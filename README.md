@@ -51,6 +51,7 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 * Put code into MVP (Model, View, Presenter) format
 * Allow Sorting by any column in table.
 * Simplify entering filepath, simple splash window asking to select the relavent folders.
+* Add search for isotope selection, and scroll bar.
 
 ## **Accessibility**
 

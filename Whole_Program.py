@@ -295,6 +295,10 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
 
     def Plot(self, tof=False, filepath=None, imported=False, name=None):
 
+        if self.data == None:
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You have not selected anything to plot')
+            return
         if imported:
             self.data = name
         self.plotted_substances.append(self.data)
@@ -302,10 +306,6 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         if not imported:
             self.number_totpeaks.append(self.number_rows)
         # Stops program from crashing when nothing has been selected
-        if name == None:
-            QtWidgets.QMessageBox.warning(
-                self, 'Error', 'You have not selected anything to plot')
-            return
 
         # Re-setting Arrays
         self.x = []
@@ -732,7 +732,7 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 return  # Exits function
             self.ax2.set_xscale(scale)
             self.ax2.set_yscale(scale)
-            self.ax2.plot(self.x_array, self.y_array, '-')
+            self.ax2.plot(self.x_array, self.y_array, '.')
             self.ax2.autoscale()
             titlename = self.data + '- Peak: ' + str(int(substance[-1]))
             self.ax2.set(xlabel='Energy (eV)',

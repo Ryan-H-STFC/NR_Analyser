@@ -44,7 +44,6 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 * Limiting number of graphs to avoid crashing.
 * Toggling Peak Line throws unnecessary error. 'checked' variable may be the issue.
 * Disable buttons which require a selected isotope, to avoid 'no graph selected' errors.
-* Peak Detection - "Yes" for maxima does nothing, "No" for minima reads and display both max and min values.
 * Peak Detection - Do not allow multiple reads for peak data if it is already displayed.
 
 ## **Improvements Coming Soon**

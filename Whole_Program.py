@@ -2,6 +2,7 @@
 import os
 import sys
 import shutil
+import matplotlib.rcsetup
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
@@ -18,14 +19,26 @@ filepath = input('Enter the filepath where the repository has been saved. \n For
 source_filepath = input('Enter the filepath where the latest NRCA code data folder is \n For Example:'
                         'C://Users/ccj88542/NRCA/Rehana/Latest/main/data/: \n')
 
+matplotlib.rcParamsDefault['path.simplify'] = False
+
 
 class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a template)
+    """_summary_
+    Class responsible for creating the GUI used in selecting and graphing the data of numerous isotopes
+    within the NRTI/NRCA Database.
+    """
+
     # Establishing signals that will be used later on
 
     # init constructure for classes
     def __init__(self):
-        super(DatabaseGUI, self).__init__()  # Allows for adding more things to the QWidget template
-        # self.window = PeakWindow()
+        super(DatabaseGUI, self).__init__()
+        """_summary_
+        Initialisator for DatabaseGUI class
+        """
+
+        # Allows for adding more things to the QWidget template
+        super(DatabaseGUI, self).__init__()
         self.initUI()
 
         # Setting global variables
@@ -64,10 +77,12 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         self.data_filepath = source_filepath
 
     def initUI(self):
-        self.setGeometry(350, 50, 1200, 800)  # setting size of GUI and titles etc (Coordinates and size here)
+        # setting size of GUI and titles etc (Coordinates and size here)
+        self.setGeometry(350, 50, 1200, 800)
         self.setWindowTitle('NRTI/NRCA Viewing Database')
 
-        self.layout = QtWidgets.QVBoxLayout()  # creates vbox layout so as to arrange things without manually moving
+        # creates vbox layout so as to arrange things without manually moving
+        self.layout = QtWidgets.QVBoxLayout()
 
         self.figure = plt.figure()  # Creating canvas to plot graph on and toolbar
         self.canvas = FigureCanvas(self.figure)
@@ -121,7 +136,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         destination_directory = filepath + 'data/'
 
         # Adding drop down menu in which users
-        self.substances = [None]  # Creating a list of substances stored in the NRCA database data directory
+        # Creating a list of substances stored in the NRCA database data directory
+        self.substances = [None]
         for file in os.listdir(source_directory):
             filename = os.fsdecode(file)
             filename = filename[:-4]
@@ -134,7 +150,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         combobox = QtWidgets.QComboBox()  # Creating combo box (drop down menu)
         combobox.addItems(self.substances)
         self.layout.addWidget(combobox)
-        combobox.currentTextChanged.connect(self.Select_and_Display)  # Upon selecting an option, it records the option
+        # Upon selecting an option, it records the option
+        combobox.currentTextChanged.connect(self.Select_and_Display)
         # and connects to the method 'Select_and_Display'
         # Creating a layout for checkboxes
         self.toggle_layout = QtWidgets.QHBoxLayout()
@@ -188,12 +205,16 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                   'Relevant Isotope', 'Plot Peak']
         self.table.setHorizontalHeaderLabels(labels)
         self.table.resizeColumnsToContents()
-        header = self.table.horizontalHeader()  # Making the table fill the space available
+        # Allow sorting by column if clicked
+        self.table.setSortingEnabled(True)
+        # Making the table fill the space available
+        header = self.table.horizontalHeader()
         header.setStretchLastSection(True)
         self.layout.addWidget(self.table)
         # If double-clicking cell, can trigger plot peak
         self.table.cellDoubleClicked.connect(self.PlotPeakWindow)
 
+        # Threshold Label
         self.threshold_label = QtWidgets.QLabel()
         self.threshold_label.setText('Nothing has been selected')
         self.threshold_label.setAlignment(QtCore.Qt.AlignLeft)
@@ -202,7 +223,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         self.setLayout(self.layout)  # Generating layout
         self.show()
 
-    def Select_and_Display(self, substance):  # Detects what has been selected and displays relevant peak information
+    # Detects what has been selected and displays relevant peak information
+    def Select_and_Display(self, substance):
         self.data = substance
         # Getting symbol from substance
         split = self.data.split('-')
@@ -230,14 +252,16 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             for i in range(0, self.number_rows):
                 column_info = file[i].split()
                 for j in range(0, len(column_info)):
-                    self.table.setItem(row_count, j, QtWidgets.QTableWidgetItem(column_info[j]))
+                    self.table.setItem(
+                        row_count, j, QtWidgets.QTableWidgetItem(column_info[j]))
                     self.table.resizeRowsToContents()
                 # peak_plot_btn = QtWidgets.QPushButton(self.table)      # If wanting a button to plot peak
                 # peak_plot_btn.setText('Plot')                          # Not sure how to get cell-clicked though
                 # peak_plot_btn.clicked.connect(self.PlotPeak)
                 # self.table.setCellWidget(row_count,10,peak_plot_btn)
 
-                self.table.setItem(row_count, 10, QtWidgets.QTableWidgetItem(str('Double click anywhere on the row.')))
+                self.table.setItem(row_count, 10, QtWidgets.QTableWidgetItem(
+                    str('Double click anywhere on the row.')))
                 row_count += 1
 
         except:
@@ -262,19 +286,27 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         if self.thresholds == '100 by default':
             label_info = 'Threshold for peak detection for n-tot mode: ' + self.thresholds
         else:
-            label_info = 'Threshold for peak detection (n-tot mode, n-g mode): ' + self.thresholds
+            label_info = 'Threshold for peak detection (n-tot mode, n-g mode): ' + \
+                self.thresholds
         self.threshold_label.setText(str(label_info))
         # Changing the peak label text
         label_info = 'Number of peaks: ' + str(self.number_rows)
         self.peaklabel.setText(str(label_info))
 
     def Plot(self, tof=False, filepath=None, imported=False, name=None):
-        if imported: self.data = name
+
+        if imported:
+            self.data = name
         self.plotted_substances.append(self.data)
         # Establishing the number of peaks on the graph at any one time and which are due to which plot
-        if not imported: self.number_totpeaks.append(self.number_rows)
+        if not imported:
+            self.number_totpeaks.append(self.number_rows)
         # Stops program from crashing when nothing has been selected
-        # try:
+        if name == None:
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You have not selected anything to plot')
+            return
+
         # Re-setting Arrays
         self.x = []
         self.y = []
@@ -291,12 +323,14 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             for line in data:
                 temporary.append(line)
         for i in temporary:
-            if i[0] == '1' and i[1] == '.':  # Extracting the raw data from the file without the accompanying info
+            # Extracting the raw data from the file without the accompanying info
+            if i[0] == '1' and i[1] == '.':
                 start_index = temporary.index(i)
                 break
             else:
                 continue
-        for i in range(0, start_index): del temporary[0]
+        for i in range(0, start_index):
+            del temporary[0]
         for i in temporary:
             data = i
             sorting = data.split(' ')
@@ -322,20 +356,26 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         # Allows user to plot in ToF if chosen # -----------------------------------------------------------------------
         if tof and not imported:
             self.x = self.EnergytoTOF(length)
-            if self.plot_count < 0: self.ax.set(xlabel='ToF (uS)', ylabel='Cross section (b)', title=self.data)
+            if self.plot_count < 0:
+                self.ax.set(xlabel='ToF (uS)',
+                            ylabel='Cross section (b)', title=self.data)
         else:
             if self.plot_count < 0:
                 if tof:
-                    self.ax.set(xlabel='Time of Flight (uS)', ylabel='Cross section (b)', title=self.data)
+                    self.ax.set(xlabel='Time of Flight (uS)',
+                                ylabel='Cross section (b)', title=self.data)
                 else:
-                    self.ax.set(xlabel='Energy (eV)', ylabel='Cross section (b)', title=self.data)
+                    self.ax.set(xlabel='Energy (eV)',
+                                ylabel='Cross section (b)', title=self.data)
             else:
                 self.ax.set(title=None)
         # Plotting -----------------------------------------------------------------------------------------------------
         colour = colours[self.plot_count + 1]
-        spectra_line = self.ax.plot(self.x, self.y, '-', color=colour, label=self.data)
+        spectra_line = self.ax.plot(
+            self.x, self.y, '.', color=colour, label=self.data)
         # Adding peak labels
-        if self.plot_count < 0: self.annotations = []
+        if self.plot_count < 0:
+            self.annotations = []
         try:
             if not tof:
                 col_no_1 = 1
@@ -349,7 +389,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 label_y_coord_adjusted = label_y_coord + (0.05 * label_y_coord)
                 label_x_coord_adjusted = label_x_coord - (0.05 * label_x_coord)
                 labels = self.ax.annotate(str(i), xy=(label_x_coord, label_y_coord), xycoords='data',
-                                          xytext=(label_x_coord_adjusted, label_y_coord_adjusted),
+                                          xytext=(label_x_coord_adjusted,
+                                                  label_y_coord_adjusted),
                                           textcoords='data')
                 self.annotations.append(labels)
         except:
@@ -396,9 +437,12 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 file = file[2:]
                 if file == []:
                     end_row = self.number_totpeaks[row_set_count]
-                    self.table.setSpan(row_count, 0, 1, self.table.columnCount())
-                    self.table.setItem(row_count, 0, QtWidgets.QTableWidgetItem('No peaks for: ' + self.data))
-                    self.table.item(row_count, 0).setBackground(QtGui.QColor(56, 139, 181))
+                    self.table.setSpan(
+                        row_count, 0, 1, self.table.columnCount())
+                    self.table.setItem(row_count, 0, QtWidgets.QTableWidgetItem(
+                        'No peaks for: ' + self.data))
+                    self.table.item(row_count, 0).setBackground(
+                        QtGui.QColor(56, 139, 181))
                     row_count += 1
                 else:
                     # Dealing with rows
@@ -406,12 +450,16 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                     for j in range(-1, end_row):
                         column_info = file[j].split()
                         if j == -1:  # Sets heading of substance in table
-                            self.table.setSpan(row_count, 0, 1, self.table.columnCount())
-                            self.table.setItem(row_count, 0, QtWidgets.QTableWidgetItem(i))
-                            self.table.item(row_count, 0).setBackground(QtGui.QColor(56, 139, 181))
+                            self.table.setSpan(
+                                row_count, 0, 1, self.table.columnCount())
+                            self.table.setItem(
+                                row_count, 0, QtWidgets.QTableWidgetItem(i))
+                            self.table.item(row_count, 0).setBackground(
+                                QtGui.QColor(56, 139, 181))
                         else:
                             for k in range(0, len(column_info)):
-                                self.table.setItem(row_count, k, QtWidgets.QTableWidgetItem(column_info[k]))
+                                self.table.setItem(
+                                    row_count, k, QtWidgets.QTableWidgetItem(column_info[k]))
                                 self.table.resizeRowsToContents()
                                 self.table.setItem(row_count, 10,
                                                    QtWidgets.QTableWidgetItem(str('Double click anywhere on the row.')))
@@ -422,12 +470,6 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         self.canvas.draw()
         # Establishing plot count
         self.plot_count = self.plot_count + 1
-
-        # except:
-        #     if self.data == 'None':
-        #         QtWidgets.QMessageBox.warning(self, 'Error', 'You have not selected anything to plot')
-        #     else:
-        #         QtWidgets.QMessageBox.warning(self, 'Error', 'Cannot be plotted. \n Contact Rehana.Patel@stfc.ac.uk')
 
     def onclick(self, event):
         legline = event.artist
@@ -447,24 +489,30 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         number_plots = len(self.number_totpeaks)  # Tells you how many plots
         number_labels_before = 0  # Tells you how many labels came before the relevant plot
         for i in range(0, origline_index):
-            number_labels_before = number_labels_before + self.number_totpeaks[i]
-        final_label = number_labels_before + self.number_totpeaks[origline_index]  # Last label of plot
+            number_labels_before = number_labels_before + \
+                self.number_totpeaks[i]
+        final_label = number_labels_before + \
+            self.number_totpeaks[origline_index]  # Last label of plot
         for i in range(number_labels_before, final_label):
             annotation = self.annotations[i]
             annotation.set_visible(False)
-            if visible: annotation.set_visible(True)
+            if visible:
+                annotation.set_visible(True)
+
         self.canvas.draw()
 
     def PlotToF(self):
         self.Plot(True)
 
     def EnergytoTOF(self, length=None):  # Convert data from energy to TOF on the x-axis
-        if length == None: length = 22.804
+        if length == None:
+            length = 22.804
         temporary_x = []
         neutron_mass = float(1.68E-27)
         electron_charge = float(1.60E-19)
         for i in self.x:
-            conversion_calculation = length * (1E6) * (0.5 * neutron_mass / (i * electron_charge)) ** 0.5
+            conversion_calculation = length * \
+                (1E6) * (0.5 * neutron_mass / (i * electron_charge)) ** 0.5
             temporary_x.append(conversion_calculation)
         return temporary_x
 
@@ -495,7 +543,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 self.ax.grid()
                 self.canvas.draw()
         except:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'You have not plotted anything')
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You have not plotted anything')
 
     def Threshold(self, checked):
         try:
@@ -508,25 +557,34 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 if self.thresholds == '100 by default':
                     threshold_coord_y = 100
                 elif self.data[-1] == 't':
-                    threshold_coord_y_sort = len(threshold_sorting[0])  # sort_limits is set earlier in SelectandDisplay
-                    threshold_coord_y = float(threshold_sorting[0][1:threshold_coord_y_sort])
+                    # sort_limits is set earlier in SelectandDisplay
+                    threshold_coord_y_sort = len(threshold_sorting[0])
+                    threshold_coord_y = float(
+                        threshold_sorting[0][1:threshold_coord_y_sort])
                     print('n-tot mode')
                 else:
-                    threshold_coord_y_sort = len(threshold_sorting[1])  # sort_limits is set earlier in SelectandDisplay
-                    cutoff = threshold_coord_y_sort - 2  # To splice the number from the string correctly regardless of magnitude
+                    # sort_limits is set earlier in SelectandDisplay
+                    threshold_coord_y_sort = len(threshold_sorting[1])
+                    # To splice the number from the string correctly regardless of magnitude
+                    cutoff = threshold_coord_y_sort - 2
                     threshold_coord_y = float(threshold_sorting[1][0:cutoff])
                     print('n-g mode')
                 print('Threshold: ', threshold_coord_y)
                 # Creating an array to plot line of coords
-                threshold_coords_y = [float(threshold_coord_y)] * number_data_points
+                threshold_coords_y = [
+                    float(threshold_coord_y)] * number_data_points
                 threshold_coords_x = self.x
-                self.ax.plot(threshold_coords_x, threshold_coords_y, '--', color='black', linewidth=0.5)
+                self.ax.plot(threshold_coords_x, threshold_coords_y,
+                             '--', color='black', linewidth=0.5)
                 self.canvas.draw()
             else:
-                self.ax.lines.pop()  # Getting rid of the second lines plotted on the graph! (Threshold line)
+                # Getting rid of the second lines plotted on the graph! (Threshold line)
+                self.ax.lines.pop()
                 self.canvas.draw()
+
         except:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'You have not plotted anything')
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You have not plotted anything')
 
     def Annotations(self, checked):
         try:
@@ -552,18 +610,22 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
 
             # Setting up dock for widgets to be used around canvas
             dock = QtWidgets.QDockWidget('Peak info', peakwindow)
-            peak_info_widget = QtWidgets.QWidget()  # Creating a widget to contain peak info in dock
+            # Creating a widget to contain peak info in dock
+            peak_info_widget = QtWidgets.QWidget()
 
-            layout2 = QtWidgets.QVBoxLayout()  # Creating layout to display peak info in the widget
+            # Creating layout to display peak info in the widget
+            layout2 = QtWidgets.QVBoxLayout()
             toggle_layout2 = QtWidgets.QHBoxLayout()
 
             # Adding checkbox to toggle the peak limits on and off
-            threshold_check2 = QtWidgets.QCheckBox('Peak Detection Limits in X', peakwindow)
+            threshold_check2 = QtWidgets.QCheckBox(
+                'Peak Detection Limits in X', peakwindow)
             threshold_check2.resize(threshold_check2.sizeHint())
             toggle_layout2.addWidget(threshold_check2)
             threshold_check2.stateChanged.connect(self.PeakLimits)
             # Adding checkbox to toggle the peak detection limits on and off
-            threshold_check3 = QtWidgets.QCheckBox('Peak Detection Limits in Y', peakwindow)
+            threshold_check3 = QtWidgets.QCheckBox(
+                'Peak Detection Limits in Y', peakwindow)
             threshold_check3.resize(threshold_check3.sizeHint())
             toggle_layout2.addWidget(threshold_check3)
             threshold_check3.stateChanged.connect(self.ThresholdforPeak)
@@ -577,18 +639,23 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                       'Isotopic Origin']
             peak_table.setHorizontalHeaderLabels(labels)
             peak_table.resizeColumnsToContents()
-            header = peak_table.horizontalHeader()  # Making the table fill the space available
+            # Making the table fill the space available
+            header = peak_table.horizontalHeader()
             header.setStretchLastSection(True)
             layout2.addWidget(peak_table)
 
-            scale_label = QtWidgets.QLabel()  # Adding label which shows what scale the user picks
+            # Adding label which shows what scale the user picks
+            scale_label = QtWidgets.QLabel()
             layout2.addWidget(scale_label)
 
-            peak_info_widget.setLayout(layout2)  # Setting layout within peak info widget
+            # Setting layout within peak info widget
+            peak_info_widget.setLayout(layout2)
             dock.setWidget(peak_info_widget)  # Adding peak info widget to dock
 
-            peakwindow.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, dock)
-            peakwindow.setCentralWidget(self.canvas2)  # Setting canvas as central widget
+            peakwindow.addDockWidget(
+                QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, dock)
+            # Setting canvas as central widget
+            peakwindow.setCentralWidget(self.canvas2)
 
             self.ax2 = figure2.add_subplot(111)
             # Establishing which row belongs to what substance if multiple ------------------------------------------------
@@ -597,7 +664,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 index = self.plotted_substances.index(i)
                 for j in range(0, index):
                     start_row = start_row + self.number_totpeaks[j] + 1
-                end_row = start_row + self.number_totpeaks[self.plotted_substances.index(i)] + 1
+                end_row = start_row + \
+                    self.number_totpeaks[self.plotted_substances.index(i)] + 1
                 peak_count = 0
                 for j in range(start_row, end_row):
                     self.table_layout[j] = i + '_' + str(peak_count)
@@ -613,9 +681,11 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                     with open(filepath, 'r') as f:
                         lines = f.readlines()
                         for i in lines:
-                            sorting = i.split(' ')  # should have sorting = [name, peak limit 1, peak limit 2]
+                            # should have sorting = [name, peak limit 1, peak limit 2]
+                            sorting = i.split(' ')
                             if sorting[0] == substance[:-2]:
-                                peak_limits.append(sorting[1][1:-1])  # Slicing the actual numbers out of the string
+                                # Slicing the actual numbers out of the string
+                                peak_limits.append(sorting[1][1:-1])
                                 peak_limits.append(sorting[2][:-2])
                             else:
                                 continue
@@ -624,11 +694,14 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                     print(self.peak_limits_x)
                     limit = str(peak_center_coord) + '_first'
                     print(limit)
-                    peak_limits.append(self.peak_limits_x[str(peak_center_coord) + '_first'])
-                    peak_limits.append(self.peak_limits_x[str(peak_center_coord) + '_second'])
+                    peak_limits.append(
+                        self.peak_limits_x[str(peak_center_coord) + '_first'])
+                    peak_limits.append(
+                        self.peak_limits_x[str(peak_center_coord) + '_second'])
 
             except:
-                QtWidgets.QMessageBox.warning(self, 'Error', 'No peak limits for this substance')
+                QtWidgets.QMessageBox.warning(
+                    self, 'Error', 'No peak limits for this substance')
             # Getting peak limits for relevant peak
             relevant_limits_index = int(self.substance[-1]) * 2 - 2
             self.first_limit = peak_limits[relevant_limits_index]
@@ -639,17 +712,21 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             # Truncating array to just before and after peak limits
             index_first_limit = x.index(float(self.first_limit))
             index_second_limit = x.index(float(self.second_limit))
-            self.x_array = x[int(index_first_limit - 10):int(index_second_limit + 10)]
-            self.y_array = y[int(index_first_limit - 10):int(index_second_limit + 10)]
+            self.x_array = x[int(index_first_limit - 10)
+                                 :int(index_second_limit + 10)]
+            self.y_array = y[int(index_first_limit - 10)
+                                 :int(index_second_limit + 10)]
             # -------------------------------------------------------------------------------------------------------------
             # Plotting
             # Getting user to choose scale
             scale_list = ['linear', 'log']
-            scale, ok = QtWidgets.QInputDialog.getText(peakwindow, 'Scale', 'Enter Scale as "linear" or "log" : ')
+            scale, ok = QtWidgets.QInputDialog.getText(
+                peakwindow, 'Scale', 'Enter Scale as "linear" or "log" : ')
             if ok:
                 print(scale)
                 if scale not in scale_list:
-                    QtWidgets.QMessageBox.warning(self, 'Error', 'Not a valid scale option - The default is linear')
+                    QtWidgets.QMessageBox.warning(
+                        self, 'Error', 'Not a valid scale option - The default is linear')
                     scale = 'linear'
             else:
                 return  # Exits function
@@ -658,17 +735,21 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             self.ax2.plot(self.x_array, self.y_array, '-')
             self.ax2.autoscale()
             titlename = self.data + '- Peak: ' + str(int(substance[-1]))
-            self.ax2.set(xlabel='Energy (eV)', ylabel='Cross section (b)', title=titlename)
+            self.ax2.set(xlabel='Energy (eV)',
+                         ylabel='Cross section (b)', title=titlename)
             # Filling in the peak info table information-------------------------------------------------------------------
             rank = self.table.item(row_clicked, 0)
-            limits = '(' + str(self.first_limit) + ',' + str(self.second_limit) + ')'
+            limits = '(' + str(self.first_limit) + \
+                ',' + str(self.second_limit) + ')'
             peak_center_coord = self.table.item(row_clicked, 1)
             isotopic_origin = self.table.item(row_clicked, 9)
             # Setting in table
             peak_table.setItem(0, 0, QtWidgets.QTableWidgetItem(rank))
             peak_table.setItem(0, 1, QtWidgets.QTableWidgetItem(limits))
-            peak_table.setItem(0, 2, QtWidgets.QTableWidgetItem(peak_center_coord))
-            peak_table.setItem(0, 3, QtWidgets.QTableWidgetItem(isotopic_origin))
+            peak_table.setItem(
+                0, 2, QtWidgets.QTableWidgetItem(peak_center_coord))
+            peak_table.setItem(
+                0, 3, QtWidgets.QTableWidgetItem(isotopic_origin))
             peak_table.resizeRowsToContents()
             # Setting label text
             label_info = 'Selected Scale: ' + scale
@@ -676,7 +757,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
 
             peakwindow.show()
         except:
-            QtWidgets.QMessageBox.warning(self, 'Error', 'You need to plot the graph first or select a valid row')
+            QtWidgets.QMessageBox.warning(
+                self, 'Error', 'You need to plot the graph first or select a valid row')
 
     def PeakLimits(self, checked):
         try:
@@ -686,14 +768,20 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 threshold1_x = [(float(self.first_limit))] * number_datappoints
                 max_value_in_y = max(self.y_array)
                 min_value_in_y = min(self.y_array)
-                threshold1_y = np.linspace(min_value_in_y, max_value_in_y, number_datappoints)
-                threshold2_x = [(float(self.second_limit))] * number_datappoints
-                self.ax2.plot(threshold1_x, threshold1_y, '--', color='red', linewidth=1.0)
-                self.ax2.plot(threshold2_x, threshold1_y, '--', color='red', linewidth=1.0)
+                threshold1_y = np.linspace(
+                    min_value_in_y, max_value_in_y, number_datappoints)
+                threshold2_x = [(float(self.second_limit))] * \
+                    number_datappoints
+                self.ax2.plot(threshold1_x, threshold1_y,
+                              '--', color='red', linewidth=1.0)
+                self.ax2.plot(threshold2_x, threshold1_y,
+                              '--', color='red', linewidth=1.0)
                 self.canvas2.draw()
             else:
-                self.ax2.lines.pop(1)  # Getting rid of the second plot on the graph (the first limit)
-                self.ax2.lines.pop(1)  # Getting rid of what becomes the second plot on the graph (the second limit)
+                # Getting rid of the second plot on the graph (the first limit)
+                self.ax2.lines.pop(1)
+                # Getting rid of what becomes the second plot on the graph (the second limit)
+                self.ax2.lines.pop(1)
                 self.canvas2.draw()
         except:
             print('No')
@@ -714,25 +802,32 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                     sort_limits = i.split(' ')
                     symbol = sort_limits[0]
                     if str(symbol) == str(data_symbol):
-                        self.thresholds = str(sort_limits[1]) + str(sort_limits[2])
+                        self.thresholds = str(
+                            sort_limits[1]) + str(sort_limits[2])
                 # Plotting ---------------------------------------------------------------------------------------------
                 number_data_points = len(self.x_array)
                 threshold_sorting = self.thresholds.split(',')
                 if self.thresholds == '100 by default':
                     threshold_coord_y = 100
                 elif self.data[-1] == 't':
-                    threshold_coord_y_sort = len(threshold_sorting[0])  # sort_limits is set earlier in SelectandDisplay
-                    threshold_coord_y = float(threshold_sorting[0][1:threshold_coord_y_sort])
+                    # sort_limits is set earlier in SelectandDisplay
+                    threshold_coord_y_sort = len(threshold_sorting[0])
+                    threshold_coord_y = float(
+                        threshold_sorting[0][1:threshold_coord_y_sort])
                     print('n-tot mode')
                 else:
-                    threshold_coord_y_sort = len(threshold_sorting[1])  # sort_limits is set earlier in SelectandDisplay
-                    cutoff = threshold_coord_y_sort - 2  # To splice the number from the string correctly regardless of magnitude
+                    # sort_limits is set earlier in SelectandDisplay
+                    threshold_coord_y_sort = len(threshold_sorting[1])
+                    # To splice the number from the string correctly regardless of magnitude
+                    cutoff = threshold_coord_y_sort - 2
                     threshold_coord_y = float(threshold_sorting[1][0:cutoff])
                     print('n-g mode')
                 # Creating an array to plot line of coords
-                threshold_coords_y = [float(threshold_coord_y)] * number_data_points
+                threshold_coords_y = [
+                    float(threshold_coord_y)] * number_data_points
                 threshold_coords_x = self.x_array
-                self.ax2.plot(threshold_coords_x, threshold_coords_y, '--', color='black', linewidth=0.5)
+                self.ax2.plot(threshold_coords_x, threshold_coords_y,
+                              '--', color='black', linewidth=0.5)
                 self.canvas2.draw()
             else:
                 self.ax2.lines.pop()  # Getting rid of line
@@ -743,7 +838,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                                           'Trouble getting peak limits for this peak \n Contact Rehana.Patel@stfc.ac.uk')
 
     def importdata(self):  # Allows user to select a file on their computer to open and analyse
-        file_name = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', self.filepath)
+        file_name = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Open file', self.filepath)
         filepath = file_name[0]
         get_name = filepath.split('/')
         name = get_name[-1]
@@ -753,7 +849,7 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         else:
             self.Plot(False, filepath, True, name)
 
-## PEAK DETECTION BITS ## -------------------------------------------------------------------------------------------------
+# ------------------------ PEAK DETECTION BITS ## ------------------------
     def maxima(self):  # Finds the maxima in a sample and the peak widths
         y = np.asarray(self.y)
         maxima, _ = sp.signal.find_peaks(y, height=100)
@@ -777,15 +873,18 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             index = first_limits.index(i)
             peak = maxima_list_x[index]
             coordinate = self.x[round(i)]
-            coordinate_index = self.x.index(coordinate)  # Finding the y- value for corresponding limits
+            # Finding the y- value for corresponding limits
+            coordinate_index = self.x.index(coordinate)
             self.peak_limits_y[str(peak) + '_first'] = self.y[coordinate_index]
             self.peak_limits_x[str(peak) + '_first'] = coordinate
         for i in second_limits:
             index = second_limits.index(i)
             peak = maxima_list_x[index]
             coordinate = self.x[round(i)]
-            coordinate_index = self.x.index(coordinate)  # Finding the y- value for corresponding limits
-            self.peak_limits_y[str(peak) + '_second'] = self.y[coordinate_index]
+            # Finding the y- value for corresponding limits
+            coordinate_index = self.x.index(coordinate)
+            self.peak_limits_y[str(
+                peak) + '_second'] = self.y[coordinate_index]
             self.peak_limits_x[str(peak) + '_second'] = coordinate
         print('Peak limits x: ', self.peak_limits_x)
         print('Peak limits y: ', self.peak_limits_y)
@@ -815,15 +914,18 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             index = first_limits.index(i)
             peak = minima_list_x[index]
             coordinate = self.x[round(i)]
-            coordinate_index = self.x.index(coordinate)  # Finding the y- value for corresponding limits
+            # Finding the y- value for corresponding limits
+            coordinate_index = self.x.index(coordinate)
             self.peak_limits_y[str(peak) + '_first'] = self.y[coordinate_index]
             self.peak_limits_x[str(peak) + '_first'] = coordinate
         for i in second_limits:
             index = second_limits.index(i)
             peak = minima_list_x[index]
             coordinate = self.x[round(i)]
-            coordinate_index = self.x.index(coordinate)  # Finding the y- value for corresponding limits
-            self.peak_limits_y[str(peak) + '_second'] = self.y[coordinate_index]
+            # Finding the y- value for corresponding limits
+            coordinate_index = self.x.index(coordinate)
+            self.peak_limits_y[str(
+                peak) + '_second'] = self.y[coordinate_index]
             self.peak_limits_x[str(peak) + '_second'] = coordinate
         print('Peak limits x: ', self.peak_limits_x)
         self.peak_list = minima_list_x
@@ -863,8 +965,10 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                 changed_first = True
             else:
                 continue
-            if not changed_first: first_limits_changed.append(i)
-            if not changed_second: second_limits_changed.append(second_limits[index])
+            if not changed_first:
+                first_limits_changed.append(i)
+            if not changed_second:
+                second_limits_changed.append(second_limits[index])
         print('Changed: ', first_limits_changed, second_limits_changed)
         return first_limits_changed, second_limits_changed
 
@@ -896,10 +1000,11 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         print('MAXIMA LIST: ', peaks_x, peaks_y)
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
-        self.ax.plot(self.x, self.y, '-', color='b')
+        self.ax.plot(self.x, self.y, '.', color='b')
         self.ax.set_xscale('log')
         self.ax.set_yscale('log')
-        self.ax.set(xlabel='Energy (eV)', ylabel='Cross section (b)', title=str(self.data))
+        self.ax.set(xlabel='Energy (eV)',
+                    ylabel='Cross section (b)', title=str(self.data))
         for i in peaks_x:
             y_index = peaks_x.index(i)
             print('x: ', i, 'y: ', peaks_y[y_index])
@@ -918,7 +1023,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         # Ordering peaks
         peak_order = 'Rank by eV    (eV) \n'
         for i in range(0, len(self.peak_list)):
-            peak_order = peak_order + str(i) + '    ' + str(self.peak_list[i]) + '\n'
+            peak_order = peak_order + \
+                str(i) + '    ' + str(self.peak_list[i]) + '\n'
         # Choose which peak they are editing
         self.peaknum, ok = QtWidgets.QInputDialog.getText(self, 'Peak Editing',
                                                           'Choose which peak to edit by entering its peak '
@@ -931,7 +1037,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
                                                                'Enter the first peak limit x-coordinate: ')
             second_limit_x, ok = QtWidgets.QInputDialog.getText(self, 'Peak Limits in X',
                                                                 'Enter the second peak limit x-coordinate: ')
-            first_limit_y = self.y[self.x.index(first_limit_x)]  # Finding the corresponding y-value
+            # Finding the corresponding y-value
+            first_limit_y = self.y[self.x.index(first_limit_x)]
             second_limit_y = self.y[self.x.index(second_limit_x)]
             peak = self.peak_list[int(self.peaknum)]
             self.peak_limits_x[str(peak) + '_first'] = float(first_limit_x)
@@ -972,7 +1079,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
 
     def SelectLimitsOption(self):
         # Allowing for selecting coordinates
-        self.interact = self.canvas.mpl_connect('button_press_event', self.SelectLimits)
+        self.interact = self.canvas.mpl_connect(
+            'button_press_event', self.SelectLimits)
 
     def SelectLimits(self, event):
         self.xi, self.yj = event.xdata, event.ydata
@@ -990,7 +1098,8 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
             first_limit_x = self.nearestnumber(self.x, float(
                 self.first_click_x))  # Finding the nearest x-value on the spectrum to where was clicked
             second_limit_x = self.nearestnumber(self.x, float(second_click_x))
-            first_limit_y = self.y[self.x.index(first_limit_x)]  # Finding the corresponding y-value
+            # Finding the corresponding y-value
+            first_limit_y = self.y[self.x.index(first_limit_x)]
             second_limit_y = self.y[self.x.index(second_limit_x)]
             # Altering it in dictionary
             self.peak_limits_x[str(peak) + '_first'] = first_limit_x
@@ -1017,13 +1126,16 @@ class DatabaseGUI(QtWidgets.QWidget):  # Acts just like QWidget class (like a te
         # Disconnecting clicking
         self.canvas.mpl_disconnect(self.interact)
 
-    def nearestnumber(self, x, target):  # Finds the closest value in a list to the input target value
+    # Finds the closest value in a list to the input target value
+    def nearestnumber(self, x, target):
         array = np.asarray(x)
         value_index = (
             np.abs(array - target)).argmin()  # Finds the absolute difference between the value and the target
-        return array[value_index]  # then gives the smallest number in the array and returns it
+        # then gives the smallest number in the array and returns it
+        return array[value_index]
 
-## PEAK DETECTION BITS ABOVE ## -------------------------------------------------------------------------------------------
+# ------------------------ PEAK DETECTION BITS ## ------------------------
+
 
 app = QtWidgets.QApplication(sys.argv)
 # Changing colour of GUI
@@ -1033,6 +1145,6 @@ Colours.setColor(QtGui.QPalette.Window, QtGui.QColor(220, 220, 220))
 Colours.setColor(QtGui.QPalette.Button, QtGui.QColor(255, 255, 255))
 Colours.setColor(QtGui.QPalette.ButtonText, QtGui.QColor(0, 0, 0))
 app.setPalette(Colours)
-# ---------------------------------------------------------------
+# ------------------------------------------------------------------------
 w = DatabaseGUI()
 app.exec()

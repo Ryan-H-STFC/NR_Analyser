@@ -27,23 +27,31 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 ## **Features**
 
-*Import and plot data
-*Compare spectra with the ability to hide and show different spectra within the plot
-*Provide automated peak detection feature for quick analysis upon importing of data or selecting data
-*Edit peak limits
-*Provide further information about a singular peak selected from a spectrum
-*Save and export plots
-*Be accessible and straightforward in installation and use
+* Import and plot data
+* Compare spectra with the ability to hide and show different spectra within the plot
+* Provide automated peak detection feature for quick analysis upon importing of data or selecting data
+* Edit peak limits
+* Provide further information about a singular peak selected from a spectrum
+* Save and export plots
+* Be accessible and straightforward in installation and use
 
 
 **Note** : You cannot alter limits or any data within this program.
 
 ## **Bugs to be fixed soon**
 
+* Adding mulitple of the same graph.
+* Limiting number of graphs to avoid crashing.
+* Toggling Peak Line throws unnecessary error. 'checked' variable may be the issue.
+* Disable buttons which require a selected isotope, to avoid 'no graph selected' errors.
+* Peak Detection - Do not allow multiple reads for peak data if it is already displayed.
 
 ## **Improvements Coming Soon**
 
 * Put code into MVP (Model, View, Presenter) format
+* Allow Sorting by any column in table.
+* Simplify entering filepath, simple splash window asking to select the relavent folders.
+* Add search for isotope selection, and scroll bar.
 
 ## **Accessibility**
 

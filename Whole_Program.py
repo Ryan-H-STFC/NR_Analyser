@@ -11,6 +11,8 @@ from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas  # Import class from module as FigureCanvas for simplicity
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar  # ""
 from PyQt5 import QtGui, QtWidgets, QtCore  # importing classes from PyQt
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import (
     QPushButton,
     QCheckBox,
@@ -27,9 +29,9 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
     QMainWindow,
     QWidget,
-    QDockWidget
+    QDockWidget,
+    QCompleter
 )
-
 
 # ? Should this ask for the filepath or just be require to be in the format as seen in the repository,
 # ? Download the repository and run the program without altering the file structure, will save having
@@ -123,6 +125,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         importAction = QAction('&Import Data', self)
         importAction.setShortcut('Ctrl+I')
+
         importAction.triggered.connect(self.importdata)
 
         editpeakAction = QAction('&Edit Peak Limits', self)
@@ -154,7 +157,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Adding label which shows number of peaks
         self.peaklabel = QLabel()
         self.peaklabel.setText('')
-        self.peaklabel.setAlignment(QtCore.Qt.AlignRight)
+        self.peaklabel.setAlignment(Qt.AlignRight)
         self.layout.addWidget(self.peaklabel)
         # Adding canvas
         self.layout.addWidget(self.canvas)
@@ -177,18 +180,36 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 shutil.copy(source, destination)
 
         # Creating combo box (drop down menu)
-        combobox = QComboBox()
-        combobox.addItems(self.substances)
-        self.layout.addWidget(combobox)
+        self.combobox = QComboBox()
+        self.combobox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.combobox.setStyleSheet("""
+            QComboBox {
+                combobox-popup: 0;
+            }
+        """)
+
+        self.combobox.addItems(self.substances)
+
+        self.combobox.setEditable(True)
+        self.combobox.setInsertPolicy(QComboBox.NoInsert)
+        self.combobox.setMaxVisibleItems(15)
+        # filterCompleter = QCompleter(self)
+        # filterCompleter.set
+        self.combobox.completer().setCompletionMode(
+            QCompleter.UnfilteredPopupCompletion)
+        self.combobox.completer().setCaseSensitivity(Qt.CaseInsensitive)
+        self.combobox.completer().setFilterMode(Qt.MatchContains)
+        self.layout.addWidget(self.combobox)
         # Upon selecting an option, it records the option
-        combobox.currentTextChanged.connect(self.Select_and_Display)
         # and connects to the method 'Select_and_Display'
+        self.combobox.activated.connect(self.Select_and_Display)
 
         # Creating a layout for checkboxes
         self.toggle_layout = QHBoxLayout()
 
         # Adding checkbox to toggle on and off gridlines for plots
         grid_check = QCheckBox('Grid Lines', self)
+        grid_check.setCursor(QCursor(Qt.PointingHandCursor))
         grid_check.__name__ = "gridCheck"
         grid_check.resize(grid_check.sizeHint())
         grid_check.setEnabled(False)
@@ -197,6 +218,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Adding checkbox to toggle on and off threshold lines for plots
         threshold_check = QCheckBox('Peak Detection Limits', self)
+        threshold_check.setCursor(QCursor(Qt.PointingHandCursor))
         threshold_check.__name__ = "thresholdCheck"
         threshold_check.resize(threshold_check.sizeHint())
         threshold_check.setEnabled(False)
@@ -205,6 +227,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Adding checkbox to toggle on and off annotations
         label_check = QCheckBox('Hide Peak Labels', self)
+        label_check.setCursor(QCursor(Qt.PointingHandCursor))
         label_check.__name__ = "labelCheck"
         label_check.resize(label_check.sizeHint())
         label_check.setEnabled(False)
@@ -219,6 +242,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Creating a plot in eV (no conversion needed) button
         plot_energy_btn = QPushButton('Plot in Energy', self)
+        plot_energy_btn.setCursor(QCursor(Qt.PointingHandCursor))
         plot_energy_btn.__name__ = "plotEnergyBtn"
         plot_energy_btn.resize(plot_energy_btn.sizeHint())
         plot_energy_btn.setEnabled(False)
@@ -227,6 +251,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Creating a plot in tof button
         plot_tof_btn = QPushButton('Plot in ToF', self)
+        plot_tof_btn.setCursor(QCursor(Qt.PointingHandCursor))
         plot_tof_btn.__name__ = "plotToFBtn"
         plot_tof_btn.resize(plot_tof_btn.sizeHint())
         plot_tof_btn.setEnabled(False)
@@ -235,6 +260,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Creating a clear result button
         clear_btn = QPushButton('Clear Results', self)
+        clear_btn.setCursor(QCursor(Qt.PointingHandCursor))
         clear_btn.__name__ = "clearBtn"
         clear_btn.resize(clear_btn.sizeHint())
         clear_btn.setEnabled(False)
@@ -243,6 +269,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Peak detection button
         pd_btn = QPushButton('Peak Detection', self)
+        pd_btn.setCursor(QCursor(Qt.PointingHandCursor))
         pd_btn.__name__ = "pdBtn"
         pd_btn.resize(pd_btn.sizeHint())
         pd_btn.setEnabled(False)
@@ -275,24 +302,28 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Threshold Label
         self.threshold_label = QLabel()
         self.threshold_label.setText('Nothing has been selected')
-        self.threshold_label.setAlignment(QtCore.Qt.AlignLeft)
+        self.threshold_label.setAlignment(Qt.AlignLeft)
         self.layout.addWidget(self.threshold_label)
 
         self.setLayout(self.layout)  # Generating layout
         self.show()
 
     # Detects what has been selected and displays relevant peak information
-    def Select_and_Display(self, substance):
-        self.data = substance
-
-        self.toggleBtnControls(
-            plotEnergyBtn=True, plotToFBtn=True, clearBtn=True)
-
-        if self.data == '' and self.plot_count != 0:
+    def Select_and_Display(self, index):
+        #! Fix The Index issue, substance needs to be the string from the selection not the index.
+        self.data = self.combobox.itemText(index)
+        if self.data == '' and self.plot_count > 0:  # Null selection and graphs shown
             self.toggleBtnControls(clearBtn=True)
             return
-        elif self.data == '':
+        elif self.data == '' and self.plot_count <= 0:  # Null selection and no graphs shown
             self.toggleBtnControls(enableAll=False)
+            self.toggleCheckboxControls(enableAll=False)
+        elif self.plot_count > 0:  # Named Selection and graphs shown
+            self.toggleBtnControls(enableAll=True)
+            self.toggleCheckboxControls(enableAll=True)
+        else:   # Named selection and no graphs shown
+            self.toggleBtnControls(
+                plotEnergyBtn=True, plotToFBtn=True, clearBtn=True)
             self.toggleCheckboxControls(enableAll=False)
         # Getting symbol from substance
         split = self.data.split('-')
@@ -366,7 +397,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 # Add for both functions toggle.....
 
 # Crashes when using peak detection without a graph.
-
 
     def toggleBtnControls(self, enableAll: bool = False, plotEnergyBtn: bool = False,
                           plotToFBtn: bool = False, clearBtn: bool = False, pdBtn: bool = False):
@@ -809,7 +839,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             dock.setWidget(peak_info_widget)  # Adding peak info widget to dock
 
             peakwindow.addDockWidget(
-                QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, dock)
+                Qt.DockWidgetArea.BottomDockWidgetArea, dock)
             # Setting canvas as central widget
             peakwindow.setCentralWidget(self.canvas2)
 
@@ -868,8 +898,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             # Truncating array to just before and after peak limits
             index_first_limit = x.index(float(self.first_limit))
             index_second_limit = x.index(float(self.second_limit))
-            self.x_array = x[int(index_first_limit - 10):int(index_second_limit + 10)]
-            self.y_array = y[int(index_first_limit - 10):int(index_second_limit + 10)]
+            self.x_array = x[int(index_first_limit - 10)                             :int(index_second_limit + 10)]
+            self.y_array = y[int(index_first_limit - 10)                             :int(index_second_limit + 10)]
             # -------------------------------------------------------------------------------------------------------------
             # Plotting
             # Getting user to choose scale

@@ -42,16 +42,11 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 * Adding mulitple of the same graph.
 * Limiting number of graphs to avoid crashing.
-* Toggling Peak Line throws unnecessary error. 'checked' variable may be the issue.
-* Disable buttons which require a selected isotope, to avoid 'no graph selected' errors.
 * Peak Detection - Do not allow multiple reads for peak data if it is already displayed.
 
 ## **Improvements Coming Soon**
 
 * Put code into MVP (Model, View, Presenter) format
-* Allow Sorting by any column in table.
-* Simplify entering filepath, simple splash window asking to select the relavent folders.
-* Add search for isotope selection, and scroll bar.
 
 ## **Accessibility**
 

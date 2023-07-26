@@ -91,6 +91,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.graphs = OrderedDict()
         self.annotations = []
         self.plotted_substances = []
+        self.plotted_substances_tof = []
         self.rows = None
         self.table_layout = dict()
         self.arrays = dict()
@@ -197,6 +198,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # filterCompleter.set
         self.combobox.completer().setCompletionMode(
             QCompleter.UnfilteredPopupCompletion)
+
         self.combobox.completer().setCaseSensitivity(Qt.CaseInsensitive)
         self.combobox.completer().setFilterMode(Qt.MatchContains)
         self.layout.addWidget(self.combobox)
@@ -209,7 +211,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Adding checkbox to toggle on and off gridlines for plots
         grid_check = QCheckBox('Grid Lines', self)
-        grid_check.setCursor(QCursor(Qt.PointingHandCursor))
+        grid_check.setStyleSheet("""
+            QCheckbox::hover {
+                cursor: pointer;
+            }
+        """)
         grid_check.__name__ = "gridCheck"
         grid_check.resize(grid_check.sizeHint())
         grid_check.setEnabled(False)
@@ -310,21 +316,27 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     # Detects what has been selected and displays relevant peak information
     def Select_and_Display(self, index):
-        #! Fix The Index issue, substance needs to be the string from the selection not the index.
         self.data = self.combobox.itemText(index)
-        if self.data == '' and self.plot_count > 0:  # Null selection and graphs shown
+
+        # print(self.plot_count)
+        # print("> " + self.data + " <")
+        # print(self.data == '')
+
+        if self.data == '' and self.plot_count > -1:  # Null selection and graphs shown
             self.toggleBtnControls(clearBtn=True)
             return
-        elif self.data == '' and self.plot_count <= 0:  # Null selection and no graphs shown
+        elif self.data == '' and self.plot_count == -1:  # Null selection and no graphs shown
             self.toggleBtnControls(enableAll=False)
             self.toggleCheckboxControls(enableAll=False)
-        elif self.plot_count > 0:  # Named Selection and graphs shown
+            return
+        elif self.plot_count != -1:  # Named Selection and graphs shown
             self.toggleBtnControls(enableAll=True)
             self.toggleCheckboxControls(enableAll=True)
         else:   # Named selection and no graphs shown
             self.toggleBtnControls(
                 plotEnergyBtn=True, plotToFBtn=True, clearBtn=True)
             self.toggleCheckboxControls(enableAll=False)
+
         # Getting symbol from substance
         split = self.data.split('-')
         if self.data.startswith('e'):
@@ -397,6 +409,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 # Add for both functions toggle.....
 
 # Crashes when using peak detection without a graph.
+
 
     def toggleBtnControls(self, enableAll: bool = False, plotEnergyBtn: bool = False,
                           plotToFBtn: bool = False, clearBtn: bool = False, pdBtn: bool = False):
@@ -482,7 +495,23 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             return
         if imported:
             self.data = name
-        self.plotted_substances.append(self.data)
+
+        # Do not allow mulitple of the same graph
+        # if self.data in self.plotted_substances:
+        #     QMessageBox.warning(self, 'Error', 'Selection already plotted')
+        #     return
+        # Checks for adding mutliple graphs for the same selection, energy/tof types.
+        if not tof and self.data in self.plotted_substances:
+            QMessageBox.warning(self, 'Warning', 'Graph is already plotted')
+            return
+        elif tof and self.data in self.plotted_substances_tof:
+            QMessageBox.warning(self, 'Warning', 'Graph is already plotted')
+            return
+        if tof:
+            self.plotted_substances_tof.append(self.data)
+        else:
+            self.plotted_substances.append(self.data)  # ! May break code
+
         # Establishing the number of peaks on the graph at any one time and which are due to which plot
         if not imported:
             self.number_totpeaks.append(self.number_rows)
@@ -550,10 +579,15 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                                 ylabel='Cross section (b)', title=self.data)
             else:
                 self.ax.set(title=None)
+        self.figure.tight_layout()
+        print("norm " + str(self.plotted_substances))
+        print("tof " + str(self.plotted_substances_tof))
         # Plotting -----------------------------------------------------------------------------------------------------
         colour = colours[self.plot_count + 1]
+
         spectra_line = self.ax.plot(
             self.x, self.y, '-', color=colour, alpha=0.6, linewidth=0.6, label=self.data)
+
         # Adding peak labels
         if self.plot_count < 0:
             self.annotations = []
@@ -577,7 +611,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         except:
             print('No peak labels available')
         # # Creating a legend to toggle on and off plots--------------------------------------------------------------
-        legend = self.ax.legend(fancybox=True, shadow=True)
+        legend = self.ax.legend(fancybox=True, shadow=True, )
         # Amending dictionary of plotted lines - maps legend line to original line and allows for picking
         spectra_legend = legend.get_lines()  # Gets the 'ID' of lines ( I think)
         for i in spectra_legend:
@@ -597,9 +631,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         plt.connect('pick_event', self.onclick)
         # ------------------------------------------------------------------------------------------------------------
         # Amending the table for more than one plot.
-        print(len(self.number_totpeaks))
+        # ? print("num tot: " + str(len(self.number_totpeaks)))
+        # ? print("sum tot: " + str(sum(self.number_totpeaks)))
         if len(self.number_totpeaks) > 1:
             self.table.clearContents()
+            # ! Unkown error for self.number_totpeaks being NoneType
             self.rows = sum(self.number_totpeaks) + len(self.number_totpeaks)
             self.table.setRowCount(self.rows)
             peakinfo_directory = self.filepath + 'GUI Files/Peak information/'
@@ -650,7 +686,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.ax.autoscale()  # Tidying up
         self.canvas.draw()
         # Establishing plot count
-        self.plot_count = self.plot_count + 1
+        self.plot_count += 1
 
     def onclick(self, event):
         legline = event.artist
@@ -710,15 +746,23 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.threshold_label.setText('')
         for i in reversed(range(0, self.rows)):  # Resetting table
             self.table.removeRow(i)
+
         # Resetting legend
         self.graphs = OrderedDict()
+
         # Resetting dictionaries
         self.table_layout = dict()
         self.arrays = dict()
+
+        # Resetting plotted graphs arrays
+        self.plotted_substances = []
+        self.plotted_substances_tof = []
+
+        print("norm " + str(self.plotted_substances))
+        print("tof " + str(self.plotted_substances_tof))
+
         # On clearning graphs disable Checkboxes
         self.toggleCheckboxControls(enableAll=False)
-        self.toggleBtnControls(
-            plotEnergyBtn=True, plotToFBtn=True, clearBtn=True, pdBtn=False)
 
     def Gridlines(self, checked):
         try:
@@ -898,8 +942,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             # Truncating array to just before and after peak limits
             index_first_limit = x.index(float(self.first_limit))
             index_second_limit = x.index(float(self.second_limit))
-            self.x_array = x[int(index_first_limit - 10)                             :int(index_second_limit + 10)]
-            self.y_array = y[int(index_first_limit - 10)                             :int(index_second_limit + 10)]
+            self.x_array = x[int(index_first_limit - 10):int(index_second_limit + 10)]
+            self.y_array = y[int(index_first_limit - 10):int(index_second_limit + 10)]
             # -------------------------------------------------------------------------------------------------------------
             # Plotting
             # Getting user to choose scale

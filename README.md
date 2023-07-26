@@ -34,7 +34,7 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 * Provide further information about a singular peak selected from a spectrum
 * Save and export plots
 * Be accessible and straightforward in installation and use
-
+* Simple search for element selection
 
 **Note** : You cannot alter limits or any data within this program.
 

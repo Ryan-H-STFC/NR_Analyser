@@ -6,9 +6,12 @@
 Download the repository. The following python packages are required for the script to run:
 * matplotlib
 * numppy
+* pandas
+* scipy
 * os
 * shutil
 * PyQt5
+
 
 Download the repository and save it in a suitable filepath on your computer. Please keep the directory paths the same else the program will not run. You will be asked for the filepath upon running the application.
 You will also be asked for the filepath to the data folder from the most recent version of the NRCA code. This can be found on the ndw1901 computer at 'NRCA/Rehana/Latest_NRCA_Code/data'.
@@ -40,13 +43,21 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 ## **Bugs to be fixed soon**
 
-* Adding mulitple of the same graph.
-* Limiting number of graphs to avoid crashing.
-* Peak Detection - Do not allow multiple reads for peak data if it is already displayed.
+* Annotation hiding, global and graph specific with legend conflicting (Element Data Structure Integration)
+* Peak Label overlapping for high density peaks (Clustering or top n peaks shown)
+* (Dev) Automated Testing not fully github integrated
+* (Dev) Limit selection, Threshold Exceptions and PeakWindow
 
 ## **Improvements Coming Soon**
 
 * Put code into MVP (Model, View, Presenter) format
+* More options for graphs:
+    * Colour picker
+    *  Removing single graphs
+* Peak Detection for mulitple graphs
+* Dropdowns for element table data
+* Updated styling; possibly, mutiple styles for accessibility options?
+* Threshold Input
 
 ## **Accessibility**
 

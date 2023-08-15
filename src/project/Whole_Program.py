@@ -708,7 +708,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.DrawAnnotations(self.element_data.get(f"{self.data}-ToF" if newElement._isToF else f"{self.data}-Energy"))
 
         self.ax.autoscale()  # Tidying up
-        
+
         self.figure.tight_layout()
 
         self.table_model = ExtendedQTableModel(table_data)
@@ -805,7 +805,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # if substance._isToF:
         #     peak_x_coord = np.array(substance._tableData[1:]['TOF (us)'])
         # else:
-        #     peak_x_coord = np.array(substance._tableData[1:]['Energy (eV)'])        
+        #     peak_x_coord = np.array(substance._tableData[1:]['Energy (eV)'])
         # peak_y_coord = np.array(substance._tableData[1:]['Peak Height'])
 
         peak_x_coord, peak_y_coord = substance._maxima[0], substance._maxima[1]

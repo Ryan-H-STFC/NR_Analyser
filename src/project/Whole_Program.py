@@ -6,6 +6,7 @@ import matplotlib.rcsetup
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+# import adjustText
 from collections import OrderedDict
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -37,7 +38,6 @@ from PyQt5.QtWidgets import (
     QCompleter,
 )
 
-from PeakDetection import PeakDetection
 from ElementDataStructure import ElementData
 from ExtendedTableModel import ExtendedQTableModel
 
@@ -124,6 +124,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.filepath = filepath
         self.data_filepath = source_filepath
         self.element_data = dict()
+        self.element_data_names = []
+        self.maxPeak = 50
 
     def initUI(self):
         # setting size of GUI and titles etc (Coordinates and size here)
@@ -271,7 +273,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # self.label_check.resize(self.label_check.sizeHint())
         self.label_check.setEnabled(False)
         self.toggle_layout.addWidget(self.label_check, 0, 2)
-        self.label_check.stateChanged.connect(self.Annotations)
+        self.label_check.stateChanged.connect(self.ToggleAnnotations)
         # print(self.toggle_layout.columnCount())
         # Adding to overall layout
         self.layout.addLayout(self.toggle_layout)
@@ -320,7 +322,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         pd_btn.resize(pd_btn.sizeHint())
         pd_btn.setEnabled(False)
         self.btn_layout.addWidget(pd_btn)
-        pd_btn.clicked.connect(self.PeakDetection)
+        pd_btn.clicked.connect(self.GetPeaks)
 
         # Adding sub-layout
 
@@ -559,7 +561,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         if imported:
             self.data = name
         # Checks for adding mutliple graphs for the same selection, energy/tof types.
-        if not tof and (self.data, tof) in self.plotted_substances:
+        if (self.data, tof) in self.plotted_substances:
             QMessageBox.warning(self, "Warning", "Graph is already plotted")
             return
 
@@ -581,7 +583,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             length = 22.804
 
         end_row = [0]
-        # Energy plot
+
         for (substance, tof) in self.plotted_substances:
 
             self.plot_filepath = f"{self.filepath}data\\{substance}.csv"
@@ -599,12 +601,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 element_table_data.loc[-1] = [substance, *[""] * 9]
             element_table_data.index += 1
             element_table_data.sort_index(inplace=True)
-
+            colour = (np.random.random()*0.8 + 0.1, np.random.random()*0.5 + 0.2, np.random.random()*0.8 + 0.1)
             newElement = ElementData(name=substance, numPeaks=self.number_rows, tableData=element_table_data,
-                                     graphData=graph_data, annotations=[], isToF=tof,
+                                     graphData=graph_data, graphColour=colour, annotations=[], isToF=tof,
                                      isAnnotationsHidden=self.label_check.isChecked())
-            self.element_data[f"{substance}-{'ToF' if tof else 'Energy'}"] = newElement
-
+            title = f"{substance}-{'ToF' if tof else 'Energy'}"
+            if title not in self.element_data.keys():
+                self.element_data[title] = newElement
         # Re-setting Arrays
         self.x = []
         self.y = []
@@ -643,10 +646,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     )
             else:
                 self.ax.set(title=None)
-        self.figure.tight_layout()
 
         # Plotting -----------------------------------------------------------------------------------------------------
-        colour = (np.random.random()*0.8 + 0.1, np.random.random()*0.5 + 0.2, np.random.random()*0.8 + 0.1)
+
         spectra_line = self.ax.plot(
             graph_data.iloc[:, 0],
             graph_data.iloc[:, 1],
@@ -658,7 +660,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             gid=self.data,
         )
 
-        # # Creating a legend to toggle on and off plots--------------------------------------------------------------
+        # Creating a legend to toggle on and off plots----------------------------------------------------------------
         legend = self.ax.legend(
             fancybox=True,
             shadow=True,
@@ -682,13 +684,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         for i in spectra_legend:
             self.graphs[i] = self.graphs.pop(dictionary_keys[count])
             count = count + 1
-        plt.connect("pick_event", self.onclick)
+        plt.connect("pick_event", self.HideGraph)
         # ------------------------------------------------------------------------------------------------------------
 
-        self.ax.autoscale()  # Tidying up
-        self.canvas.draw()
         # Establishing plot count
         self.plot_count += 1
+        self.canvas.draw()
 
         # Amending the table for more than one plot.
         self.table.reset()
@@ -698,82 +699,45 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # ! ---------------------------------------------------------------------------------
         # ? Maybe sort the order in which they are plotted and added to the table.
         # ! Change into dataclass compatible
-
         for substance in self.element_data.values():
+            if substance._name not in self.element_data_names:
+                table_data = pd.concat([table_data, substance._tableData], ignore_index=True)
+                end_row.append(end_row[-1] + substance._tableData.shape[0])
+                self.element_data_names.append(substance._name)
 
-            table_data = pd.concat([table_data, substance._tableData], ignore_index=True)
-            end_row.append(end_row[-1] + substance._tableData.shape[0])
-            if self.plot_count < 0:
-                self.annotations = []
-            try:
-                if not substance._isToF:
-                    col_no_1 = 1
-                else:
-                    col_no_1 = 3
-                for i in range(0, substance._numPeaks):
-                    peak_x_coord = substance._tableData[1:].iloc[i, col_no_1]
-                    peak_y_coord = substance._tableData[1:].iloc[i, 7]
+        self.DrawAnnotations(self.element_data.get(f"{self.data}-ToF" if newElement._isToF else f"{self.data}-Energy"))
 
-                    label_y_coord_adjusted = peak_y_coord + (0.05 * peak_y_coord)
-                    label_x_coord_adjusted = peak_x_coord - (0.05 * peak_x_coord)
+        self.ax.autoscale()  # Tidying up
+        
+        self.figure.tight_layout()
 
-                    labels = self.ax.annotate(
-                        str(i),
-                        xy=(peak_x_coord, peak_y_coord),
-                        xycoords="data",
-                        xytext=(label_x_coord_adjusted, label_y_coord_adjusted),
-                        textcoords="data",
-                    )
-                    substance._annotations.append(labels)
-                    self.annotations.append(labels)  # !
-                    self.ax.draw_artist(labels)
-
-                # self.ax.draw()
-            except Exception:
-                print("No peak labels available")
-                labels = []
-
-        self.table_model = ExtendedQTableModel(newElement._tableData)
+        self.table_model = ExtendedQTableModel(table_data)
         self.table.setModel(self.table_model)
         self.table.clearSpans()
         for row in end_row[:-1]:
             self.table.setSpan(row, 0, 1, 10)
 
-    def onclick(self, event):
+        self.canvas.draw()
+
+    def HideGraph(self, event):
         """_summary_
             Function to show or hide the selected graph by clicking the legend.
         Args:
             event (pick_event): event on clicking a graphs legend
         """
         legline = event.artist
-        origline = self.graphs[legline]
-        origline_name = origline._label
+        orgline = self.graphs[legline]
+        orgline_name = orgline._label
         # Tells you which plot number you need to delete labels for
         # Hiding relevant line
-        visible = not origline.get_visible()
-        origline.set_visible(visible)
+        visible = not orgline.get_visible()
+        legline.set_alpha(1.0 if visible else 0.2)
+        orgline.set_visible(visible)
+        self.element_data[orgline_name].isGraphHidden = not visible
+        self.element_data[orgline_name].HideAnnotations(self.label_check.isChecked())
         # Change the alpha on the line in the legend so we can see what lines
         # have been toggled.
-        legline.set_alpha(1.0 if visible else 0.2)
         # Hiding relevant labels
-        if self.annotations == []:
-            self.canvas.draw()
-            return  # Exits function if there are no labels to hide
-        # number_plots = len(self.number_totpeaks)  # Tells you how many plots
-        # Tells you how many labels came before the relevant plot
-
-        for annotation in self.element_data[origline_name]._annotations:
-
-            # ! -------------------------------------------------------
-
-            if visible:
-                annotation.set_visible(not self.label_check.isChecked())
-                if annotation in self.local_hidden_annotations:
-                    self.local_hidden_annotations.remove(annotation)
-            else:
-                annotation.set_visible(False)
-                if annotation not in self.local_hidden_annotations:
-                    self.local_hidden_annotations.append(annotation)
 
         self.canvas.draw()
 
@@ -815,6 +779,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.peaklabel.setText("")
         self.threshold_label.setText("")
         self.element_data = {}
+        self.element_data_names = []
 
         self.table.setModel(None)
 
@@ -832,6 +797,30 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # On clearning graphs disable Checkboxes
         self.toggleCheckboxControls(enableAll=False)
+
+    def DrawAnnotations(self, substance):
+        print("Draw Annotations Called !")
+        self.element_data_names = []
+
+        # if substance._isToF:
+        #     peak_x_coord = np.array(substance._tableData[1:]['TOF (us)'])
+        # else:
+        #     peak_x_coord = np.array(substance._tableData[1:]['Energy (eV)'])        
+        # peak_y_coord = np.array(substance._tableData[1:]['Peak Height'])
+
+        peak_x_coord, peak_y_coord = substance._maxima[0], substance._maxima[1]
+
+        maxDraw = substance._numPeaks if substance._numPeaks < 50 else 50
+
+        substance._annotations = [self.ax.annotate(text=f'{i}',
+                                                   xy=(peak_x_coord.item(i), peak_y_coord.item(i)),
+                                                   xytext=(peak_x_coord.item(i), peak_y_coord.item(i)),
+                                                   xycoords="data",
+                                                   textcoords="data",
+                                                   size=6,
+                                                   annotation_clip=True)
+                                  for i in range(maxDraw)]
+        self.canvas.draw()
 
     def Gridlines(self, checked):
         print(checked)
@@ -892,18 +881,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         except Exception:
             QMessageBox.warning(self, "Error", "You have not plotted anything")
 
-    def Annotations(self):
+    def ToggleAnnotations(self):
         """
         Function Annotations shows & hides all peak annotations globally.
         """
-        for annotation in self.annotations:
-            globalVisible = not self.label_check.isChecked()
-            if globalVisible:
-                if annotation not in self.local_hidden_annotations:
-                    annotation.set_visible(True)
-            elif annotation not in self.local_hidden_annotations:
-                annotation.set_visible(False)
-        self.canvas.draw()
+        for substance in self.element_data.values():
+            substance.HideAnnotations(self.label_check.isChecked())
+        substance.isAnnotationsHidden = not substance.isAnnotationsHidden
 
     # ! Not Working <-----------------------------------------------------------------------
     def PlotPeakWindow(self, row_clicked):
@@ -1184,11 +1168,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.Plot(False, filepath, True, name)
 
     # ------------------------ PEAK DETECTION BITS ## ------------------------
-    def PeakDetection(self):  # Steps of Peak Detection Put into One Function
+    def GetPeaks(self):  # Steps of Peak Detection Put into One Function
         # Ask the user to look for minima or maxima
         typecheck = QMessageBox()
         typecheck.setWindowTitle("What Should I Plot?")
         # ! maybe add combobox for which plotted graph to get maxima or minimas for?
+        element_chioce = QComboBox()
+        element_chioce.addItems(self.element_data.keys())
         typecheck.setStandardButtons(
             QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
         )
@@ -1197,29 +1183,17 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         buttonN = typecheck.button(QMessageBox.No)
         buttonN.setText("Minima")
         typecheck.exec_()
-        pd = PeakDetection()
-        if typecheck.clickedButton().text() == "Maxima":
-            x, y = pd.maxima(self.graph_data)
-        elif typecheck.clickedButton().text() == "Minima":
-            x, y = pd.minima(self.graph_data)
-        else:
+        if typecheck.clickedButton().text() == "Cancel":
             return
-        # # Plots the peak minima/maxima of the detected peaks
-        # self.ax.plot(x, y, 'x', color='black')
-        # # Plotting peak limits
-        # for i in x:
-        #     first_limit = self.peak_limits_x[str(i) + '_first']
-        #     second_limit = self.peak_limits_x[str(i) + '_second']
-        #     first_limit_y = self.peak_limits_y[str(i) + '_first']
-        #     second_limit_y = self.peak_limits_y[str(i) + '_second']
-        #     self.ax.plot(first_limit, first_limit_y, 'x', color='r')
-        #     self.ax.plot(second_limit, second_limit_y, 'x', color='r')
-        # self.canvas.draw()
-        self.peak_limits_x = pd.peak_limits_x
-        self.peak_limits_y = pd.peak_limits_y
-        self.PlottingPD(x, y)
 
-    def PlottingPD(self, peaks_x, peaks_y):
+        for element_data in self.element_data.values():
+            self.PlottingPD(element_data, typecheck.clickedButton().text() == "Maxima")
+
+    def PlottingPD(self, element_data, isMax: bool):
+        if isMax:
+            peaks_x, peaks_y = element_data._maxima[0], element_data._maxima[1]
+        else:
+            peaks_x, peaks_y = element_data._minima[0], element_data._minima[1]
         print("MAXIMA LIST: ", (peaks_x, peaks_y))
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
@@ -1229,7 +1203,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.graph_data[0],
             self.graph_data[1],
             "-",
-            color="b",
+            color=element_data._graphColour,
             alpha=0.6,
             linewidth=0.6,
         )
@@ -1239,16 +1213,28 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.ax.set(
             xlabel="Energy (eV)", ylabel="Cross section (b)", title=str(self.data)
         )
-        for i in peaks_x:
-            y_index = peaks_x.index(i)
-            print("x: ", i, "y: ", peaks_y[y_index])
-            self.ax.plot(i, peaks_y[y_index], "x", color="black")
-            first_limit = self.peak_limits_x[str(i) + "_first"]
-            second_limit = self.peak_limits_x[str(i) + "_second"]
-            first_limit_y = self.peak_limits_y[str(i) + "_first"]
-            second_limit_y = self.peak_limits_y[str(i) + "_second"]
-            self.ax.plot(first_limit, first_limit_y, "x", color="r")
-            self.ax.plot(second_limit, second_limit_y, "x", color="r")
+        if isMax:
+            for i in peaks_x:
+                y_index = peaks_x.index(i)
+                print("x: ", i, "y: ", peaks_y[y_index])
+                self.ax.plot(i, peaks_y[y_index], "x", color="black")
+                limit_x_first = element_data.max_peak_limits_x[str(i) + "_first"]
+                limit_y_first = element_data.max_peak_limits_y[str(i) + "_first"]
+                limit_x_second = element_data.max_peak_limits_x[str(i) + "_second"]
+                limit_y_second = element_data.max_peak_limits_y[str(i) + "_second"]
+                self.ax.plot(limit_x_first, limit_y_first, "x", color="r")
+                self.ax.plot(limit_x_second, limit_y_second, "x", color="r")
+        else:
+            for i in peaks_x:
+                y_index = peaks_x.index(i)
+                print("x: ", i, "y: ", peaks_y[y_index])
+                self.ax.plot(i, peaks_y[y_index], "x", color="black")
+                limit_x_first = element_data.min_peak_limits_x[str(i) + "_first"]
+                limit_y_first = element_data.min_peak_limits_y[str(i) + "_first"]
+                limit_x_second = element_data.min_peak_limits_x[str(i) + "_second"]
+                limit_y_second = element_data.min_peak_limits_y[str(i) + "_second"]
+                self.ax.plot(limit_x_first, limit_y_first, "x", color="r")
+                self.ax.plot(limit_x_second, limit_y_second, "x", color="r")
         self.figure.tight_layout()
         self.canvas.draw()
 

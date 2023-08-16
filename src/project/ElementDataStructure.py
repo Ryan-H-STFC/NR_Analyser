@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from PeakDetection import PeakDetection
 from pandas import DataFrame, errors
 import numpy as np
+from src.project.PeakDetection import PeakDetection
 
 
 @dataclass(repr=True)

@@ -1,5 +1,6 @@
 # NRTI/NRCA-Viewing-Database
 
+![Tests](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/actions/workflows/test.yml/badge.svg)
 
 ## **Installing and Starting the Application**
 

@@ -18,7 +18,7 @@ def test_ElementData_init_Normal(getElementData):
     (tableData1, graphData1), _, _ = getElementData
     # Normal
     elementT = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
-                           graphData=graphData1, isToF=True, annotations=[], graphColour=(0, 0, 0))
+                           graphData=graphData1, graphColour=(0, 0, 0), isToF=True, annotations=[])
     elementF = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
                            graphData=graphData1, isToF=False, annotations=[], graphColour=(0, 0, 0))
     return elementT != elementF is True

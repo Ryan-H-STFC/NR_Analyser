@@ -16,10 +16,10 @@ class ElementData:
     _numPeaks: int
     _tableData: list
     _graphData: list
-    _graphColour: tuple[float]
+    _graphColour: tuple
     _annotations: list
-    _maxima: list[float] = None
-    _minima: list[float] = None
+    _maxima: list = None
+    _minima: list = None
 
     max_peak_limits_x: dict = None
     max_peak_limits_y: dict = None

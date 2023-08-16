@@ -1,5 +1,5 @@
 matplotlib==3.5.3
-numpy==1.24.4
+numpy==1.21.6
 pandas==2.0.3
 PyQt5==5.15.9
 pyqt5-plugins==5.15.9.2.3

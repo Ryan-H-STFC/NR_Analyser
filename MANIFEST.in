@@ -1,3 +1,6 @@
 graft src/project
 global-exclude __pycache__
 global-exclude *.py[c|o]
+include pyproject.toml
+include *.md
+include *.txt

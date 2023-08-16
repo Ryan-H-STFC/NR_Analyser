@@ -53,5 +53,5 @@
       "italic": false
     }
   ],
-  "python.analysis.extraPaths": ["./src/project"]
+  "python.analysis.extraPaths": ["./src/project", "./src"]
 }

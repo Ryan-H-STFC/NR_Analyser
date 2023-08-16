@@ -3,9 +3,7 @@
 # import project.Whole_Program
 # import tests.conftest
 import pytest
-import sys
-sys.path.insert(0, 'C:\\Users\\gzi47552\\Documents\\code\\src\\project\\')
-from ElementDataStructure import ElementData
+from src.project.ElementDataStructure import ElementData
 
 
 @pytest.fixture
@@ -20,9 +18,9 @@ def test_ElementData_init_Normal(getElementData):
     (tableData1, graphData1), _, _ = getElementData
     # Normal
     elementT = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
-                           graphData=graphData1, isToF=True, annotations=[])
+                           graphData=graphData1, graphColour=(0, 0, 0), isToF=True, annotations=[])
     elementF = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
-                           graphData=graphData1, isToF=False, annotations=[])
+                           graphData=graphData1, isToF=False, annotations=[], graphColour=(0, 0, 0))
     return elementT != elementF is True
 
 
@@ -31,9 +29,9 @@ def test_ElementData_init_Large(getElementData):
     # >1000 Peaks
 
     elementT = ElementData(name="element_92-U_n-tot", numPeaks=1169, tableData=tableData2,
-                           graphData=graphData2, isToF=True, annotations=[])
+                           graphData=graphData2, isToF=True, annotations=[], graphColour=(0, 0, 0))
     elementF = ElementData(name="element_92-U_n-tot", numPeaks=1169, tableData=tableData2,
-                           graphData=graphData2, isToF=False, annotations=[])
+                           graphData=graphData2, isToF=False, annotations=[], graphColour=(0, 0, 0))
     return elementT != elementF is True
 
 
@@ -41,9 +39,9 @@ def test_ElementData_init_Null(getElementData):
     _, _, (tableData3, graphData3) = getElementData
     # Null Peak Data
     elementT = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData3,
-                           graphData=graphData3, isToF=True, annotations=[])
+                           graphData=graphData3, isToF=True, annotations=[], graphColour=(0, 0, 0))
     elementF = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData3,
-                           graphData=graphData3, isToF=False, annotations=[])
+                           graphData=graphData3, isToF=False, annotations=[], graphColour=(0, 0, 0))
     return elementT != elementF is True
 
 # ? ExtendedTableModel Testing

@@ -5,7 +5,8 @@ import os
 
 @pytest.fixture(scope="session")
 def getElementData():
-    filepath = os.path.dirname(os.path.dirname(__file__)) + "\\project"
+    filepath = os.path.dirname(__file__)
+    print(filepath)
 
     # Normal 2 peak dataset
     graphdata1 = pd.read_csv(f"{filepath}\\data\\29-Cu-63_n-g.csv",

@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: NRTI-NRCA-GUI-Viewing-Database
+Version: 0.0.0
+Summary: NRTI/NRCA GUI Viewing Database, Graphing and Assisted Computation Program
+Author: Ryan Horrell
+Platform: linux
+Platform: win32
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.10
+Provides-Extra: testing

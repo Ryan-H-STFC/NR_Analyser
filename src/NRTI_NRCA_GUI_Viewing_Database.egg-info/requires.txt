@@ -1,0 +1,14 @@
+matplotlib>=3
+numpy>=1
+pandas>=2
+PyQt5>=5
+pyqt5-plugins>=5
+pyqt5-tools>=5
+scipy>=1
+
+[testing]
+pytest>=6.0
+pytest-cov>=2.0
+pytest-qt>=4.0
+flake8>=3.9
+tox>=4.0

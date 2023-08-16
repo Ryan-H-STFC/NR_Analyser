@@ -68,7 +68,7 @@ matplotlib.rcParamsDefault["path.simplify"] = False
 
 class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     """
-    Class responsible for creating the GUI used in selecting and graphing the data of numerous isotopes
+    Class responsible for creating and manipulating the GUI used in selecting and graphing the data of numerous isotopes
     within the NRTI/NRCA Database.
     """
 

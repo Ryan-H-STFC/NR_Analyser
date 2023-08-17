@@ -28,6 +28,6 @@ jobs:
       - name: Test with tox
         run: |
           echo Python ${{matrix.python-version}}
-          tox -e Python${{matrix.python-version}}
+          tox -e py${{matrix.python-version}}
       - name: Test Linting
         run: tox -e flake8

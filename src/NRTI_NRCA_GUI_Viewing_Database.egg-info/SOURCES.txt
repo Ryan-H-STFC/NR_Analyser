@@ -8,7 +8,6 @@ setup.py
 src/NRTI_NRCA_GUI_Viewing_Database.egg-info/PKG-INFO
 src/NRTI_NRCA_GUI_Viewing_Database.egg-info/SOURCES.txt
 src/NRTI_NRCA_GUI_Viewing_Database.egg-info/dependency_links.txt
-src/NRTI_NRCA_GUI_Viewing_Database.egg-info/namespace_packages.txt
 src/NRTI_NRCA_GUI_Viewing_Database.egg-info/not-zip-safe
 src/NRTI_NRCA_GUI_Viewing_Database.egg-info/requires.txt
 src/NRTI_NRCA_GUI_Viewing_Database.egg-info/top_level.txt
@@ -17,7 +16,6 @@ src/project/ExtendedTableModel.py
 src/project/PeakDetection.py
 src/project/README.md
 src/project/Whole_Program.py
-src/project/__init__.py
 src/project/py.typed
 src/project/GUI Files/Peak_limits.txt
 src/project/GUI Files/threshold_exceptions.txt

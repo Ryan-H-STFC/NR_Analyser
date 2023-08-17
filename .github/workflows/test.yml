@@ -2,7 +2,6 @@ name: Tests
 
 on:
   - push
-  - pull_request
 
 jobs:
   test:
@@ -27,4 +26,8 @@ jobs:
           pip install tox tox-gh-actions
 
       - name: Test with tox
-        run: tox
+        run: |
+          echo Python ${{matrix.python-version}}
+          tox -e py${{matrix.python-version}}
+      - name: Test Linting
+        run: tox -e flake8

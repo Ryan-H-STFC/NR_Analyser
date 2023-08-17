@@ -15,7 +15,7 @@ def app():
 
 
 def test_ElementData_init_Normal(getElementData):
-    (tableData1, graphData1), _, _ = getElementData
+    (tableData1, graphData1), _ = getElementData
     # Normal
     elementT = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
                            graphData=graphData1, graphColour=(0, 0, 0), isToF=True, annotations=[])
@@ -24,24 +24,13 @@ def test_ElementData_init_Normal(getElementData):
     return elementT != elementF is True
 
 
-def test_ElementData_init_Large(getElementData):
-    _, (tableData2, graphData2), _ = getElementData
-    # >1000 Peaks
-
-    elementT = ElementData(name="element_92-U_n-tot", numPeaks=1169, tableData=tableData2,
-                           graphData=graphData2, isToF=True, annotations=[], graphColour=(0, 0, 0))
-    elementF = ElementData(name="element_92-U_n-tot", numPeaks=1169, tableData=tableData2,
-                           graphData=graphData2, isToF=False, annotations=[], graphColour=(0, 0, 0))
-    return elementT != elementF is True
-
-
 def test_ElementData_init_Null(getElementData):
-    _, _, (tableData3, graphData3) = getElementData
+    _, (tableData2, graphData2) = getElementData
     # Null Peak Data
-    elementT = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData3,
-                           graphData=graphData3, isToF=True, annotations=[], graphColour=(0, 0, 0))
-    elementF = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData3,
-                           graphData=graphData3, isToF=False, annotations=[], graphColour=(0, 0, 0))
+    elementT = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData2,
+                           graphData=graphData2, isToF=True, annotations=[], graphColour=(0, 0, 0))
+    elementF = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData2,
+                           graphData=graphData2, isToF=False, annotations=[], graphColour=(0, 0, 0))
     return elementT != elementF is True
 
 # ? ExtendedTableModel Testing

@@ -1,7 +1,13 @@
+from pandas import DataFrame
 import scipy as sp
 
 
 class PeakDetection:
+    """
+    Peak Detection, class which is used to find peaks, both maximas and minimas of a sample, 
+    peak widths used in integration calculations.
+    Functions also used within
+    """    
     def __init__(self):
         self.max_peak_limits_x = None
         self.max_peak_limits_y = None
@@ -11,9 +17,19 @@ class PeakDetection:
 
     # ! Check functionality of maxima function
 
-    def maxima(self, data):  # Finds the maxima in a sample and the peak widths
+    def maxima(self, data: DataFrame, threshold: float = 100) -> (list, list):
+        """
+        maxima finds the coordinates of any peak which is found higher than the threshold, within the sample.
+        As well as the peak widths.
+        Args:
+            self (PeakDetection): PeakDetection Instance.
+            data (DataFrame): Pandas Dataframe with the graph data for the sample.
+            threshold (float): Threshold for what level peaks should be found from.
+        Returns:
+            (maxima_list_x, maxima_list_y): Tuple of lists, list of x-coords, list of y-coords.
+        """
         x, y = data.iloc[:, 0], data.iloc[:, 1]
-        maxima, _ = sp.signal.find_peaks(y, height=100)
+        maxima, _ = sp.signal.find_peaks(y, height=threshold)
         width = sp.signal.peak_widths(y, maxima, rel_height=1, wlen=300)
         # Extracting maxima coordinates
         maxima_list_x = []
@@ -29,7 +45,7 @@ class PeakDetection:
         second_limits = width[3].tolist()
         # Refining peak limits
         # first_limits, second_limits = self.PeakLimitsCheck(first_limits, second_limits, maxima)
-        print("FL", first_limits)
+        # print("FL", first_limits)
         for i in first_limits:
             index = first_limits.index(i)
             peak = maxima_list_x[index]
@@ -47,12 +63,22 @@ class PeakDetection:
             coordinate_index = x.loc[x == coordinate].index[0]
             self.max_peak_limits_x[str(peak) + "_second"] = coordinate
             self.max_peak_limits_y[str(peak) + "_second"] = y[coordinate_index]
-        print("Peak limits x: ", self.max_peak_limits_x)
-        print("Peak limits y: ", self.max_peak_limits_y)
+        # print("Peak limits x: ", self.max_peak_limits_x)
+        # print("Peak limits y: ", self.max_peak_limits_y)
         self.peak_list = maxima_list_x
         return maxima_list_x, maxima_list_y
 
-    def minima(self, data):  # Inverts the data to find the minima in the sample
+    def minima(self, data: DataFrame) -> (list, list):  # Inverts the data to find the minima in the sample
+        """
+        minima finds the coordinates of the minimas within the selected sample.
+
+        Args:
+            self (PeakDetection): PeakDetection Instance.
+            data (DataFrame): Pandas Dataframe with the graph data for the sample.
+
+        Returns:
+            (minima_list_x, minima_list_y): Tuple of lists, list of x-coords, list of y-coords.
+        """
         x = data[0]
         y = (lambda data: -1 * data[1])(data)
         minima, _ = sp.signal.find_peaks(y, height=-0.90, prominence=0.0035)
@@ -91,22 +117,10 @@ class PeakDetection:
         minima_list_y = list(map(lambda val: -1 * val, minima_list_y))
         return minima_list_x, minima_list_y
 
-    def PeakCalculations(self, xlimits, limits):
-        # Calculates the necessary information to put in the table for the detected peaks
-        # This involves:
-        # Rank by Integral
-        # Peak Centre Coordinate in terms of energy (eV) and TOF (microseconds)
-        # Integral
-        # Rank by Peak Width
-        # Peak Height
-        # Rank by Peak Height
-        # fake = 10
-        pass
-
     def PeakLimitsCheck(first_limits, second_limits, maxima):
         # Ensuring the limits are symmetrical about the peak center
-        print("original: ", first_limits, second_limits)
-        print("maxima: ", maxima)
+        # print("original: ", first_limits, second_limits)
+        # print("maxima: ", maxima)
         first_limits_changed = []
         second_limits_changed = []
         for i in first_limits:
@@ -130,7 +144,7 @@ class PeakDetection:
                 first_limits_changed.append(i)
             if not changed_second:
                 second_limits_changed.append(second_limits[index])
-        print("Changed: ", first_limits_changed, second_limits_changed)
+        # print("Changed: ", first_limits_changed, second_limits_changed)
         return first_limits_changed, second_limits_changed
 
     def GetMaxPeakLimits(self):

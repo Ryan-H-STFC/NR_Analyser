@@ -1400,7 +1400,7 @@ def main():
             font-weight: 400;
         }
         QTableView{
-            font-size: 7pt;
+            font-size: 9pt;
         }
         QLabel#numPeakLabel, #thresholdLabel {
             font: 10pt 'Roboto Mono';

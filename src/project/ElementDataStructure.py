@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pandas import DataFrame, errors
 import numpy as np
+from numpy import ndarray
 from PeakDetection import PeakDetector
 
 
@@ -17,14 +18,14 @@ class ElementData:
     _graphData: list
     _graphColour: tuple
     _annotations: list
-    _maxima: list = None
-    _minima: list = None
+    _maxima: ndarray = None
+    _minima: ndarray = None
 
-    max_peak_limits_x: dict = None
-    max_peak_limits_y: dict = None
+    max_peak_limits_x: ndarray = None
+    max_peak_limits_y: ndarray = None
 
-    min_peak_limits_x: dict = None
-    min_peak_limits_y: dict = None
+    min_peak_limits_x: ndarray = None
+    min_peak_limits_y: ndarray = None
     _isToF: bool = False
     isGraphHidden: bool = False
     isAnnotationsHidden: bool = False
@@ -57,6 +58,9 @@ class ElementData:
             self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
             self._minima = np.array(pd.minima(graphData))
             self.min_peak_limits_x, self.min_peak_limits_y = np.array(pd.GetMinPeakLimits())
+
+        if self._numPeaks is None:
+            self._numPeaks = len(self._maxima[0])
 
     def __eq__(self, other):
         if isinstance(other, ElementData):

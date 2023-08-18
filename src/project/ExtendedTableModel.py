@@ -11,7 +11,7 @@ class ExtendedQTableModel(QAbstractTableModel):
     def __init__(self, data):
         super(ExtendedQTableModel, self).__init__()
         self._data = data
-        self.columns = list(data.columns.values)
+        self.columns: list = list(data.columns.values)
 
     def data(self, index, role):
         """
@@ -30,8 +30,8 @@ class ExtendedQTableModel(QAbstractTableModel):
             QVariant(bgcolor): QColor used for differentiating rows in the table.
             str(value): The data as string.
         """
-        row = index.row()
-        column = index.column()
+        row: int = index.row()
+        column: int = index.column()
         value = self._data.iloc[row, column]
         header_flag: bool = False
 
@@ -65,3 +65,6 @@ class ExtendedQTableModel(QAbstractTableModel):
             return self.columns[section]
         if orientation == Qt.Vertical and role == Qt.DisplayRole:
             return self._data.index[section]
+
+    def sort(self, column: int, order: Qt.SortOrder = ...) -> None:
+        return super().sort(column, order)

@@ -113,7 +113,7 @@ class PeakDetector:
             self.min_peak_limits_x[str(peak) + "_second"] = coordinate
             self.min_peak_limits_y[str(peak) + "_second"] = y[coordinate_index]
 
-        print("Peak limits x: ", self.min_peak_limits_x)
+        # print("Peak limits x: ", self.min_peak_limits_x)
         minima_list_y = list(map(lambda val: -1 * val, minima_list_y))
         return minima_list_x, minima_list_y
 

@@ -13,7 +13,8 @@ from matplotlib.backends.backend_qt5agg import (
 )  # Import class from module as FigureCanvas for simplicity
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar,
-)  # ""
+)
+from matplotlib import font_manager
 from PyQt5 import QtGui, QtWidgets  # importing classes from PyQt
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor
@@ -40,7 +41,7 @@ from PyQt5.QtWidgets import (
 
 from ElementDataStructure import ElementData
 from ExtendedTableModel import ExtendedQTableModel
-
+from CustomSortingProxy import CustomSortingProxy
 
 # todo -------------------- Issues/Feature TODO list --------------------
 # todo - Add periodic table GUI for selection.
@@ -62,6 +63,11 @@ source_filepath = filepath + "data"
 
 # print(filepath)
 # print(source_filepath)
+# ! fonts = font_manager.findSystemFonts(fontpaths="C:\\Users\\gzi47552\\Documents\\NRTI-NRCA-Viewing-Database\\src\\fonts")
+# ! for font in fonts:
+# !    font_manager.fontManager.addfont(font)
+# ! matplotlib.rcParams["font.family"] = 'Roboto'
+
 
 matplotlib.rcParamsDefault["path.simplify"] = False
 
@@ -126,6 +132,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.element_data = dict()
         self.element_data_names = []
         self.maxPeak = 50
+        self.threshold = 100
 
     def initUI(self):
         # setting size of GUI and titles etc (Coordinates and size here)
@@ -162,6 +169,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         selectlimitsAction.setShortcut("Ctrl+L")
         selectlimitsAction.triggered.connect(self.SelectLimitsOption)
 
+        editThresholdAction = QAction("&Edit Threshold", self)
+        editThresholdAction.setShortcut("Ctrl+Shift+T")
+        editThresholdAction.triggered.connect(self.editThresholdLimit)
+
         # * ----------------------------------------------
 
         # * -------------- MENU BAR - EDIT ---------------
@@ -177,6 +188,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         editMenu.addAction(editpeakAction)
         editMenu.addAction(selectlimitsAction)
 
+        optionsMenu = menubar.addMenu("&Options")
+        optionsMenu.addAction(editThresholdAction)
         # helpMenu = menubar.addMenu('&Help')
         # helpMenu.addAction(aboutAction)
         self.layout.addWidget(menubar)  # adds to layout
@@ -335,6 +348,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # * -------------------- Table --------------------
         # Adding table to display peak information
         self.table = QTableView()
+        self.table.setObjectName('dataTable')
+        
         self.table.horizontalHeader()
         self.table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Stretch
@@ -362,9 +377,20 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.setLayout(self.layout)  # Generating layout
         self.show()
 
-    # Detects what has been selected and displays relevant peak information
+    def editThresholdLimit(self):
+        inputDialog = QInputDialog(self)
+        inputDialog.windowTitle = "Threshold Input"
+        threshold = inputDialog.getText(self, 'New Threshold Limit', 'Threshold: ', text='100')
+        
 
     def Select_and_Display(self, index):
+        """
+        Select_and_Display detects what has been selected and displays relevant peak information in the table.
+        Once a select is made, the relevant controls are enabled.
+
+        Args:
+            index (int): Index of the selected item within the combobox.
+        """
         self.data = self.combobox.itemText(index)
 
         if self.data == "" and self.plot_count > -1:  # Null selection and graphs shown
@@ -410,7 +436,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             print("Number of peaks: ", self.number_rows)
             # Fill Table with data
             self.table_model = ExtendedQTableModel(file)
-            self.table.setModel(self.table_model)
+            proxy = CustomSortingProxy()
+            proxy.setSourceModel(self.table_model)
+
+            self.table.setModel(proxy)
+            self.table.setSortingEnabled(True)
             self.peak_info_isNull = False
             # peak_plot_energy_btn = QPushButton(self.table)      # If wanting a button to plot peak
             # peak_plot_energy_btn.setText('Plot')         # Not sure how to get cell-clicked though
@@ -593,10 +623,27 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             graph_data = pd.read_csv(self.plot_filepath, header=None)
             self.graph_data = graph_data
+
             if tof:
                 graph_data[0] = self.EnergytoTOF(graph_data[0], length=length)
 
-            element_table_data = pd.read_csv(f"{peakinfo_directory}{substance}.csv")
+            try:
+                element_table_data = pd.read_csv(f"{peakinfo_directory}{substance}.csv")
+            except FileNotFoundError:
+                element_table_data = pd.DataFrame(
+                    columns=[
+                        "Rank by Integral",
+                        "Energy (eV)",
+                        "Rank by Energy",
+                        "TOF (us)",
+                        "Integral",
+                        "Peak Width",
+                        "Rank by Peak Width",
+                        "Peak Height",
+                        "Rank by Peak Height",
+                        "Relevant Isotope"
+                    ])
+            # Title Rows
             if element_table_data.empty:
                 element_table_data.loc[-1] = [f"No Peaks for {substance}", *[""] * 9]
             else:
@@ -715,6 +762,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.table_model = ExtendedQTableModel(table_data)
         self.table.setModel(self.table_model)
+        self.table.setSortingEnabled(False)
         self.table.clearSpans()
         for row in end_row[:-1]:
             self.table.setSpan(row, 0, 1, 10)
@@ -727,21 +775,20 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         Args:
             event (pick_event): event on clicking a graphs legend
         """
+        # Tells you which plot number you need to delete labels for
         legline = event.artist
         orgline = self.graphs[legline]
         orgline_name = orgline._label
-        # Tells you which plot number you need to delete labels for
         # Hiding relevant line
         visible = not orgline.get_visible()
-        legline.set_alpha(1.0 if visible else 0.2)
-        orgline.set_visible(visible)
-        self.element_data[orgline_name].isGraphHidden = not visible
-        self.element_data[orgline_name].HideAnnotations(self.label_check.isChecked())
         # Change the alpha on the line in the legend so we can see what lines
         # have been toggled.
+        legline.set_alpha(1.0 if visible else 0.2)
+        orgline.set_visible(visible)
         # Hiding relevant labels
-
-        self.figure.draw()
+        self.element_data[orgline_name].isGraphHidden = not visible
+        self.element_data[orgline_name].HideAnnotations(self.label_check.isChecked())
+        self.canvas.draw()
 
     def PlotToF(self):
         self.Plot(True)
@@ -799,7 +846,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.toggleCheckboxControls(enableAll=False)
 
     def DrawAnnotations(self, substance):
-        print("Draw Annotations Called !")
         self.element_data_names = []
 
         # if substance._isToF:
@@ -887,7 +933,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         for substance in self.element_data.values():
             substance.HideAnnotations(self.label_check.isChecked())
-        substance.isAnnotationsHidden = not substance.isAnnotationsHidden
+            substance.isAnnotationsHidden = not substance.isAnnotationsHidden
+        self.canvas.draw()
 
     # ! Not Working <-----------------------------------------------------------------------
     def PlotPeakWindow(self, row_clicked):
@@ -1173,6 +1220,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # ! maybe add combobox for which plotted graph to get maxima or minimas for?
         element_chioce = QComboBox()
         element_chioce.addItems(self.element_data.keys())
+        
         typecheck.setStandardButtons(
             QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
         )
@@ -1192,7 +1240,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             peaks_x, peaks_y = element_data._maxima[0], element_data._maxima[1]
         else:
             peaks_x, peaks_y = element_data._minima[0], element_data._minima[1]
-        print("MAXIMA LIST: ", (peaks_x, peaks_y))
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
 
@@ -1212,27 +1259,23 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             xlabel="Energy (eV)", ylabel="Cross section (b)", title=str(self.data)
         )
         if isMax:
-            for i in peaks_x:
-                y_index = peaks_x.index(i)
-                print("x: ", i, "y: ", peaks_y[y_index])
-                self.ax.plot(i, peaks_y[y_index], "x", color="black")
-                limit_x_first = element_data.max_peak_limits_x[str(i) + "_first"]
-                limit_y_first = element_data.max_peak_limits_y[str(i) + "_first"]
-                limit_x_second = element_data.max_peak_limits_x[str(i) + "_second"]
-                limit_y_second = element_data.max_peak_limits_y[str(i) + "_second"]
-                self.ax.plot(limit_x_first, limit_y_first, "x", color="r")
-                self.ax.plot(limit_x_second, limit_y_second, "x", color="r")
+            for x, y in zip(peaks_x, peaks_y):
+                self.ax.plot(x, y, "x", color="black", markersize=4)
+                limit_x_first = element_data.max_peak_limits_x[str(x) + "_first"]
+                limit_y_first = element_data.max_peak_limits_y[str(x) + "_first"]
+                limit_x_second = element_data.max_peak_limits_x[str(x) + "_second"]
+                limit_y_second = element_data.max_peak_limits_y[str(x) + "_second"]
+                self.ax.plot(limit_x_first, limit_y_first, marker=2, color="r", markersize=8)
+                self.ax.plot(limit_x_second, limit_y_second, marker=2, color="r", markersize=8)
         else:
-            for i in peaks_x:
-                y_index = peaks_x.index(i)
-                print("x: ", i, "y: ", peaks_y[y_index])
-                self.ax.plot(i, peaks_y[y_index], "x", color="black")
-                limit_x_first = element_data.min_peak_limits_x[str(i) + "_first"]
-                limit_y_first = element_data.min_peak_limits_y[str(i) + "_first"]
-                limit_x_second = element_data.min_peak_limits_x[str(i) + "_second"]
-                limit_y_second = element_data.min_peak_limits_y[str(i) + "_second"]
-                self.ax.plot(limit_x_first, limit_y_first, "x", color="r")
-                self.ax.plot(limit_x_second, limit_y_second, "x", color="r")
+            for x, y in zip(peaks_x, peaks_y):
+                self.ax.plot(x, y, "x", color="black")
+                # limit_x_first = element_data.min_peak_limits_x[str(x) + "_first"]
+                # limit_y_first = element_data.min_peak_limits_y[str(x) + "_first"]
+                # limit_x_second = element_data.min_peak_limits_x[str(x) + "_second"]
+                # limit_y_second = element_data.min_peak_limits_y[str(x) + "_second"]
+                # self.ax.plot(limit_x_first, limit_y_first, 0, color="r", markersize=8)
+                # self.ax.plot(limit_x_second, limit_y_second, 0, color="r", markersize=8)
         self.figure.tight_layout()
         self.canvas.draw()
 
@@ -1242,7 +1285,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Ordering peaks
         peak_order = "Rank by eV    (eV) \n"
         for i in range(0, len(self.peak_list)):
-            peak_order = peak_order + str(i) + "    " + str(self.peak_list[i]) + "\n"
+            peak_order += str(i) + "    " + str(self.peak_list[i]) + "\n"
         # Choose which peak they are editing
         self.peaknum, ok = QInputDialog.getText(
             self,
@@ -1394,8 +1437,12 @@ def main():
             font-size: 10pt;
             font-weight: 400;
         }
-        QTableView{
-            font-size: 9pt;
+        QHeaderView{
+            font-size: 8pt;
+            font-weight: 450;
+        }
+        QTableView#dataTable{
+            font-size: 8pt;
         }
         QLabel#numPeakLabel, #thresholdLabel {
             font: 10pt 'Roboto Mono';
@@ -1421,7 +1468,7 @@ def main():
             color: #FFF
         }
         QCheckBox#grid_check:disabled, #threshold_check:disabled, #label_check:disabled {
-            color: #BBBBBB;
+            color: #888;
         }
         QCheckBox#grid_check:enabled, #threshold_check:enabled, #label_check:enabled {
             color: #FFF;
@@ -1432,7 +1479,7 @@ def main():
             font
         }
         QPushButton#plot_energy_btn:disabled, #plot_tof_btn:disabled, #clear_btn:disabled, #pd_btn:disabled {
-            color: #BBBBBB;
+            color: #AAA;
         }
         QPushButton#plot_energy_btn:enabled, #plot_tof_btn:enabled, #clear_btn:enabled, #pd_btn:enabled {
             color: #000;

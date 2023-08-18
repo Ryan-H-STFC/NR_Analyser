@@ -4,10 +4,10 @@ import scipy as sp
 
 class PeakDetector:
     """
-    Peak Detection, class which is used to find peaks, both maximas and minimas of a sample, 
+    Peak Detection, class which is used to find peaks, both maximas and minimas of a sample,
     peak widths used in integration calculations.
     Functions also used within
-    """    
+    """
     def __init__(self):
         self.max_peak_limits_x = None
         self.max_peak_limits_y = None

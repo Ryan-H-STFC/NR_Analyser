@@ -452,8 +452,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             )
         else:
             label_info = (
-                "Threshold for peak detection (n-tot mode, n-g mode): "
-                + self.thresholds
+                "Threshold for peak detection (n-tot mode, n-g mode): " + self.thresholds
             )
         self.threshold_label.setText(str(label_info))
         # Changing the peak label text
@@ -604,7 +603,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 element_table_data.loc[-1] = [substance, *[""] * 9]
             element_table_data.index += 1
             element_table_data.sort_index(inplace=True)
-            colour = (np.random.random()*0.8 + 0.1, np.random.random()*0.5 + 0.2, np.random.random()*0.8 + 0.1)
+            colour = (np.random.random() * 0.8 + 0.1, np.random.random() * 0.5 + 0.2, np.random.random() * 0.8 + 0.1)
             newElement = ElementData(name=substance, numPeaks=self.number_rows, tableData=element_table_data,
                                      graphData=graph_data, graphColour=colour, annotations=[], isToF=tof,
                                      isAnnotationsHidden=self.label_check.isChecked())
@@ -756,9 +755,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Maps all X Values from energy to TOF
         tof_x = list(
             map(
-                lambda x: length
-                * 1e6
-                * (0.5 * neutron_mass / (x * electron_charge)) ** 0.5,
+                lambda x: length * 1e6 * (0.5 * neutron_mass / (x * electron_charge)) ** 0.5,
                 x_data
             )
         )
@@ -961,9 +958,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 for j in range(0, index):
                     start_row = start_row + self.number_totpeaks[j] + 1
                 end_row = (
-                    start_row
-                    + self.number_totpeaks[self.plotted_substances.index(i)]
-                    + 1
+                    start_row + self.number_totpeaks[self.plotted_substances.index(i)] + 1
                 )
                 peak_count = 0
                 for j in range(start_row, end_row):

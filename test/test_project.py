@@ -1,9 +1,8 @@
-# from project.ExtendedTableModel import ExtendedQTableModel
-# from project.PeakDetection import PeakDetection
-# import project.Whole_Program
-# import tests.conftest
 import pytest
-from src.project.ElementDataStructure import ElementData
+import sys
+import os
+sys.path.append(os.path.abspath('./src/project/'))
+from ElementDataStructure import ElementData
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@ from pandas import DataFrame
 import scipy as sp
 
 
-class PeakDetection:
+class PeakDetector:
     """
     Peak Detection, class which is used to find peaks, both maximas and minimas of a sample, 
     peak widths used in integration calculations.
@@ -22,7 +22,7 @@ class PeakDetection:
         maxima finds the coordinates of any peak which is found higher than the threshold, within the sample.
         As well as the peak widths.
         Args:
-            self (PeakDetection): PeakDetection Instance.
+            self (PeakDetector): PeakDetector Instance.
             data (DataFrame): Pandas Dataframe with the graph data for the sample.
             threshold (float): Threshold for what level peaks should be found from.
         Returns:
@@ -73,7 +73,7 @@ class PeakDetection:
         minima finds the coordinates of the minimas within the selected sample.
 
         Args:
-            self (PeakDetection): PeakDetection Instance.
+            self (PeakDetector): PeakDetector Instance.
             data (DataFrame): Pandas Dataframe with the graph data for the sample.
 
         Returns:

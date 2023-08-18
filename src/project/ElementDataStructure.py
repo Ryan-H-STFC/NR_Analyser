@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pandas import DataFrame, errors
 import numpy as np
-from PeakDetection import PeakDetection
+from PeakDetection import PeakDetector
 
 
 @dataclass(repr=True)
@@ -37,7 +37,7 @@ class ElementData:
         self._annotations = annotations
         self._isToF = isToF
         self.isAnnotationsHidden = isAnnotationsHidden
-        pd = PeakDetection()
+        pd = PeakDetector()
         try:
             self._tableData = tableData
 

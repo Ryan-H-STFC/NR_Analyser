@@ -35,7 +35,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QWidget,
     QDockWidget,
-    QCompleter,
+    QCompleter
 )
 
 from ElementDataStructure import ElementData
@@ -129,7 +129,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def initUI(self):
         # setting size of GUI and titles etc (Coordinates and size here)
-        self.setGeometry(350, 50, 1200, 800)
+        self.setGeometry(350, 50, 1600, 900)
         self.setWindowTitle("NRTI/NRCA Viewing Database")
 
         # creates vbox layout so as to arrange things without manually moving
@@ -140,7 +140,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # * ---------------- Plot Canvas -----------------
         self.figure = plt.figure()  # Creating canvas to plot graph on and toolbar
         self.canvas = FigureCanvas(self.figure)
-
+        self.canvas.__name__ = "canvas"
         # * ----------------------------------------------
 
         # * -------------- MENU BAR - FILE ---------------
@@ -186,6 +186,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Adding label which shows number of peaks
         self.peaklabel = QLabel()
+        self.peaklabel.setObjectName('numPeakLabel')
         self.peaklabel.setText("")
         self.peaklabel.setAlignment(Qt.AlignRight)
         self.layout.addWidget(self.peaklabel)
@@ -239,6 +240,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # * --------------- Checkbox Group ---------------
         # Creating a layout for checkboxes
         self.toggle_layout = QGridLayout()
+        self.toggle_layout.setObjectName('toggleLayout')
         self.toggle_layout.setSpacing(round(self.window().width() / 3 - 100))
         self.toggle_layout.setRowStretch(1, 0)
         self.toggle_layout.setRowStretch(2, 0)
@@ -352,6 +354,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Threshold Label
         self.threshold_label = QLabel()
+        self.threshold_label.setObjectName('thresholdLabel')
         self.threshold_label.setText("Nothing has been selected")
         self.threshold_label.setAlignment(Qt.AlignLeft)
         self.layout.addWidget(self.threshold_label)
@@ -449,8 +452,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             )
         else:
             label_info = (
-                "Threshold for peak detection (n-tot mode, n-g mode): "
-                + self.thresholds
+                "Threshold for peak detection (n-tot mode, n-g mode): " + self.thresholds
             )
         self.threshold_label.setText(str(label_info))
         # Changing the peak label text
@@ -601,7 +603,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 element_table_data.loc[-1] = [substance, *[""] * 9]
             element_table_data.index += 1
             element_table_data.sort_index(inplace=True)
-            colour = (np.random.random()*0.8 + 0.1, np.random.random()*0.5 + 0.2, np.random.random()*0.8 + 0.1)
+            colour = (np.random.random() * 0.8 + 0.1, np.random.random() * 0.5 + 0.2, np.random.random() * 0.8 + 0.1)
             newElement = ElementData(name=substance, numPeaks=self.number_rows, tableData=element_table_data,
                                      graphData=graph_data, graphColour=colour, annotations=[], isToF=tof,
                                      isAnnotationsHidden=self.label_check.isChecked())
@@ -739,7 +741,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # have been toggled.
         # Hiding relevant labels
 
-        self.canvas.draw()
+        self.figure.draw()
 
     def PlotToF(self):
         self.Plot(True)
@@ -753,9 +755,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Maps all X Values from energy to TOF
         tof_x = list(
             map(
-                lambda x: length
-                * 1e6
-                * (0.5 * neutron_mass / (x * electron_charge)) ** 0.5,
+                lambda x: length * 1e6 * (0.5 * neutron_mass / (x * electron_charge)) ** 0.5,
                 x_data
             )
         )
@@ -958,9 +958,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 for j in range(0, index):
                     start_row = start_row + self.number_totpeaks[j] + 1
                 end_row = (
-                    start_row
-                    + self.number_totpeaks[self.plotted_substances.index(i)]
-                    + 1
+                    start_row + self.number_totpeaks[self.plotted_substances.index(i)] + 1
                 )
                 peak_count = 0
                 for j in range(start_row, end_row):
@@ -1381,30 +1379,62 @@ def main():
 
     # Changing colour of GUI
     app.setStyle("Fusion")
+
+    QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Thin.ttf')
+    QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Regular.ttf')
+    QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Medium.ttf')
     Colours = QtGui.QPalette()
-    Colours.setColor(QtGui.QPalette.Window, QtGui.QColor("#B5B4B1"))
+    Colours.setColor(QtGui.QPalette.Window, QtGui.QColor("#696969"))
     Colours.setColor(QtGui.QPalette.Button, QtGui.QColor("#FFF"))
-    Colours.setColor(QtGui.QPalette.ButtonText, QtGui.QColor("#000"))
 
     app.setStyleSheet(
         """
-        QMenuBar#menubar {
+        *{
+            font-family: 'Roboto Mono';
+            font-size: 10pt;
+            font-weight: 400;
+        }
+        QTableView{
+            font-size: 9pt;
+        }
+        QLabel#numPeakLabel, #thresholdLabel {
+            font: 10pt 'Roboto Mono';
+            color: #FFF;
+        }
+        QMenuBar{
+            color: #FFF;
+        }
 
+        QCheckBox#grid_check, #threshold_check, #label_check {
+            font-weight: 500;
         }
-        QPushButton#plot_energy_btn:disabled, #plot_tof_btn:disabled, #clear_btn:disabled, #pd_btn:disabled {
-            color: #CDCDCD;
+        QCheckBox#grid_check::indicator:unchecked,
+                 #threshold_check::indicator:unchecked,
+                 #label_check::indicator:unchecked {
+            image: url(./src/img/checkbox-component-unchecked.svg);
+            color: #FFF
         }
-        QPushButton#plot_energy_btn:enabled, #plot_tof_btn:enabled, #clear_btn:enabled, #pd_btn:enabled {
-            color: #000;
-        }
-
-        QCheckBox{
-            border: 1px solid red;
+        QCheckBox#grid_check::indicator:checked,
+                 #threshold_check::indicator:checked,
+                 #label_check::indicator:checked{
+            image: url(./src/img/checkbox-component-checked.svg);
+            color: #FFF
         }
         QCheckBox#grid_check:disabled, #threshold_check:disabled, #label_check:disabled {
-            color: #CDCDCD;
+            color: #BBBBBB;
         }
         QCheckBox#grid_check:enabled, #threshold_check:enabled, #label_check:enabled {
+            color: #FFF;
+        }
+
+        QPushButton#plot_energy_btn, #plot_tof_btn, #clear_btn, #pd_btn {
+            font: 10pt 'Roboto Mono Medium';
+            font
+        }
+        QPushButton#plot_energy_btn:disabled, #plot_tof_btn:disabled, #clear_btn:disabled, #pd_btn:disabled {
+            color: #BBBBBB;
+        }
+        QPushButton#plot_energy_btn:enabled, #plot_tof_btn:enabled, #clear_btn:enabled, #pd_btn:enabled {
             color: #000;
         }
     """

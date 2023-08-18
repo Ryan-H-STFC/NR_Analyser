@@ -1,15 +1,14 @@
 from dataclasses import dataclass
 from pandas import DataFrame, errors
 import numpy as np
-from src.project.PeakDetection import PeakDetection
+from PeakDetection import PeakDetector
 
 
 @dataclass(repr=True)
 class ElementData:
     """
-    Data class ElementData used to create a structure for each unique element
-    selection and its data. along with altered python dunder functions utilised
-    throughout the program.
+    Data class ElementData used to create a structure for each unique element selection and its data. along with
+    altered python dunder functions utilised throughout the program.
     """
 
     _name: str
@@ -38,7 +37,7 @@ class ElementData:
         self._annotations = annotations
         self._isToF = isToF
         self.isAnnotationsHidden = isAnnotationsHidden
-        pd = PeakDetection()
+        pd = PeakDetector()
         try:
             self._tableData = tableData
 
@@ -69,12 +68,17 @@ class ElementData:
             return self._name != other._name or self._isToF != other._isToF
 
     def HideAnnotations(self, globalHide: bool = False):
+        """
+        HideAnnotations will only hide if 'Hide Peak Label' is checked, or the graph is hidden,
+        otherwise it will show the annotation.
+
+        Args:
+            globalHide (bool, optional): Wheher or not the 'Hide Peak Label' is checked or not. Defaults to False.
+        """
         if self._annotations == []:
             return
-        # Only Hide if 'Hide Peak Label' is checked, or the graph is hidden,
-        # Otherwise show
+
         boolCheck = not (globalHide or self.isGraphHidden)
-        # ! Fix Global vs local hiding
         for point in self._annotations:
             point.set_visible(boolCheck)
         self.isAnnotationsHidden = boolCheck

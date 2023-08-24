@@ -1,0 +1,22 @@
+# VSCode
+.vscode/settings.json
+
+# Distribution / packaging
+*.egg-info
+.installed.cfg
+*.egg
+
+# Byte-complied / optimised / DLL files
+__pycache__/
+*.py[cod]
+
+# Installer Logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml

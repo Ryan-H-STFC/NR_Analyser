@@ -12,8 +12,6 @@ from matplotlib.backends.backend_qt5agg import (
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
-from matplotlib.backend_bases import Event
-from matplotlib import font_manager
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QRegExp
 from PyQt5.QtGui import QCursor, QRegExpValidator
@@ -71,7 +69,8 @@ source_filepath = filepath + "data"
 # print(filepath)
 # print(source_filepath)
 
-# ! fonts = font_manager.findSystemFonts(fontpaths="C:\\Users\\gzi47552\\Documents\\NRTI-NRCA-Viewing-Database\\src\\fonts")
+# ! fonts = font_manager.findSystemFonts(
+#     fontpaths="C:\\Users\\gzi47552\\Documents\\NRTI-NRCA-Viewing-Database\\src\\fonts")
 # ! for font in fonts:
 # !    font_manager.fontManager.addfont(font)
 # ! matplotlib.rcParams["font.family"] = 'Roboto'
@@ -144,8 +143,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     def initUI(self) -> None:
         """
         Creates the UI.
-        """        
-
+        """
         self.setObjectName('mainWindow')
         self.setGeometry(350, 50, 1600, 900)
         self.setWindowTitle("NRTI/NRCA Viewing Database")
@@ -482,7 +480,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         mainLayout.addWidget(buttonBox)
 
         input_window = QDialog()
-        input_window.setWindowTitle("Displayed Peaks Quantity") 
+        input_window.setWindowTitle("Displayed Peaks Quantity")
         input_window.setLayout(mainLayout)
 
         def closeWindow():
@@ -933,7 +931,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         Returns:
             list[float]: Mapped x-coords
-        """        
+        """
         if length is None:
             length = 22.804
         neutron_mass = float(1.68e-27)
@@ -1034,7 +1032,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     def Threshold(self) -> None:
         """
         Plots the threshold line for each plotted substance at their respective limits.
-        """        
+        """
         checked = self.threshold_check.isChecked()
         for line in self.ax.lines:
             if line is None:
@@ -1688,11 +1686,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-# background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-#                             stop: 0.058 #FFF,
-#                             stop: 0.059 #4D4D4D,
-#                             stop: 0.064 #4D4D4D,
-#                             stop: 0.065 #FFF,
-#                             stop: 0.632 #FFF,
-#                             stop: 0.633 #4D4D4D)

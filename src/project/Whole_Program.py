@@ -10,8 +10,9 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
 )
 from matplotlib.backends.backend_qt5agg import (
-    NavigationToolbar2QT as NavigationToolbar,
+    NavigationToolbar2QT as NavigationToolbar
 )
+from matplotlib.backend_bases import Event
 from matplotlib import font_manager
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QRegExp
@@ -41,6 +42,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget
 )
+from pyparsing import Generator
 
 from ElementDataStructure import ElementData
 from ExtendedTableModel import ExtendedQTableModel
@@ -86,7 +88,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     # Establishing signals that will be used later on
 
     # init constructure for classes
-    def __init__(self):
+    def __init__(self) -> None:
         """_summary_
         Initialisator for DatabaseGUI class
         """
@@ -139,7 +141,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.maxPeak = 50
         self.threshold = 100
 
-    def initUI(self):
+    def initUI(self) -> None:
+        """
+        Creates the UI.
+        """        
 
         self.setObjectName('mainWindow')
         self.setGeometry(350, 50, 1600, 900)
@@ -889,7 +894,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.canvas.draw()
 
-    def HideGraph(self, event):
+    def HideGraph(self, event) -> None:
         """
         Function to show or hide the selected graph by clicking the legend.
 
@@ -915,16 +920,25 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 line.set_visible(visible)
         self.canvas.draw()
 
-    def PlotToF(self):
+    def PlotToF(self) -> None:
         self.Plot(True)
 
-    def EnergytoTOF(self, x_data: list, length=None):
+    def EnergytoTOF(self, x_data: list[float], length) -> list[float]:
+        """
+        Maps all X Values from energy to TOF
+
+        Args:
+            x_data (list[float]): List of the substances x-coords of its graph data
+            length (float): Constant value associated to whether the substance data is with repsect to n-g or n-tot
+
+        Returns:
+            list[float]: Mapped x-coords
+        """        
         if length is None:
             length = 22.804
         neutron_mass = float(1.68e-27)
         electron_charge = float(1.60e-19)
 
-        # Maps all X Values from energy to TOF
         tof_x = list(
             map(
                 lambda x: length * 1e6 * (0.5 * neutron_mass / (x * electron_charge)) ** 0.5,
@@ -933,7 +947,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         )
         return tof_x
 
-    def Clear(self):
+    def Clear(self) -> None:
         """
         Clear Function will empty all data from the table, all graphs from the plots,
         along with resetting all data associated the table or plot.
@@ -970,7 +984,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # On clearning graphs disable Checkboxes
         self.toggleCheckboxControls(enableAll=False)
 
-    def DrawAnnotations(self, substance: ElementData):
+    def DrawAnnotations(self, substance: ElementData) -> None:
         self.element_data_names = []
 
         if substance.isAnnotationsDrawn:
@@ -992,7 +1006,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                                                   )
                                  for i in range(maxDraw)]
         # text = [str(i) for i in range(maxDraw)]
-        
+
         if substance.isGraphHidden or self.label_check.isChecked():
             for annotation in substance.annotations:
                 annotation.set_visible(False)
@@ -1000,8 +1014,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         substance.isAnnotationsDrawn = True
         self.canvas.draw()
 
-    def Gridlines(self, checked):
-        print(checked)
+    def Gridlines(self, checked) -> None:
+        """
+        Toggles the gridlines on the plot
+
+        Args:
+            checked (_type_): _description_
+        """
         try:
             if checked:
                 self.ax.grid()
@@ -1012,56 +1031,38 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         except Exception:
             QMessageBox.warning(self, "Error", "You have not plotted anything")
 
-    def Threshold(self):
+    def Threshold(self) -> None:
+        """
+        Plots the threshold line for each plotted substance at their respective limits.
+        """        
         checked = self.threshold_check.isChecked()
-        try:
-            for line in self.ax.lines:
-                if line is None:
-                    continue
-                if "pd_threshold" in line.get_gid():
-                    line.remove()
-            self.canvas.draw()
-            if checked:
-                for name, substance in self.element_data.items():
-                    # # Plotting theshold and limits used
-                    # # Getting the singular y-limits
-                    # threshold_coord_y = 0
-                    # threshold_sorting = self.thresholds.split(",")
-                    # if self.thresholds == "100 by default":
-                    #     threshold_coord_y = 100
-                    # elif substance.name[-1] == 't':
-                    #     # sort_limits is set earlier in SelectandDisplay
-                    #     threshold_coord_y_sort = len(threshold_sorting[0])
-                    #     threshold_coord_y = float(
-                    #         threshold_sorting[0][1:threshold_coord_y_sort]
-                    #     )
-                    #     print("n-tot mode")
-                    # else:
-                    #     # sort_limits is set earlier in SelectandDisplay
-                    #     threshold_coord_y_sort = len(threshold_sorting[1])
-                    #     # To splice the number from the string correctly regardless of magnitude
-                    #     cutoff = threshold_coord_y_sort - 2
-                    #     threshold_coord_y = float(threshold_sorting[1][0:cutoff])
-                    #     print("n-g mode")
-                    # print("Threshold: ", threshold_coord_y)
-                    # Creating an array to plot line of coords
+        for line in self.ax.lines:
+            if line is None:
+                continue
+            if line.get_gid() is None:
+                continue
+            if "pd_threshold" in line.get_gid():
+                line.remove()
+        self.canvas.draw()
+        if checked:
+            for name, substance in self.element_data.items():
+                self.figure.add_subplot(self.ax)
+                line = self.ax.axhline(
+                    y=substance.threshold,
+                    linestyle="--",
+                    color=substance.graphColour,
+                    linewidth=0.5,
+                    gid=f"pd_threshold-{name}"
+                )
+                if substance.isGraphHidden:
+                    line.set_visible(False)
 
-                    self.figure.add_subplot(self.ax)
-                    line = self.ax.axhline(
-                        y=substance.threshold,
-                        linestyle="--",
-                        color=substance.graphColour,
-                        linewidth=0.5,
-                        gid=f"pd_threshold-{name}"
-                    )
-                    if substance.isGraphHidden:
-                        line.set_visible(False)
+                self.canvas.draw()
+        # try:
+        # except Exception:
+        #     QMessageBox.warning(self, "Error", "You have not plotted anything")
 
-                    self.canvas.draw()
-        except Exception:
-            QMessageBox.warning(self, "Error", "You have not plotted anything")
-
-    def ToggleAnnotations(self):
+    def ToggleAnnotations(self) -> None:
         """
         Function Annotations shows & hides all peak annotations globally.
         """
@@ -1071,7 +1072,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.canvas.draw()
 
     # ! Not Working <-----------------------------------------------------------------------
-    def PlotPeakWindow(self, row_clicked):
+    def PlotPeakWindow(self, row_clicked) -> None:
         try:
             peakwindow = QMainWindow(self)
             # Setting title and geometry
@@ -1245,7 +1246,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self, "Error", "You need to plot the graph first or select a valid row"
             )
 
-    def PeakLimits(self, checked):
+    def PeakLimits(self, checked) -> None:
         try:
             if checked:
                 # Plotting threshold lines ----------------------------------------------------------------------------
@@ -1273,7 +1274,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         except Exception:
             print("No")
 
-    def ThresholdforPeak(self, checked):
+    def ThresholdforPeak(self, checked) -> None:
         try:
             if checked:
                 # Getting the threshold for the specific substance------------------------------------------------------
@@ -1327,16 +1328,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self.canvas2.draw()
         except Exception:
             print("No")
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Trouble getting peak limits for this peak \n Contact Rehana.Patel@stfc.ac.uk",
-            )
+            QMessageBox.warning(self, "Error",
+                                "Trouble getting peak limits for this peak \n Contact Rehana.Patel@stfc.ac.uk")
 
-    def importdata(self): 
+    def importdata(self) -> None:
         """
         Allows user to select a file on their computer to open and analyse.
-        """        
+        """
         file_name = QFileDialog.getOpenFileName(self, "Open file", self.filepath)
         if file_name[0] == '':
             return
@@ -1351,8 +1349,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.Plot(False, filepath, True, name)
 
     # ------------------------ PEAK DETECTION BITS ## ------------------------
-    def GetPeaks(self):  # Steps of Peak Detection Put into One Function
-        # Ask the user to look for minima or maxima
+    def GetPeaks(self) -> None:
+        """
+        Ask the user for which function to plot the maxima or minima of which substance
+        then calls the respective function on that substance
+        """
 
         mainLayout = QVBoxLayout()
         input_formGroupBox = QGroupBox()
@@ -1400,17 +1401,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         input_window.exec_()
 
-    def PlottingPD(self, element_data, isMax: bool):
+    def PlottingPD(self, element_data: ElementData, isMax: bool) -> None:
         if isMax:
             peaks_x, peaks_y = element_data.maxima[0], element_data.maxima[1]
         else:
             peaks_x, peaks_y = element_data.minima[0], element_data.minima[1]
-        self.ax = self.figure.add_subplot(111)
 
         # ! Add substance selection to Peak Detection menu
         # ! Change how points are then plotted
         # Redrawing graph and Peak Detection Limits
-        self.ax.clear()
+        self.figure.clear()
+        self.ax = self.figure.add_subplot(111)
+
         self.ax.plot(
             self.graph_data[0],
             self.graph_data[1],
@@ -1446,7 +1448,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.figure.tight_layout()
         self.canvas.draw()
 
-    def EditPeaks(self):
+    def EditPeaks(self) -> None:
         # Click count to disconnect after two limits have been selected
         if self.plotted_substances == []:
             QMessageBox.warning(self, "Error", "You have not plotted anything")
@@ -1516,14 +1518,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # # Allowing for selecting coordinates
         # self.interact = self.canvas.mpl_connect('button_press_event', self.SelectLimits)
 
-    def SelectLimitsOption(self):
+    def SelectLimitsOption(self) -> None:
         # Allowing for selecting coordinates
         if self.plotted_substances == []:
             QMessageBox.warning(self, "Error", "You have not plotted anything")
             return
         self.interact = self.canvas.mpl_connect("button_press_event", self.SelectLimits)
 
-    def SelectLimits(self, event):
+    def SelectLimits(self, event: Qt.pyqtSignal) -> None:
         if self.clickcount is None:
             self.clickcount = 0
         self.xi, self.yj = event.xdata, event.ydata
@@ -1570,18 +1572,17 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Disconnecting clicking
         self.canvas.mpl_disconnect(self.interact)
 
-    # Finds the closest value in a list to the input target value
-    def nearestnumber(self, x: float, target):
+    def nearestnumber(self, x: list[float], target: float) -> float:
         """
         Find the closet value in a list the the input target value
 
         Args:
-            x (_type_): _description_
-            target (_type_): _description_
+            x (list[float]): List of x-coords being plotted
+            target (float): Value of mouse x-coord
 
         Returns:
-            _type_: _description_
-        """        
+            float: Nearest value in x from target
+        """
         array = np.asarray(x)
         value_index = (
             np.abs(array - target)
@@ -1590,8 +1591,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         return array[value_index]
 
 
-def getLayoutWidgets(layout):
-    """getLayoutWidgets returns a list of widgets from an inputted layout.
+def getLayoutWidgets(layout) -> Generator[QWidget]:
+    """
+    getLayoutWidgets returns a list of widgets from an inputted layout.
 
     Args:
         layout (PyQt Layout): PyQt Layout Object
@@ -1602,7 +1604,7 @@ def getLayoutWidgets(layout):
     return (layout.itemAt(i).widget() for i in range(layout.count()))
 
 
-def main():
+def main() -> None:
     app = QtWidgets.QApplication(sys.argv)
 
     # Changing colour of GUI
@@ -1687,10 +1689,10 @@ def main():
 if __name__ == "__main__":
     main()
 
-#background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        # stop: 0.058 #FFF,
-                        # stop: 0.059 #4D4D4D,
-                        # stop: 0.064 #4D4D4D,
-                        # stop: 0.065 #FFF,
-                        # stop: 0.632 #FFF,
-                        # stop: 0.633 #4D4D4D)
+# background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+#                             stop: 0.058 #FFF,
+#                             stop: 0.059 #4D4D4D,
+#                             stop: 0.064 #4D4D4D,
+#                             stop: 0.065 #FFF,
+#                             stop: 0.632 #FFF,
+#                             stop: 0.633 #4D4D4D)

@@ -12,64 +12,69 @@ class ElementData:
     altered python dunder functions utilised throughout the program.
     """
 
-    _name: str
-    _numPeaks: int
-    _tableData: list
-    _graphData: list
-    _graphColour: tuple
-    _annotations: list
-    _maxima: ndarray = None
-    _minima: ndarray = None
+    name: str
+    numPeaks: int
+    tableData: list
+    graphData: list
+    graphColour: tuple
+    annotations: list
+    threshold: float = 100.0
+    maxPeaks: int = 50
+    maxima: ndarray = None
+    minima: ndarray = None
 
     max_peak_limits_x: ndarray = None
     max_peak_limits_y: ndarray = None
 
     min_peak_limits_x: ndarray = None
     min_peak_limits_y: ndarray = None
-    _isToF: bool = False
+
+    isToF: bool = False
     isGraphHidden: bool = False
     isAnnotationsHidden: bool = False
     isAnnotationsDrawn: bool = False
 
     def __init__(self, name: str, numPeaks: int, tableData: DataFrame, graphData: DataFrame,
-                 graphColour: tuple, annotations: list, isToF: bool, isAnnotationsHidden: bool = False):
-        self._name = name
-        self._numPeaks = numPeaks
-        self._annotations = annotations
-        self._isToF = isToF
+                 graphColour: tuple, annotations: list, isToF: bool, isAnnotationsHidden: bool = False,
+                 threshold: float = 100):
+        self.name = name
+        self.numPeaks = numPeaks
+        self.annotations = annotations
+        self.isToF = isToF
         self.isAnnotationsHidden = isAnnotationsHidden
+        self.threshold = threshold
         pd = PeakDetector()
         try:
-            self._tableData = tableData
+            self.tableData = tableData
 
         except errors.EmptyDataError:
-            self._tableData = DataFrame()
+            self.tableData = DataFrame()
 
         try:
-            self._graphData = graphData
+            self.graphData = graphData
 
         except errors.EmptyDataError:
-            self._graphData = DataFrame()
+            self.graphData = DataFrame()
 
-        self._graphColour = graphColour
+        self.graphColour = graphColour
 
-        if not self._graphData.empty:
-            self._maxima = np.array(pd.maxima(graphData))
+        if not self.graphData.empty:
+            self.maxima = np.array(pd.maxima(graphData, threshold))
             self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
-            self._minima = np.array(pd.minima(graphData))
+            self.minima = np.array(pd.minima(graphData))
             self.min_peak_limits_x, self.min_peak_limits_y = np.array(pd.GetMinPeakLimits())
 
-        if self._numPeaks is None:
-            self._numPeaks = len(self._maxima[0])
+        if self.numPeaks is None:
+            self.numPeaks = len(self.maxima[0])
 
     def __eq__(self, other):
         if isinstance(other, ElementData):
-            return self._name == other._name and self._isToF == other._isToF
+            return self.name == other.name and self.isToF == other.isToF
         return False
 
     def __ne__(self, other):
         if isinstance(other, ElementData):
-            return self._name != other._name or self._isToF != other._isToF
+            return self.name != other.name or self.isToF != other.isToF
 
     def HideAnnotations(self, globalHide: bool = False):
         """
@@ -79,10 +84,17 @@ class ElementData:
         Args:
             globalHide (bool, optional): Wheher or not the 'Hide Peak Label' is checked or not. Defaults to False.
         """
-        if self._annotations == []:
+        if self.annotations == []:
             return
 
         boolCheck = not (globalHide or self.isGraphHidden)
-        for point in self._annotations:
+        for point in self.annotations:
             point.set_visible(boolCheck)
         self.isAnnotationsHidden = boolCheck
+
+    def UpdateMaximas(self):
+        pd = PeakDetector()
+
+        self.maxima = np.array(pd.maxima(self.graphData, self.threshold))
+        self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
+        self.numPeaks = len(self.maxima[0])

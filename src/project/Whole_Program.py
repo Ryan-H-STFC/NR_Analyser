@@ -1,4 +1,3 @@
-# Importing packages and modules to use
 import os
 import sys
 import shutil
@@ -6,37 +5,41 @@ import matplotlib.rcsetup
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-# import adjustText
 from collections import OrderedDict
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
-)  # Import class from module as FigureCanvas for simplicity
+)
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar,
 )
 from matplotlib import font_manager
-from PyQt5 import QtGui, QtWidgets  # importing classes from PyQt
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QCursor
+from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import Qt, QRegExp
+from PyQt5.QtGui import QCursor, QRegExpValidator
 from PyQt5.QtWidgets import (
-    QPushButton,
+    QAction,
     QCheckBox,
     QComboBox,
-    QTableView,
-    QAction,
-    QMenuBar,
-    QHBoxLayout,
-    QVBoxLayout,
-    QGridLayout,
-    QLabel,
-    QMessageBox,
-    QInputDialog,
-    QFileDialog,
-    QTableWidgetItem,
-    QMainWindow,
-    QWidget,
+    QCompleter,
+    QDialog,
+    QDialogButtonBox,
     QDockWidget,
-    QCompleter
+    QFileDialog,
+    QFormLayout,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMenuBar,
+    QMessageBox,
+    QPushButton,
+    QTableView,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget
 )
 
 from ElementDataStructure import ElementData
@@ -45,6 +48,8 @@ from CustomSortingProxy import CustomSortingProxy
 
 # todo -------------------- Issues/Feature TODO list --------------------
 # todo - Add periodic table GUI for selection.
+# todo - Maximas are broken
+# todo - Matplotlib icons
 
 
 # ? Should this ask for the filepath or just be require to be in the format as seen in the repository,
@@ -63,11 +68,11 @@ source_filepath = filepath + "data"
 
 # print(filepath)
 # print(source_filepath)
+
 # ! fonts = font_manager.findSystemFonts(fontpaths="C:\\Users\\gzi47552\\Documents\\NRTI-NRCA-Viewing-Database\\src\\fonts")
 # ! for font in fonts:
 # !    font_manager.fontManager.addfont(font)
 # ! matplotlib.rcParams["font.family"] = 'Roboto'
-
 
 matplotlib.rcParamsDefault["path.simplify"] = False
 
@@ -135,19 +140,17 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.threshold = 100
 
     def initUI(self):
-        # setting size of GUI and titles etc (Coordinates and size here)
+
+        self.setObjectName('mainWindow')
         self.setGeometry(350, 50, 1600, 900)
         self.setWindowTitle("NRTI/NRCA Viewing Database")
 
-        # creates vbox layout so as to arrange things without manually moving
-        self.layout = QVBoxLayout()
+        main_layout = QGridLayout()
 
-        # * ----------------------------------------------
+        menubar_layout = QHBoxLayout()
+        sidebar_layout = QVBoxLayout()
+        content_layout = QVBoxLayout()
 
-        # * ---------------- Plot Canvas -----------------
-        self.figure = plt.figure()  # Creating canvas to plot graph on and toolbar
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas.__name__ = "canvas"
         # * ----------------------------------------------
 
         # * -------------- MENU BAR - FILE ---------------
@@ -173,6 +176,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         editThresholdAction.setShortcut("Ctrl+Shift+T")
         editThresholdAction.triggered.connect(self.editThresholdLimit)
 
+        editMaxPeaks = QAction("&Edit Peak Quantity", self)
+        editMaxPeaks.setShortcut("Ctrl+Shift+Q")
+        editMaxPeaks.triggered.connect(self.editMaxPeaks)
+
         # * ----------------------------------------------
 
         # * -------------- MENU BAR - EDIT ---------------
@@ -187,25 +194,27 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         editMenu = menubar.addMenu("&Edit")
         editMenu.addAction(editpeakAction)
         editMenu.addAction(selectlimitsAction)
-
-        optionsMenu = menubar.addMenu("&Options")
-        optionsMenu.addAction(editThresholdAction)
+        editMenu.addAction(editThresholdAction)
+        editMenu.addAction(editMaxPeaks)
         # helpMenu = menubar.addMenu('&Help')
         # helpMenu.addAction(aboutAction)
-        self.layout.addWidget(menubar)  # adds to layout
-        # Creating and adding toolbar
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        self.layout.addWidget(self.toolbar)
-
+        menubar_layout.addWidget(menubar, alignment=Qt.AlignLeft)
         # Adding label which shows number of peaks
         self.peaklabel = QLabel()
         self.peaklabel.setObjectName('numPeakLabel')
         self.peaklabel.setText("")
-        self.peaklabel.setAlignment(Qt.AlignRight)
-        self.layout.addWidget(self.peaklabel)
+        self.peaklabel.setAlignment(Qt.AlignVCenter)
 
-        # Adding canvas
-        self.layout.addWidget(self.canvas)
+        self.peaklabel.setContentsMargins(0, 10, 0, 0)
+        menubar_layout.addWidget(self.peaklabel, alignment=Qt.AlignVCenter)
+        # Threshold Label
+        self.threshold_label = QLabel()
+        self.threshold_label.setObjectName('thresholdLabel')
+        self.threshold_label.setText("Nothing has been selected")
+        self.threshold_label.setAlignment(Qt.AlignRight)
+        self.threshold_label.setContentsMargins(0, 10, 0, 0)
+
+        menubar_layout.addWidget(self.threshold_label, alignment=Qt.AlignRight)
 
         # * ----------------------------------------------
 
@@ -215,7 +224,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         source_directory = source_filepath
         destination_directory = filepath + "data/"
 
-        # Adding drop down menu in which users
         # Creating a list of substances stored in the NRCA database data directory
         self.substances = [None]
         for file in os.listdir(source_directory):
@@ -233,6 +241,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.combobox.setObjectName("combobox")
         self.combobox.addItems(self.substances)
         self.combobox.setEditable(True)
+        self.combobox.setPlaceholderText("Select substance")
         self.combobox.setInsertPolicy(QComboBox.NoInsert)
         self.combobox.setMaxVisibleItems(15)
         # filterCompleter = QCompleter(self)
@@ -243,61 +252,19 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.combobox.completer().setCaseSensitivity(Qt.CaseInsensitive)
         self.combobox.completer().setFilterMode(Qt.MatchContains)
-        self.layout.addWidget(self.combobox)
+
+        sidebar_layout.addWidget(self.combobox)
         # Upon selecting an option, it records the option
         # and connects to the method 'Select_and_Display'
         self.combobox.activated.connect(self.Select_and_Display)
 
         # * ----------------------------------------------
 
-        # * --------------- Checkbox Group ---------------
-        # Creating a layout for checkboxes
-        self.toggle_layout = QGridLayout()
-        self.toggle_layout.setObjectName('toggleLayout')
-        self.toggle_layout.setSpacing(round(self.window().width() / 3 - 100))
-        self.toggle_layout.setRowStretch(1, 0)
-        self.toggle_layout.setRowStretch(2, 0)
         pointing_cursor = QCursor(Qt.PointingHandCursor)
-
-        # Adding checkbox to toggle on and off gridlines for plots
-        grid_check = QCheckBox("Grid Lines", self)
-        grid_check.setCursor(pointing_cursor)
-        grid_check.setObjectName("grid_check")
-        grid_check.__name__ = "gridCheck"
-
-        # grid_check.resize(grid_check.sizeHint())
-        grid_check.setEnabled(False)
-        self.toggle_layout.addWidget(grid_check, 0, 0)
-        grid_check.stateChanged.connect(self.Gridlines)
-
-        # Adding checkbox to toggle on and off threshold lines for plots
-        self.threshold_check = QCheckBox("Peak Detection Limits", self)
-        self.threshold_check.setCursor(pointing_cursor)
-        self.threshold_check.setObjectName("threshold_check")
-        self.threshold_check.__name__ = "thresholdCheck"
-        # self.threshold_check.resize(self.threshold_check.sizeHint())
-        self.threshold_check.setEnabled(False)
-        self.toggle_layout.addWidget(self.threshold_check, 0, 1)
-        self.threshold_check.stateChanged.connect(self.Threshold)
-
-        # Adding checkbox to toggle on and off annotations
-        self.label_check = QCheckBox("Hide Peak Labels", self)
-        self.label_check.setCursor(pointing_cursor)
-        self.label_check.setObjectName("label_check")
-        self.label_check.__name__ = "labelCheck"
-        # self.label_check.resize(self.label_check.sizeHint())
-        self.label_check.setEnabled(False)
-        self.toggle_layout.addWidget(self.label_check, 0, 2)
-        self.label_check.stateChanged.connect(self.ToggleAnnotations)
-        # print(self.toggle_layout.columnCount())
-        # Adding to overall layout
-        self.layout.addLayout(self.toggle_layout)
-
-        # * ----------------------------------------------
 
         # * ---------------- Button Group ----------------
         # Button layout
-        self.btn_layout = QHBoxLayout()
+        self.btn_layout = QVBoxLayout()
         # Creating a plot in eV (no conversion needed) button
         plot_energy_btn = QPushButton("Plot in Energy", self)
         plot_energy_btn.setObjectName("plot_energy_btn")
@@ -339,9 +306,61 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.btn_layout.addWidget(pd_btn)
         pd_btn.clicked.connect(self.GetPeaks)
 
-        # Adding sub-layout
+        sidebar_layout.addLayout(self.btn_layout)
 
-        self.layout.addLayout(self.btn_layout)
+        # * ----------------------------------------------
+
+        # * --------------- Checkbox Group ---------------
+        # Creating a layout for checkboxes
+        self.toggle_layout = QVBoxLayout()
+        self.toggle_layout.setObjectName('toggleLayout')
+
+        # Adding checkbox to toggle on and off gridlines for plots
+        grid_check = QCheckBox("Grid Lines", self)
+        grid_check.setCursor(pointing_cursor)
+        grid_check.setObjectName("grid_check")
+        grid_check.__name__ = "gridCheck"
+
+        # grid_check.resize(grid_check.sizeHint())
+        grid_check.setEnabled(False)
+        self.toggle_layout.addWidget(grid_check)
+        grid_check.stateChanged.connect(self.Gridlines)
+
+        # Adding checkbox to toggle on and off threshold lines for plots
+        self.threshold_check = QCheckBox("Peak Detection Limits", self)
+        self.threshold_check.setCursor(pointing_cursor)
+        self.threshold_check.setObjectName("threshold_check")
+        self.threshold_check.__name__ = "thresholdCheck"
+        # self.threshold_check.resize(self.threshold_check.sizeHint())
+        self.threshold_check.setEnabled(False)
+        self.toggle_layout.addWidget(self.threshold_check)
+        self.threshold_check.stateChanged.connect(self.Threshold)
+
+        # Adding checkbox to toggle on and off annotations
+        self.label_check = QCheckBox("Hide Peak Labels", self)
+        self.label_check.setCursor(pointing_cursor)
+        self.label_check.setObjectName("label_check")
+        self.label_check.__name__ = "labelCheck"
+        # self.label_check.resize(self.label_check.sizeHint())
+        self.label_check.setEnabled(False)
+        self.toggle_layout.addWidget(self.label_check)
+        self.label_check.stateChanged.connect(self.ToggleAnnotations)
+        # print(self.toggle_layout.columnCount())
+        # Adding to overall layout
+
+        sidebar_layout.addLayout(self.toggle_layout)
+        # * ---------------- Plot Canvas ------------------
+        self.figure = plt.figure()  # Creating canvas to plot graph on and toolbar
+        self.canvas = FigureCanvas(self.figure)
+        self.canvas.__name__ = "canvas"
+
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        content_layout.addWidget(self.toolbar)
+        content_layout.addWidget(self.canvas)
+        container = QWidget(self)
+        container.setObjectName('mainContainer')
+        container.setLayout(content_layout)
+        # * -----------------------------------------------
 
         # * -----------------------------------------------
 
@@ -349,7 +368,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Adding table to display peak information
         self.table = QTableView()
         self.table.setObjectName('dataTable')
-        
+
         self.table.horizontalHeader()
         self.table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Stretch
@@ -362,26 +381,122 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # # Making the table fill the space available
         # header = self.table.horizontalHeader()
         # header.setStretchLastSection(True)
-        self.layout.addWidget(self.table)
+        content_layout.addWidget(self.table)
+
+        sidebar_layout.setAlignment(Qt.AlignTop)
+
+        main_layout.addItem(menubar_layout, 0, 0, 1, 2, Qt.AlignTop)
+        main_layout.addItem(sidebar_layout, 1, 0, 1, 1, Qt.AlignTop)
+        main_layout.addWidget(container, 1, 1)
+        self.btn_layout.setSpacing(10)
+        self.toggle_layout.setSpacing(10)
+
+        sidebar_layout.setSpacing(50)
+        content_layout.setStretch(0, 1)
 
         # If double-clicking cell, can trigger plot peak
+
         # self.table.cellDoubleClicked.connect(self.PlotPeakWindow)
 
-        # Threshold Label
-        self.threshold_label = QLabel()
-        self.threshold_label.setObjectName('thresholdLabel')
-        self.threshold_label.setText("Nothing has been selected")
-        self.threshold_label.setAlignment(Qt.AlignLeft)
-        self.layout.addWidget(self.threshold_label)
-
-        self.setLayout(self.layout)  # Generating layout
+        self.setLayout(main_layout)  # Generating layout
         self.show()
 
     def editThresholdLimit(self):
-        inputDialog = QInputDialog(self)
-        inputDialog.windowTitle = "Threshold Input"
-        threshold = inputDialog.getText(self, 'New Threshold Limit', 'Threshold: ', text='100')
-        
+        if self.element_data == {}:
+            return
+
+        mainLayout = QVBoxLayout()
+        input_formGroupBox = QGroupBox()
+        input_form = QFormLayout()
+        input_form.windowTitle = "Threshold Input"
+
+        elements = QComboBox()
+        elements.addItems(self.element_data.keys())
+
+        input_threshold = QLineEdit()
+        input_threshold.setPlaceholderText(str(self.element_data[elements.currentText()].threshold))
+        input_threshold.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
+
+        input_form.addRow(QLabel("Substance:"), elements)
+        input_form.addRow(QLabel("Threshold:"), input_threshold)
+        input_formGroupBox.setLayout(input_form)
+        buttonBox = QDialogButtonBox()
+        buttonOk = buttonBox.addButton(QDialogButtonBox.Ok)
+
+        mainLayout.addWidget(input_formGroupBox)
+        mainLayout.addWidget(buttonBox)
+
+        input_window = QDialog()
+        input_window.setWindowTitle("Edit Threshold Value")
+        input_window.setLayout(mainLayout)
+
+        def close():
+            input_window.close()
+        buttonOk.clicked.connect(close)
+
+        def changeThresholdText():
+            input_threshold.setPlaceholderText(str(self.element_data[elements.currentText()].threshold))
+        elements.currentTextChanged.connect(changeThresholdText)
+
+        input_window.exec_()
+        # ! Fix Graphing new Threshold Line
+
+        substance_name = elements.currentText()
+        if input_threshold.text() == '':
+            return
+        threshold_value = float(input_threshold.text())
+
+        self.element_data[substance_name].threshold = threshold_value
+        self.element_data[substance_name].UpdateMaximas()
+        self.Threshold()
+        self.DrawAnnotations(self.element_data[substance_name])
+
+    def editMaxPeaks(self):
+        if self.element_data == {}:
+            return
+
+        mainLayout = QVBoxLayout()
+        input_formGroupBox = QGroupBox()
+        input_form = QFormLayout()
+        input_form.windowTitle = "Threshold Input"
+
+        elements = QComboBox()
+        elements.addItems(self.element_data.keys())
+
+        input_maxPeaks = QLineEdit()
+        input_maxPeaks.setPlaceholderText(str(self.element_data[elements.currentText()].numPeaks))
+        input_maxPeaks.setValidator(QRegExpValidator(QRegExp("[0-9]{0,4}")))
+
+        input_form.addRow(QLabel("Substance:"), elements)
+        input_form.addRow(QLabel("Peak Quantity:"), input_maxPeaks)
+        input_formGroupBox.setLayout(input_form)
+        buttonBox = QDialogButtonBox()
+        okButton = buttonBox.addButton(QDialogButtonBox.Ok)
+
+        mainLayout.addWidget(input_formGroupBox)
+        mainLayout.addWidget(buttonBox)
+
+        input_window = QDialog()
+        input_window.setWindowTitle("Displayed Peaks Quantity") 
+        input_window.setLayout(mainLayout)
+
+        def closeWindow():
+            input_window.close()
+        okButton.clicked.connect(closeWindow)
+
+        def changePeaksText():
+            input_maxPeaks.setPlaceholderText(str(self.element_data[elements.currentText()].numPeaks))
+        elements.currentTextChanged.connect(changePeaksText)
+
+        input_window.exec_()
+        # ! Fix Graphing new Threshold Line
+
+        substance_name = elements.currentText()
+        if input_maxPeaks.text() == '':
+            return
+        maxPeaks = int(input_maxPeaks.text())
+        self.element_data[substance_name].maxPeaks = maxPeaks
+        self.DrawAnnotations(self.element_data[substance_name])
 
     def Select_and_Display(self, index):
         """
@@ -466,7 +581,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.thresholds = "100 by default"
         # Checking if the selected substance has a threshold exception
         for i in file:
-            sort_limits = i.split(" ")
+            sort_limits = i.replace('\n', '').split(" ")
             symbol = sort_limits[0]
             if str(symbol) == str(data_symbol):
                 self.thresholds = str(sort_limits[1]) + str(sort_limits[2])
@@ -480,10 +595,15 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             label_info = (
                 "Threshold for peak detection for n-tot mode: " + self.thresholds
             )
+            self.threshold = 100
         else:
             label_info = (
                 "Threshold for peak detection (n-tot mode, n-g mode): " + self.thresholds
             )
+            if self.data[-1] == 't':
+                self.threshold = sort_limits[1][1:-1]
+            else:
+                self.threshold = sort_limits[2][:-1]
         self.threshold_label.setText(str(label_info))
         # Changing the peak label text
         label_info = "Number of peaks: " + str(self.number_rows)
@@ -587,7 +707,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.toggleCheckboxControls(enableAll=True)
         self.toggleBtnControls(enableAll=True)
 
-        if self.data is None:
+        if self.data is None and not imported:
             QMessageBox.warning(self, "Error", "You have not selected anything to plot")
             return
         if imported:
@@ -653,7 +773,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             colour = (np.random.random() * 0.8 + 0.1, np.random.random() * 0.5 + 0.2, np.random.random() * 0.8 + 0.1)
             newElement = ElementData(name=substance, numPeaks=self.number_rows, tableData=element_table_data,
                                      graphData=graph_data, graphColour=colour, annotations=[], isToF=tof,
-                                     isAnnotationsHidden=self.label_check.isChecked())
+                                     isAnnotationsHidden=self.label_check.isChecked(), threshold=float(self.threshold))
             title = f"{substance}-{'ToF' if tof else 'Energy'}"
             if title not in self.element_data.keys():
                 self.element_data[title] = newElement
@@ -705,7 +825,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             c=colour,
             alpha=0.6,
             linewidth=0.8,
-            label=f"{self.data}-ToF" if newElement._isToF else f"{self.data}-Energy",
+            label=f"{self.data}-ToF" if newElement.isToF else f"{self.data}-Energy",
             gid=self.data,
         )
 
@@ -749,13 +869,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # ? Maybe sort the order in which they are plotted and added to the table.
         # ! Change into dataclass compatible
         for substance in self.element_data.values():
-            if substance._name not in self.element_data_names:
-                table_data = pd.concat([table_data, substance._tableData], ignore_index=True)
-                end_row.append(end_row[-1] + substance._tableData.shape[0])
-                self.element_data_names.append(substance._name)
+            if substance.name not in self.element_data_names:
+                table_data = pd.concat([table_data, substance.tableData], ignore_index=True)
+                end_row.append(end_row[-1] + substance.tableData.shape[0])
+                self.element_data_names.append(substance.name)
 
-        self.DrawAnnotations(self.element_data.get(f"{self.data}-ToF" if newElement._isToF else f"{self.data}-Energy"))
-
+        self.DrawAnnotations(self.element_data.get(f"{self.data}-ToF" if newElement.isToF else f"{self.data}-Energy"))
+        self.Threshold()
         self.ax.autoscale()  # Tidying up
 
         self.figure.tight_layout()
@@ -770,8 +890,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.canvas.draw()
 
     def HideGraph(self, event):
-        """_summary_
-            Function to show or hide the selected graph by clicking the legend.
+        """
+        Function to show or hide the selected graph by clicking the legend.
+
         Args:
             event (pick_event): event on clicking a graphs legend
         """
@@ -786,14 +907,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         legline.set_alpha(1.0 if visible else 0.2)
         orgline.set_visible(visible)
         # Hiding relevant labels
+
         self.element_data[orgline_name].isGraphHidden = not visible
         self.element_data[orgline_name].HideAnnotations(self.label_check.isChecked())
+        for line in self.ax.lines:
+            if line.get_gid() == f"pd_threshold-{orgline_name}":
+                line.set_visible(visible)
         self.canvas.draw()
 
     def PlotToF(self):
         self.Plot(True)
 
-    def EnergytoTOF(self, x_data, length=None):
+    def EnergytoTOF(self, x_data: list, length=None):
         if length is None:
             length = 22.804
         neutron_mass = float(1.68e-27)
@@ -845,27 +970,34 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # On clearning graphs disable Checkboxes
         self.toggleCheckboxControls(enableAll=False)
 
-    def DrawAnnotations(self, substance):
+    def DrawAnnotations(self, substance: ElementData):
         self.element_data_names = []
 
-        # if substance._isToF:
-        #     peak_x_coord = np.array(substance._tableData[1:]['TOF (us)'])
-        # else:
-        #     peak_x_coord = np.array(substance._tableData[1:]['Energy (eV)'])
-        # peak_y_coord = np.array(substance._tableData[1:]['Peak Height'])
+        if substance.isAnnotationsDrawn:
+            for anno in substance.annotations:
+                anno.remove()
+            substance.annotations.clear()
+        peak_x_coord, peak_y_coord = substance.maxima[0], substance.maxima[1]
 
-        peak_x_coord, peak_y_coord = substance._maxima[0], substance._maxima[1]
-
-        maxDraw = substance._numPeaks if substance._numPeaks < 50 else 50
-
-        substance._annotations = [self.ax.annotate(text=f'{i}',
-                                                   xy=(peak_x_coord.item(i), peak_y_coord.item(i)),
-                                                   xytext=(peak_x_coord.item(i), peak_y_coord.item(i)),
-                                                   xycoords="data",
-                                                   textcoords="data",
-                                                   size=6,
-                                                   annotation_clip=True)
-                                  for i in range(maxDraw)]
+        gid = f"annotation-{substance.name}-" + "ToF" if substance.isToF else "Energy"
+        maxDraw = substance.maxPeaks if substance.maxPeaks < substance.numPeaks else substance.numPeaks
+        substance.annotations = [self.ax.annotate(text=f'{i}',
+                                                  xy=(peak_x_coord.item(i), peak_y_coord.item(i)),
+                                                  xytext=(peak_x_coord.item(i), peak_y_coord.item(i)),
+                                                  xycoords="data",
+                                                  textcoords="data",
+                                                  size=6,
+                                                  gid=gid,
+                                                  annotation_clip=True
+                                                  )
+                                 for i in range(maxDraw)]
+        # text = [str(i) for i in range(maxDraw)]
+        
+        if substance.isGraphHidden or self.label_check.isChecked():
+            for annotation in substance.annotations:
+                annotation.set_visible(False)
+            substance.isAnnotationsHidden = True
+        substance.isAnnotationsDrawn = True
         self.canvas.draw()
 
     def Gridlines(self, checked):
@@ -883,47 +1015,49 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     def Threshold(self):
         checked = self.threshold_check.isChecked()
         try:
+            for line in self.ax.lines:
+                if line is None:
+                    continue
+                if "pd_threshold" in line.get_gid():
+                    line.remove()
+            self.canvas.draw()
             if checked:
-                # Plotting theshold and limits used
-                # Getting the singular y-limits
-                threshold_coord_y = 0
-                threshold_sorting = self.thresholds.split(",")
-                if self.thresholds == "100 by default":
-                    threshold_coord_y = 100
-                elif self.data[-1] == "t":
-                    # sort_limits is set earlier in SelectandDisplay
-                    threshold_coord_y_sort = len(threshold_sorting[0])
-                    threshold_coord_y = float(
-                        threshold_sorting[0][1:threshold_coord_y_sort]
-                    )
-                    print("n-tot mode")
-                else:
-                    # sort_limits is set earlier in SelectandDisplay
-                    threshold_coord_y_sort = len(threshold_sorting[1])
-                    # To splice the number from the string correctly regardless of magnitude
-                    cutoff = threshold_coord_y_sort - 2
-                    threshold_coord_y = float(threshold_sorting[1][0:cutoff])
-                    print("n-g mode")
-                print("Threshold: ", threshold_coord_y)
-                # Creating an array to plot line of coords
+                for name, substance in self.element_data.items():
+                    # # Plotting theshold and limits used
+                    # # Getting the singular y-limits
+                    # threshold_coord_y = 0
+                    # threshold_sorting = self.thresholds.split(",")
+                    # if self.thresholds == "100 by default":
+                    #     threshold_coord_y = 100
+                    # elif substance.name[-1] == 't':
+                    #     # sort_limits is set earlier in SelectandDisplay
+                    #     threshold_coord_y_sort = len(threshold_sorting[0])
+                    #     threshold_coord_y = float(
+                    #         threshold_sorting[0][1:threshold_coord_y_sort]
+                    #     )
+                    #     print("n-tot mode")
+                    # else:
+                    #     # sort_limits is set earlier in SelectandDisplay
+                    #     threshold_coord_y_sort = len(threshold_sorting[1])
+                    #     # To splice the number from the string correctly regardless of magnitude
+                    #     cutoff = threshold_coord_y_sort - 2
+                    #     threshold_coord_y = float(threshold_sorting[1][0:cutoff])
+                    #     print("n-g mode")
+                    # print("Threshold: ", threshold_coord_y)
+                    # Creating an array to plot line of coords
 
-                self.figure.add_subplot(self.ax)
-                self.ax.axhline(
-                    y=threshold_coord_y,
-                    linestyle="--",
-                    color="black",
-                    linewidth=0.5,
-                    gid="pd_threshold",
-                )
-                self.canvas.draw()
-            else:
-                # Getting rid of the second lines plotted on the graph! (Threshold line)
-                for line in self.ax.lines:
-                    if line.get_gid() == "pd_threshold":
-                        line.remove()
-                self.canvas.draw()
-                # plt.axhline().remove()
-                # plt.draw()
+                    self.figure.add_subplot(self.ax)
+                    line = self.ax.axhline(
+                        y=substance.threshold,
+                        linestyle="--",
+                        color=substance.graphColour,
+                        linewidth=0.5,
+                        gid=f"pd_threshold-{name}"
+                    )
+                    if substance.isGraphHidden:
+                        line.set_visible(False)
+
+                    self.canvas.draw()
         except Exception:
             QMessageBox.warning(self, "Error", "You have not plotted anything")
 
@@ -1199,12 +1333,16 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 "Trouble getting peak limits for this peak \n Contact Rehana.Patel@stfc.ac.uk",
             )
 
-    def importdata(
-        self,
-    ):  # Allows user to select a file on their computer to open and analyse
+    def importdata(self): 
+        """
+        Allows user to select a file on their computer to open and analyse.
+        """        
         file_name = QFileDialog.getOpenFileName(self, "Open file", self.filepath)
+        if file_name[0] == '':
+            return
         filepath = file_name[0]
         get_name = filepath.split("/")
+
         name = get_name[-1]
         name = name[:-4]
         if name[-1] == "f":
@@ -1215,40 +1353,69 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     # ------------------------ PEAK DETECTION BITS ## ------------------------
     def GetPeaks(self):  # Steps of Peak Detection Put into One Function
         # Ask the user to look for minima or maxima
-        typecheck = QMessageBox()
-        typecheck.setWindowTitle("What Should I Plot?")
-        # ! maybe add combobox for which plotted graph to get maxima or minimas for?
-        element_chioce = QComboBox()
-        element_chioce.addItems(self.element_data.keys())
-        
-        typecheck.setStandardButtons(
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
-        )
-        buttonY = typecheck.button(QMessageBox.Yes)
-        buttonY.setText("Maxima")
-        buttonN = typecheck.button(QMessageBox.No)
-        buttonN.setText("Minima")
-        typecheck.exec_()
-        if typecheck.clickedButton().text() == "Cancel":
-            return
 
-        for element_data in self.element_data.values():
-            self.PlottingPD(element_data, typecheck.clickedButton().text() == "Maxima")
+        mainLayout = QVBoxLayout()
+        input_formGroupBox = QGroupBox()
+        input_form = QFormLayout()
+        input_form.windowTitle = "Threshold Input"
+
+        elements = QComboBox()
+        elements.addItems(self.element_data.keys())
+
+        input_maxPeaks = QLineEdit()
+        input_maxPeaks.setPlaceholderText(str(self.element_data[elements.currentText()].threshold))
+        input_maxPeaks.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
+
+        input_form.addRow(QLabel("Substance:"), elements)
+        input_formGroupBox.setLayout(input_form)
+        buttonBox = QDialogButtonBox()
+        buttonY = buttonBox.addButton(QDialogButtonBox.Yes)
+        buttonY.setText("Maxima")
+        buttonN = buttonBox.addButton(QDialogButtonBox.No)
+        buttonN.setText("Minima")
+        buttonCancel = buttonBox.addButton(QDialogButtonBox.Cancel)
+        buttonCancel.setText("Cancel")
+        mainLayout.addWidget(input_formGroupBox)
+        mainLayout.addWidget(buttonBox)
+
+        input_window = QDialog()
+        input_window.setWindowTitle("What Should I Plot?")
+        input_window.setLayout(mainLayout)
+
+        def max():
+            self.PlottingPD(self.element_data[elements.currentText()], True)
+        buttonY.clicked.connect(max)
+
+        def min():
+            self.PlottingPD(self.element_data[elements.currentText()], False)
+        buttonN.clicked.connect(min)
+
+        def close():
+            input_window.close()
+        buttonCancel.clicked.connect(close)
+
+        def changePeaksText():
+            input_maxPeaks.setPlaceholderText(str(self.element_data[elements.currentText()].maxPeaks))
+        elements.currentTextChanged.connect(changePeaksText)
+
+        input_window.exec_()
 
     def PlottingPD(self, element_data, isMax: bool):
         if isMax:
-            peaks_x, peaks_y = element_data._maxima[0], element_data._maxima[1]
+            peaks_x, peaks_y = element_data.maxima[0], element_data.maxima[1]
         else:
-            peaks_x, peaks_y = element_data._minima[0], element_data._minima[1]
-        self.figure.clear()
+            peaks_x, peaks_y = element_data.minima[0], element_data.minima[1]
         self.ax = self.figure.add_subplot(111)
 
+        # ! Add substance selection to Peak Detection menu
+        # ! Change how points are then plotted
         # Redrawing graph and Peak Detection Limits
+        self.ax.clear()
         self.ax.plot(
             self.graph_data[0],
             self.graph_data[1],
             "-",
-            color=element_data._graphColour,
+            color=element_data.graphColour,
             alpha=0.6,
             linewidth=0.6,
         )
@@ -1281,6 +1448,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def EditPeaks(self):
         # Click count to disconnect after two limits have been selected
+        if self.plotted_substances == []:
+            QMessageBox.warning(self, "Error", "You have not plotted anything")
+            return
         self.clickcount = 0
         # Ordering peaks
         peak_order = "Rank by eV    (eV) \n"
@@ -1348,9 +1518,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def SelectLimitsOption(self):
         # Allowing for selecting coordinates
+        if self.plotted_substances == []:
+            QMessageBox.warning(self, "Error", "You have not plotted anything")
+            return
         self.interact = self.canvas.mpl_connect("button_press_event", self.SelectLimits)
 
     def SelectLimits(self, event):
+        if self.clickcount is None:
+            self.clickcount = 0
         self.xi, self.yj = event.xdata, event.ydata
         self.clickcount = self.clickcount + 1
         print(self.clickcount)
@@ -1396,7 +1571,17 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.canvas.mpl_disconnect(self.interact)
 
     # Finds the closest value in a list to the input target value
-    def nearestnumber(self, x, target):
+    def nearestnumber(self, x: float, target):
+        """
+        Find the closet value in a list the the input target value
+
+        Args:
+            x (_type_): _description_
+            target (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         array = np.asarray(x)
         value_index = (
             np.abs(array - target)
@@ -1427,7 +1612,7 @@ def main():
     QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Regular.ttf')
     QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Medium.ttf')
     Colours = QtGui.QPalette()
-    Colours.setColor(QtGui.QPalette.Window, QtGui.QColor("#696969"))
+    Colours.setColor(QtGui.QPalette.Window, QtGui.QColor("#4D4D4D"))
     Colours.setColor(QtGui.QPalette.Button, QtGui.QColor("#FFF"))
 
     app.setStyleSheet(
@@ -1437,19 +1622,24 @@ def main():
             font-size: 10pt;
             font-weight: 400;
         }
-        QHeaderView{
-            font-size: 8pt;
-            font-weight: 450;
-        }
-        QTableView#dataTable{
-            font-size: 8pt;
+
+        QMenuBar {
+            color: #FFF;
         }
         QLabel#numPeakLabel, #thresholdLabel {
             font: 10pt 'Roboto Mono';
             color: #FFF;
         }
-        QMenuBar{
-            color: #FFF;
+
+        QPushButton#plot_energy_btn, #plot_tof_btn, #clear_btn, #pd_btn {
+            font: 10pt 'Roboto Mono Medium';
+            font-weight: 500;
+        }
+        QPushButton#plot_energy_btn:disabled, #plot_tof_btn:disabled, #clear_btn:disabled, #pd_btn:disabled {
+            color: #AAA;
+        }
+        QPushButton#plot_energy_btn:enabled, #plot_tof_btn:enabled, #clear_btn:enabled, #pd_btn:enabled {
+            color: #000;
         }
 
         QCheckBox#grid_check, #threshold_check, #label_check {
@@ -1463,7 +1653,7 @@ def main():
         }
         QCheckBox#grid_check::indicator:checked,
                  #threshold_check::indicator:checked,
-                 #label_check::indicator:checked{
+                 #label_check::indicator:checked {
             image: url(./src/img/checkbox-component-checked.svg);
             color: #FFF
         }
@@ -1473,16 +1663,18 @@ def main():
         QCheckBox#grid_check:enabled, #threshold_check:enabled, #label_check:enabled {
             color: #FFF;
         }
+        QWidget#mainContainer {
+            border: 1px solid #4D4D4D;
+            padding: 0;
+            background: white;
 
-        QPushButton#plot_energy_btn, #plot_tof_btn, #clear_btn, #pd_btn {
-            font: 10pt 'Roboto Mono Medium';
-            font
         }
-        QPushButton#plot_energy_btn:disabled, #plot_tof_btn:disabled, #clear_btn:disabled, #pd_btn:disabled {
-            color: #AAA;
+        QHeaderView {
+            font-size: 8pt;
+            font-weight: 450;
         }
-        QPushButton#plot_energy_btn:enabled, #plot_tof_btn:enabled, #clear_btn:enabled, #pd_btn:enabled {
-            color: #000;
+        QTableView#dataTable {
+            font-size: 8pt;
         }
     """
     )
@@ -1494,3 +1686,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        # stop: 0.058 #FFF,
+                        # stop: 0.059 #4D4D4D,
+                        # stop: 0.064 #4D4D4D,
+                        # stop: 0.065 #FFF,
+                        # stop: 0.632 #FFF,
+                        # stop: 0.633 #4D4D4D)

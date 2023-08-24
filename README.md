@@ -22,9 +22,8 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 ## **Overview of GUI**
 
-
-![image](https://user-images.githubusercontent.com/109808872/210983210-82bace49-ad6a-44ef-a0b8-0d61b5f87797.png)
-
+![NTRI_NRCA_empty](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/assets/139995913/93930aa8-a848-4f55-bb87-2d095fdb4577?raw=true)
+![NTRI_NRCA_filled](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/assets/139995913/ab9e24e4-9a93-4e06-866e-2f312780a1a5?raw=true)
 
 ## **Features**
 
@@ -41,8 +40,6 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 ## **Bugs to be fixed soon**
 
-* Adding mulitple of the same graph.
-* Limiting number of graphs to avoid crashing.
 * Peak Detection - Do not allow multiple reads for peak data if it is already displayed.
 
 ## **Improvements Coming Soon**

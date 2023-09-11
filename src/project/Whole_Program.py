@@ -94,7 +94,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         super(DatabaseGUI, self).__init__()
         self.initUI()
         self.setAcceptDrops(True)
-        
+
         # Setting global variables
         self.data = None
         self.x = []
@@ -1576,7 +1576,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             element_peaks.setEnabled(True)
             first_limit_x.setEnabled(True)
             second_limit_x.setEnabled(True)
-            element_peaks.addItems([str(peak) for peak in element.maxima[0]])               
+            element_peaks.addItems([str(peak) for peak in element.maxima[0]])
             element_peaks.currentIndexChanged.connect(onPeakChange)
             onPeakChange()
 

@@ -6,7 +6,7 @@ class CustomSortingProxy(QSortFilterProxyModel):
     Custom Sorting Proxy, allows the columns of the table to be sorted based on the type of its data.
 
     Args:
-        QSortFilterProxyModel (Class): Parent Class which CustomSorting Proxy 
+        QSortFilterProxyModel (Class): Parent Class which CustomSorting Proxy
     """
     def __init__(self):
         super(QSortFilterProxyModel, self).__init__()

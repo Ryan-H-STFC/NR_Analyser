@@ -14,10 +14,11 @@ class ElementData:
 
     name: str
     numPeaks: int
-    tableData: list
-    graphData: list
+    tableData: DataFrame
+    graphData: DataFrame
     graphColour: tuple
     annotations: list
+    annotationsOrder: dict
     threshold: float = 100.0
     maxPeaks: int = 50
     maxima: ndarray = None
@@ -30,19 +31,25 @@ class ElementData:
     min_peak_limits_y: ndarray = None
 
     isToF: bool = False
+    isImported: bool = False
     isGraphHidden: bool = False
+    isGraphDrawn: bool = False
+    isMaxDrawn: bool = False
+    isMinDrawn: bool = False
     isAnnotationsHidden: bool = False
     isAnnotationsDrawn: bool = False
 
     def __init__(self, name: str, numPeaks: int, tableData: DataFrame, graphData: DataFrame,
-                 graphColour: tuple, annotations: list, isToF: bool, isAnnotationsHidden: bool = False,
-                 threshold: float = 100):
+                 graphColour: tuple, isToF: bool, isAnnotationsHidden: bool = False,
+                 threshold: float = 100, isImported: bool = False) -> None:
         self.name = name
         self.numPeaks = numPeaks
-        self.annotations = annotations
         self.isToF = isToF
+        self.annotations = []
+        self.annotationsOrder = {}
         self.isAnnotationsHidden = isAnnotationsHidden
         self.threshold = threshold
+        self.isImported = isImported
         pd = PeakDetector()
         try:
             self.tableData = tableData
@@ -67,16 +74,16 @@ class ElementData:
         if self.numPeaks is None:
             self.numPeaks = len(self.maxima[0])
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, ElementData):
             return self.name == other.name and self.isToF == other.isToF
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         if isinstance(other, ElementData):
             return self.name != other.name or self.isToF != other.isToF
 
-    def HideAnnotations(self, globalHide: bool = False):
+    def HideAnnotations(self, globalHide: bool = False) -> None:
         """
         HideAnnotations will only hide if 'Hide Peak Label' is checked, or the graph is hidden,
         otherwise it will show the annotation.
@@ -92,9 +99,68 @@ class ElementData:
             point.set_visible(boolCheck)
         self.isAnnotationsHidden = boolCheck
 
-    def UpdateMaximas(self):
+    def UpdateMaximas(self) -> None:
         pd = PeakDetector()
-
         self.maxima = np.array(pd.maxima(self.graphData, self.threshold))
         self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
         self.numPeaks = len(self.maxima[0])
+
+    def GetPeakLimits(self, max: bool = True) -> (ndarray[float], ndarray[float]):
+        if max:
+            return (self.max_peak_limits_x, self.max_peak_limits_y)
+        return (self.min_peak_limits_x, self.min_peak_limits_y)
+
+    def OrderAnnotations(self, byIntegral: bool = True) -> None:
+        """
+        OrderAnnotations alters the rank value assoicated with each peak in the annotations dictionary
+        either ranked by integral or by peak width
+
+        Args:
+            byIntegral (bool, optional): Sorted by Integral (True) else by Peak Width (False). Defaults to True.
+        """
+        self.annotationsOrder.clear()
+        if self.numPeaks == 0:
+            return
+        if self.isImported:
+            return
+        if self.isToF:
+            return
+        if self.tableData[1:].empty:
+            return
+
+        column = 'Rank by Integral' if byIntegral else 'Rank by Peak Width'
+        for (max_x, max_y) in self.maxima.T[0:self.numPeaks]:
+
+            tableMax_x = nearestnumber(self.tableData["Energy (eV)"][1:], max_x)
+
+            row = self.tableData[1:].loc[(self.tableData["Energy (eV)"][1:].astype(float) == tableMax_x)]
+
+            if row.empty:
+                index = None
+            else:
+                index = row[column].iloc[0] if '(' not in str(row[column].iloc[0]) else row[column].iloc[0][1:-1]
+            self.annotationsOrder[int(index)] = (max_x, max_y)
+
+
+def nearestnumber(x: list[float], target: float) -> float:
+    """
+    Find the closet value in a list to the input target value
+
+    Args:
+        x (list[float]): List of x-coords being plotted
+        target (float): Value of mouse x-coord
+
+    Returns:
+        float: Nearest value in x from target
+        None: If searching null list.
+    """
+    try:
+        array = np.asarray(x)
+        value_index = (
+            np.abs(array - target)
+        ).argmin()  # Finds the absolute difference between the value and the target
+        # then gives the smallest number in the array and returns it
+        return array[value_index]
+
+    except ValueError:
+        return None

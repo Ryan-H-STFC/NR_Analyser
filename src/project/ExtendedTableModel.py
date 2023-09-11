@@ -50,7 +50,7 @@ class ExtendedQTableModel(QAbstractTableModel):
 
             if header_flag:
                 bgcolor = (
-                    QColor("#B0C0BC") if "No Peaks" in value else QColor("#759395")
+                    QColor("#B0C0BC") if "No Peak" in value else QColor("#759395")
                 )
                 return QVariant(bgcolor)
 

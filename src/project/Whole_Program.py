@@ -1462,7 +1462,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         if isMax:
             peaks_x, peaks_y = element_data.maxima[0], element_data.maxima[1]
-            
+
         else:
             peaks_x, peaks_y = element_data.minima[0], element_data.minima[1]
 

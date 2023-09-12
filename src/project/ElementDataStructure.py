@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from pandas import DataFrame, errors
 import numpy as np
@@ -39,9 +40,17 @@ class ElementData:
     isAnnotationsHidden: bool = False
     isAnnotationsDrawn: bool = False
 
-    def __init__(self, name: str, numPeaks: int, tableData: DataFrame, graphData: DataFrame,
-                 graphColour: tuple, isToF: bool, isAnnotationsHidden: bool = False,
-                 threshold: float = 100, isImported: bool = False) -> None:
+    def __init__(self,
+                 name: str,
+                 numPeaks: int,
+                 tableData: DataFrame,
+                 graphData: DataFrame,
+                 graphColour: tuple,
+                 isToF: bool,
+                 isAnnotationsHidden: bool = False,
+                 threshold: float = 100,
+                 isImported: bool = False) -> None:
+
         self.name = name
         self.numPeaks = numPeaks
         self.isToF = isToF
@@ -67,9 +76,13 @@ class ElementData:
 
         if not self.graphData.empty:
             self.maxima = np.array(pd.maxima(graphData, threshold))
-            self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
+            self.max_peak_limits_x, self.max_peak_limits_y = np.array(
+                pd.GetMaxPeakLimits()
+            )
             self.minima = np.array(pd.minima(graphData))
-            self.min_peak_limits_x, self.min_peak_limits_y = np.array(pd.GetMinPeakLimits())
+            self.min_peak_limits_x, self.min_peak_limits_y = np.array(
+                pd.GetMinPeakLimits()
+            )
 
         if self.numPeaks is None:
             self.numPeaks = len(self.maxima[0])
@@ -105,7 +118,7 @@ class ElementData:
         self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
         self.numPeaks = len(self.maxima[0])
 
-    def GetPeakLimits(self, max: bool = True) -> (ndarray[float], ndarray[float]):
+    def GetPeakLimits(self, max: bool = True) -> tuple[ndarray[float]]:
         if max:
             return (self.max_peak_limits_x, self.max_peak_limits_y)
         return (self.min_peak_limits_x, self.min_peak_limits_y)
@@ -123,22 +136,27 @@ class ElementData:
             return
         if self.isImported:
             return
-        if self.isToF:
-            return
+
         if self.tableData[1:].empty:
             return
 
-        column = 'Rank by Integral' if byIntegral else 'Rank by Peak Width'
-        for (max_x, max_y) in self.maxima.T[0:self.numPeaks]:
+        rankCol = "Rank by Integral" if byIntegral else "Rank by Peak Width"
+        compareCol = "TOF (us)" if self.isToF else "Energy (eV)"
+        for max_x, max_y in self.maxima.T[0:self.numPeaks]:
+            tableMax_x = nearestnumber(self.tableData[compareCol][1:], max_x)
 
-            tableMax_x = nearestnumber(self.tableData["Energy (eV)"][1:], max_x)
-
-            row = self.tableData[1:].loc[(self.tableData["Energy (eV)"][1:].astype(float) == tableMax_x)]
+            row = self.tableData[1:].loc[
+                (self.tableData[compareCol][1:].astype(float) == tableMax_x)
+            ]
 
             if row.empty:
                 index = None
             else:
-                index = row[column].iloc[0] if '(' not in str(row[column].iloc[0]) else row[column].iloc[0][1:-1]
+                index = (
+                    row[rankCol].iloc[0]
+                    if "(" not in str(row[rankCol].iloc[0])
+                    else row[rankCol].iloc[0][1:-1]
+                )
             self.annotationsOrder[int(index)] = (max_x, max_y)
 
 

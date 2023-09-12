@@ -1,7 +1,8 @@
 import pytest
 import sys
 import os
-sys.path.append(os.path.abspath('./src/project/'))
+
+sys.path.append(os.path.abspath("./src/project/"))
 from ElementDataStructure import ElementData
 
 
@@ -10,27 +11,53 @@ def app():
     # w = project.Whole_Program.DatabaseGUI()
     pass
 
+
 # ? ElementData Testing
 
 
 def test_ElementData_init_Normal(getElementData):
     (tableData1, graphData1), _ = getElementData
     # Normal
-    elementT = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
-                           graphData=graphData1, graphColour=(0, 0, 0), isToF=True)
-    elementF = ElementData(name="29-Cu-63_n-g", numPeaks=10, tableData=tableData1,
-                           graphData=graphData1, isToF=False, graphColour=(0, 0, 0))
+    elementT = ElementData(
+        name="29-Cu-63_n-g",
+        numPeaks=10,
+        tableData=tableData1,
+        graphData=graphData1,
+        graphColour=(0, 0, 0),
+        isToF=True,
+    )
+    elementF = ElementData(
+        name="29-Cu-63_n-g",
+        numPeaks=10,
+        tableData=tableData1,
+        graphData=graphData1,
+        isToF=False,
+        graphColour=(0, 0, 0),
+    )
     return elementT != elementF is True
 
 
 def test_ElementData_init_Null(getElementData):
     _, (tableData2, graphData2) = getElementData
     # Null Peak Data
-    elementT = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData2,
-                           graphData=graphData2, isToF=True, graphColour=(0, 0, 0))
-    elementF = ElementData(name="2-He-4_n-g", numPeaks=0, tableData=tableData2,
-                           graphData=graphData2, isToF=False, graphColour=(0, 0, 0))
+    elementT = ElementData(
+        name="2-He-4_n-g",
+        numPeaks=0,
+        tableData=tableData2,
+        graphData=graphData2,
+        isToF=True,
+        graphColour=(0, 0, 0),
+    )
+    elementF = ElementData(
+        name="2-He-4_n-g",
+        numPeaks=0,
+        tableData=tableData2,
+        graphData=graphData2,
+        isToF=False,
+        graphColour=(0, 0, 0),
+    )
     return elementT != elementF is True
+
 
 # ? ExtendedTableModel Testing
 
@@ -41,6 +68,7 @@ def test_ExtendedTableModel_init():
 
 
 # ? Peak Detection Testing
+
 
 @pytest.mark.skip(reason="Unfinished Test")
 def test_PeakDetection_init():

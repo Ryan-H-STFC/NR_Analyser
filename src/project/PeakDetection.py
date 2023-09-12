@@ -7,6 +7,7 @@ class PeakDetector:
     Peak Detection, class which is used to find peaks, both maximas and minimas of a sample,
     peak widths used in integration calculations.
     """
+
     def __init__(self) -> None:
         self.max_peak_limits_x = None
         self.max_peak_limits_y = None
@@ -14,7 +15,7 @@ class PeakDetector:
         self.min_peak_limits_y = None
         self.peak_list = None
 
-    def maxima(self, data: DataFrame, threshold: float = 100) -> (list[float], list[float]):
+    def maxima(self, data: DataFrame, threshold: float = 100) -> tuple[list[float]]:
         """
         maxima finds the coordinates of any peak which is found higher than the threshold, within the sample.
         As well as the peak widths.
@@ -63,9 +64,9 @@ class PeakDetector:
         # print("Peak limits x: ", self.max_peak_limits_x)
         # print("Peak limits y: ", self.max_peak_limits_y)
         self.peak_list = maxima_list_x
-        return maxima_list_x, maxima_list_y
+        return (maxima_list_x, maxima_list_y)
 
-    def minima(self, data: DataFrame) -> (list[float], list[float]):
+    def minima(self, data: DataFrame) -> tuple[list[float]]:
         """
         minima finds the coordinates of the minimas within the selected sample.
 
@@ -113,8 +114,7 @@ class PeakDetector:
         minima_list_y = list(map(lambda val: -1 * val, minima_list_y))
         return minima_list_x, minima_list_y
 
-    def PeakLimitsCheck(first_limits, second_limits, maxima) -> (list[float], list[float]):
-        
+    def PeakLimitsCheck(first_limits, second_limits, maxima) -> tuple[list[float]]:
         first_limits_changed = []
         second_limits_changed = []
         for i in first_limits:
@@ -141,8 +141,8 @@ class PeakDetector:
         # print("Changed: ", first_limits_changed, second_limits_changed)
         return first_limits_changed, second_limits_changed
 
-    def GetMaxPeakLimits(self) -> (dict[str], dict[str]):
+    def GetMaxPeakLimits(self) -> tuple[dict[str]]:
         return self.max_peak_limits_x, self.max_peak_limits_y
 
-    def GetMinPeakLimits(self) -> (dict[str], dict[str]):
+    def GetMinPeakLimits(self) -> tuple[dict[str]]:
         return self.min_peak_limits_x, self.min_peak_limits_y

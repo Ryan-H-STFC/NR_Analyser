@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pandas import DataFrame
 import scipy as sp
 

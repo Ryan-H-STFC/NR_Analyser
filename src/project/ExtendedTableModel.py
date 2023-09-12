@@ -1,3 +1,4 @@
+from __future__ import annotations
 from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
 from PyQt5.QtGui import QColor
 

@@ -13,6 +13,7 @@ class ExtendedQTableModel(QAbstractTableModel):
         super(ExtendedQTableModel, self).__init__()
         self._data = data
         self.columns: list = list(data.columns.values)
+        self.titleRows = []
 
     def data(self, index, role):
         """

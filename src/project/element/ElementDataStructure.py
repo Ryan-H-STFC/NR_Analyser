@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pandas import DataFrame, errors
 import numpy as np
 from numpy import ndarray
-from PeakDetection import PeakDetector
+from element.PeakDetection import PeakDetector
 
 
 @dataclass(repr=True)
@@ -25,11 +25,11 @@ class ElementData:
     maxima: ndarray = None
     minima: ndarray = None
 
-    max_peak_limits_x: ndarray = None
-    max_peak_limits_y: ndarray = None
+    maxPeakLimitsX: ndarray = None
+    maxPeakLimitsY: ndarray = None
 
-    min_peak_limits_x: ndarray = None
-    min_peak_limits_y: ndarray = None
+    minPeakLimitsX: ndarray = None
+    minPeakLimitsY: ndarray = None
 
     isToF: bool = False
     isImported: bool = False
@@ -76,11 +76,11 @@ class ElementData:
 
         if not self.graphData.empty:
             self.maxima = np.array(pd.maxima(graphData, threshold))
-            self.max_peak_limits_x, self.max_peak_limits_y = np.array(
+            self.maxPeakLimitsX, self.maxPeakLimitsY = np.array(
                 pd.GetMaxPeakLimits()
             )
             self.minima = np.array(pd.minima(graphData))
-            self.min_peak_limits_x, self.min_peak_limits_y = np.array(
+            self.minPeakLimitsX, self.minPeakLimitsY = np.array(
                 pd.GetMinPeakLimits()
             )
 
@@ -115,13 +115,13 @@ class ElementData:
     def UpdateMaximas(self) -> None:
         pd = PeakDetector()
         self.maxima = np.array(pd.maxima(self.graphData, self.threshold))
-        self.max_peak_limits_x, self.max_peak_limits_y = np.array(pd.GetMaxPeakLimits())
+        self.maxPeakLimitsX, self.maxPeakLimitsY = np.array(pd.GetMaxPeakLimits())
         self.numPeaks = len(self.maxima[0])
 
     def GetPeakLimits(self, max: bool = True) -> tuple[ndarray[float]]:
         if max:
-            return (self.max_peak_limits_x, self.max_peak_limits_y)
-        return (self.min_peak_limits_x, self.min_peak_limits_y)
+            return (self.maxPeakLimitsX, self.maxPeakLimitsY)
+        return (self.minPeakLimitsX, self.minPeakLimitsY)
 
     def OrderAnnotations(self, byIntegral: bool = True) -> None:
         """

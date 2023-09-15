@@ -40,11 +40,9 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 ## **Bugs to be fixed soon**
 
-* Peak Detection - Do not allow multiple reads for peak data if it is already displayed.
 
 ## **Improvements Coming Soon**
 
-* Put code into MVP (Model, View, Presenter) format
 
 ## **Accessibility**
 

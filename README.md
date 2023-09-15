@@ -22,8 +22,8 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 ## **Overview of GUI**
 
-![NTRI_NRCA_empty](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/assets/139995913/93930aa8-a848-4f55-bb87-2d095fdb4577?raw=true)
-![NTRI_NRCA_filled](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/assets/139995913/ab9e24e4-9a93-4e06-866e-2f312780a1a5?raw=true)
+![NTRI_NRCA_empty](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/assets/139995913/093bdc5a-cbd9-45d5-a4f8-a75275ef657c)
+![NTRI_NRCA_filled](https://github.com/Ryan-H-STFC/NRTI-NRCA-Viewing-Database/assets/139995913/6948d8ea-a376-4a12-8a84-cc4c8a7c1121)
 
 ## **Features**
 

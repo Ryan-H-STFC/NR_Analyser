@@ -3,6 +3,8 @@ import sys
 import os
 
 sys.path.append(os.path.abspath("./src/project/"))
+sys.path.append(os.path.abspath("./src/project/element"))
+sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from ElementDataStructure import ElementData
 
 

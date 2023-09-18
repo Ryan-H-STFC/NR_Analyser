@@ -85,7 +85,7 @@ class ElementData:
             )
 
         if self.numPeaks is None:
-            self.numPeaks = len(self.maxima[0])
+            self.numPeaks = None if self.maxima is None else len(self.maxima[0])
 
     def __eq__(self, other) -> bool:
         if isinstance(other, ElementData):

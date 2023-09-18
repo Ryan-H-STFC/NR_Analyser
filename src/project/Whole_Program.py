@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from itertools import islice
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
 )
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
+
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QRegExp
 
@@ -48,6 +48,7 @@ from PyQt5.QtWidgets import (
 
 from element.ElementDataStructure import ElementData
 from myPyQt.ExtendedTableModel import ExtendedQTableModel
+from myPyQt.Combobox import ComboBox
 from myPyQt.CustomSortingProxy import CustomSortingProxy
 from myPyQt.ButtonDelegate import ButtonDelegate
 from helpers.integration import integrate_simps, integrate_trapz
@@ -251,11 +252,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 shutil.copy(source, destination)
 
         # Creating combo box (drop down menu)
-        self.combobox = QComboBox()
+        self.combobox = ComboBox()
         self.combobox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.combobox.setObjectName("combobox")
+
         self.combobox.addItems(self.substances)
         self.combobox.setEditable(True)
+        self.combobox.lineEdit().setPlaceholderText("Select a Substance")
 
         self.combobox.setInsertPolicy(QComboBox.NoInsert)
         self.combobox.setMaxVisibleItems(15)
@@ -324,14 +327,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.toggleLayout = QVBoxLayout()
         self.toggleLayout.setObjectName('toggleLayout')
 
-        gridCheck = QCheckBox("Grid Lines", self)
-        gridCheck.setCursor(pointingCursor)
-        gridCheck.setObjectName("gridCheck")
-        gridCheck.__name__ = "gridCheck"
+        self.gridCheck = QCheckBox("Grid Lines", self)
+        self.gridCheck.setCursor(pointingCursor)
+        self.gridCheck.setObjectName("grid_check")
+        self.gridCheck.__name__ = "gridCheck"
 
-        gridCheck.setEnabled(False)
-        self.toggleLayout.addWidget(gridCheck)
-        gridCheck.stateChanged.connect(self.Gridlines)
+        self.gridCheck.setEnabled(False)
+        self.toggleLayout.addWidget(self.gridCheck)
+        self.gridCheck.stateChanged.connect(self.Gridlines)
 
         self.threshold_check = QCheckBox("Peak Detection Limits", self)
         self.threshold_check.setCursor(pointingCursor)
@@ -599,7 +602,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             if self.data == file.split(".")[0]:
                 filepath = peakInfoDir + file
                 break
+        try:
 
+            for row in self.table_model.titleRows:
+                self.table.setItemDelegateForRow(row, None)
+        except AttributeError:
+            pass
         try:
             file = pd.read_csv(filepath, header=0)
             # start = time.time()
@@ -607,13 +615,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.table.clearSpans()
             # end = time.time()
             # print("Time elapsed : ", end-start)
+
             if self.data not in self.plottedSubstances:
                 self.numRows = file.shape[0]
             print("Number of peaks: ", self.numRows)
             # Fill Table with data
-            if self.table_model is not None:
-                for row in self.table_model.titleRows:
-                    self.table.setItemDelegateForRow(row, None)
             self.table_model = ExtendedQTableModel(file)
             proxy = CustomSortingProxy()
             proxy.setSourceModel(self.table_model)
@@ -621,12 +627,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.table.setModel(proxy)
             self.table.setSortingEnabled(True)
             self.peakInfoIsNull = False
+            # if self.table_model is not None:
+
             # peak_plotEnergyBtn = QPushButton(self.table)      # If wanting a button to plot peak
             # peak_plotEnergyBtn.setText('Plot')         # Not sure how to get cell-clicked though
             # peak_plotEnergyBtn.clicked.connect(self.PlotPeak)
             # self.table.setCellWidget(row_count,10,peak_plotEnergyBtn)
-        except AttributeError:
-            pass
+
         except ValueError:
             QMessageBox.warning(
                 self,
@@ -737,7 +744,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         for btn in getLayoutWidgets(self.toggleLayout):
             match btn.__name__:
-                case "gridCheck":
+                case "self.gridCheck":
                     btn.setEnabled(gridlines)
                 case "peakCheck":
                     btn.setEnabled(peakLimit)
@@ -795,11 +802,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     continue
             self.plotFilepath = f"{self.filepath}data\\{substance}.csv" if filepath is None else filepath
             peakInfoDir = f"{self.filepath}GUI Files/Peak information/" if filepath is None else None
+            try:
+                graphData = pd.read_csv(self.plotFilepath, header=None)
+            except pd.errors.EmptyDataError:
+                QMessageBox.warning(self, "Warning", "Selection has Empty Graph Data")
+                self.plottedSubstances.remove((self.data, tof))
+                return
 
-            graphData = pd.read_csv(self.plotFilepath, header=None)
-            self.graphData = graphData
-
-            if tof:
+            if tof and not graphData.empty:
                 graphData[0] = self.EnergytoTOF(graphData[0], length=length)
 
             try:
@@ -844,9 +854,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.x = []
         self.y = []
         # Establishing colours for multiple plots
-        # ! Fix issue with adding more than 7 graphs.
-
-        # # print(graphData)
 
         # General Plotting ---------------------------------------------------------------------------------------------
         if self.plotCount < 0:
@@ -880,45 +887,45 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self.ax.set(title=None)
 
         # Plotting -----------------------------------------------------------------------------------------------------
+        if not graphData.empty:
+            spectraLine = self.ax.plot(
+                graphData.iloc[:, 0],
+                graphData.iloc[:, 1],
+                "-",
+                c=colour,
+                alpha=0.6,
+                linewidth=0.8,
+                label=f"{self.data}-ToF" if newElement.isToF else f"{self.data}-Energy",
+                gid=self.data,
+            )
+            newElement.isGraphDrawn = True
 
-        spectraLine = self.ax.plot(
-            graphData.iloc[:, 0],
-            graphData.iloc[:, 1],
-            "-",
-            c=colour,
-            alpha=0.6,
-            linewidth=0.8,
-            label=f"{self.data}-ToF" if newElement.isToF else f"{self.data}-Energy",
-            gid=self.data,
-        )
-        newElement.isGraphDrawn = True
+            # Creating a legend to toggle on and off plots--------------------------------------------------------------
+            legend = self.ax.legend(fancybox=True, shadow=True)
 
-        # Creating a legend to toggle on and off plots----------------------------------------------------------------
-        legend = self.ax.legend(fancybox=True, shadow=True)
+            # Amending dictionary of plotted lines - maps legend line to original line and allows for picking
+            spectraLegend = legend.get_lines()  # Gets the 'ID' of lines ( I think)
+            for i in spectraLegend:
+                i.set_picker(True)
+                i.set_pickradius(5)  # Makes it easier to click on legend line
 
-        # Amending dictionary of plotted lines - maps legend line to original line and allows for picking
-        spectraLegend = legend.get_lines()  # Gets the 'ID' of lines ( I think)
-        for i in spectraLegend:
-            i.set_picker(True)
-            i.set_pickradius(5)  # Makes it easier to click on legend line
+            # Dictionary has legend line mapped to spectraLine but needs to be updated for multiple plots
+            legend_line = spectraLegend[-1]
+            self.graphs[legend_line] = spectraLine[0]
 
-        # Dictionary has legend line mapped to spectraLine but needs to be updated for multiple plots
-        legend_line = spectraLegend[-1]
-        self.graphs[legend_line] = spectraLine[0]
+            # Updating for multiple plots
+            dictionary_keys = []
+            for key in self.graphs:
+                dictionary_keys.append(key)
+            count = 0
+            for i in spectraLegend:
+                self.graphs[i] = self.graphs.pop(dictionary_keys[count])
+                count = count + 1
+            plt.connect("pick_event", self.HideGraph)
+            # ----------------------------------------------------------------------------------------------------------
 
-        # Updating for multiple plots
-        dictionary_keys = []
-        for key in self.graphs:
-            dictionary_keys.append(key)
-        count = 0
-        for i in spectraLegend:
-            self.graphs[i] = self.graphs.pop(dictionary_keys[count])
-            count = count + 1
-        plt.connect("pick_event", self.HideGraph)
-        # ------------------------------------------------------------------------------------------------------------
-
-        # Establishing plot count
-        self.plotCount += 1
+            # Establishing plot count
+            self.plotCount += 1
         self.canvas.draw()
 
         # Amending the table for more than one plot.
@@ -941,9 +948,15 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.figure.tight_layout()
 
         self.table_model = ExtendedQTableModel(table_data)
+
+        proxy = CustomSortingProxy()
+        proxy.setSourceModel(self.table_model)
+
+        self.table.setModel(proxy)
+        self.table.setSortingEnabled(True)
         self.table_model.titleRows = self.titleRows
         self.table.setModel(self.table_model)
-        self.table.setSortingEnabled(False)
+        self.table.setSortingEnabled(True)
         self.table.clearSpans()
         for row in self.titleRows[:-1]:
             self.table.setSpan(row, 0, 1, 10)
@@ -1023,8 +1036,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.thresholdLabel.setText("")
         self.elementData = {}
         self.elementDataNames = []
-        for row in self.table_model.titleRows:
-            self.table.setItemDelegateForRow(row, None)
+        try:
+            for row in self.table_model.titleRows:
+                self.table.setItemDelegateForRow(row, None)
+        except AttributeError:
+            pass
         self.table.setModel(None)
         self.graphs = OrderedDict()
         self.tableLayout = dict()
@@ -1039,17 +1055,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         Toggles the gridlines on the plot
 
         Args:
-            checked (_type_): _description_
+            checked (bool): State of the gridCheck Checkbox
         """
         try:
-            if checked:
-                self.ax.grid()
-                self.canvas.draw()
-            else:
-                self.ax.grid()
-                self.canvas.draw()
-        except Exception:
-            QMessageBox.warning(self, "Error", "You have not plotted anything")
+
+            if self.ax.get_visible():
+                self.ax.grid(checked)
+            if self.ax2.get_visible():
+                self.ax2.grid(checked)
+
+        except AttributeError:
+            pass
+        self.canvas.draw()
 
     def Threshold(self) -> None:
         """
@@ -1063,17 +1080,39 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 continue
             if "pd_threshold" in line.get_gid():
                 line.remove()
+        try:
+            for line in self.ax2.lines:
+                if line is None:
+                    continue
+                if line.get_gid() is None:
+                    continue
+                if "pd_threshold" in line.get_gid():
+                    line.remove()
+        except AttributeError:
+            pass
         self.canvas.draw()
         if checked:
             for name, substance in self.elementData.items():
                 self.figure.add_subplot(self.ax)
-                line = self.ax.axhline(
-                    y=substance.threshold,
-                    linestyle="--",
-                    color=substance.graphColour,
-                    linewidth=0.5,
-                    gid=f"pd_threshold-{name}"
-                )
+                if self.ax.get_visible():
+                    line = self.ax.axhline(
+                        y=substance.threshold,
+                        linestyle="--",
+                        color=substance.graphColour,
+                        linewidth=0.5,
+                        gid=f"pd_threshold-{name}"
+                    )
+                try:
+                    if self.ax2.get_visible():
+                        line = self.ax2.axhline(
+                            y=substance.threshold,
+                            linestyle="--",
+                            color=substance.graphColour,
+                            linewidth=0.5,
+                            gid=f"pd_threshold-{name}"
+                        )
+                except AttributeError:
+                    pass
                 if substance.isGraphHidden:
                     line.set_visible(False)
 
@@ -1117,6 +1156,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                                                 size=6,
                                                 gid=gid,
                                                 annotation_clip=True,
+                                                alpha=0.8
                                                 )
                                for i in
                                (range(0, maxDraw) if type(xy) == np.ndarray else xy.keys())
@@ -1135,6 +1175,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         for substance in self.elementData.values():
             substance.HideAnnotations(self.peakLabelCheck.isChecked())
             substance.isAnnotationsHidden = not substance.isAnnotationsHidden
+
         self.canvas.draw()
 
     # ! Not Working <-----------------------------------------------------------------------
@@ -1503,6 +1544,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     element.isMinDrawn = False
             except KeyError:
                 return
+            self.Threshold()
+            self.Gridlines(self.gridCheck.isChecked())
             self.canvas.draw()
         resetBtn.clicked.connect(ResetPDPlots)
 
@@ -1526,6 +1569,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         if self.ax2 is None:
             self.ax2 = self.figure.add_subplot(111)
+        self.Gridlines(self.gridCheck.isChecked())
 
         if not elementData.isMaxDrawn and not elementData.isMinDrawn:
             self.ax2.plot(
@@ -1534,9 +1578,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 "-",
                 color=elementData.graphColour,
                 alpha=0.6,
-                linewidth=0.6,
+                linewidth=0.8,
             )
         self.Threshold()
+        self.DrawAnnotations(elementData)
         self.ax2.set_xscale("log")
         self.ax2.set_yscale("log")
         self.ax2.set(
@@ -1544,7 +1589,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         )
         if isMax:
             for x, y in zip(peaksX, peaksY):
-                self.ax2.plot(x, y, "x", color="black", markersize=4)
+                self.ax2.plot(x, y, "x", color="black", markersize=3, alpha=0.6)
                 limitXFirst = elementData.maxPeakLimitsX[f"{x}_first"]
                 limitYFirst = elementData.maxPeakLimitsY[f"{x}_first"]
                 limitXSecond = elementData.maxPeakLimitsX[f"{x}_second"]
@@ -1556,7 +1601,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 elementData.isMaxDrawn = True
         else:
             for x, y in zip(peaksX, peaksY):
-                self.ax2.plot(x, y, "x", color="black", markersize=4)
+                self.ax2.plot(x, y, "x", color="black", markersize=3, alpha=0.6)
                 elementData.isMinDrawn = True
 
                 # limitXFirst = elementData.minPeakLimitsX[f"{x}_first"]
@@ -1839,7 +1884,7 @@ def main() -> None:
         QCheckBox#gridCheck, #threshold_check, #label_check, #orderByIntegral, #orderByPeakW {
             font-weight: 500;
         }
-        QCheckBox#gridCheck::indicator:unchecked,
+        QCheckBox#grid_check::indicator:unchecked,
                  #threshold_check::indicator:unchecked,
                  #label_check::indicator:unchecked,
                  #orderByIntegral::indicator:unchecked,
@@ -1848,7 +1893,7 @@ def main() -> None:
                    image: url(./src/img/checkbox-component-unchecked.svg);
                    color: #FFF
                  }
-        QCheckBox#gridCheck::indicator:checked,
+        QCheckBox#grid_check::indicator:checked,
                  #threshold_check::indicator:checked,
                  #label_check::indicator:checked,
                  #orderByIntegral::indicator:checked,
@@ -1857,7 +1902,7 @@ def main() -> None:
                      image: url(./src/img/checkbox-component-checked.svg);
                      color: #FFF
                  }
-        QCheckBox#gridCheck:disabled,
+        QCheckBox#grid_check:disabled,
                  #threshold_check:disabled,
                  #label_check:disabled,
                  #orderByIntegral:disabled,
@@ -1865,7 +1910,7 @@ def main() -> None:
                  {
                      color: #888;
                  }
-        QCheckBox#gridCheck:enabled,
+        QCheckBox#grid_check:enabled,
                  #threshold_check:enabled,
                  #label_check:enabled
         {
@@ -1901,7 +1946,7 @@ def main() -> None:
         QHeaderView::section:horizontal:!last{
             border-right: 1px solid #000;
         }
-        
+
         QHeaderView::down-arrow{
             image: url(./src/img/expand-down-component.svg)
         }
@@ -1914,10 +1959,13 @@ def main() -> None:
         }
         QDialog{
             background-color: #4D4D4D;
-            color: white;
+            color: #FFF;
+        }
+        QDialogQString{
+            color: #FFF;
         }
         QDialog#maxPeaks QLabel, #editPeaks QLabel, #thresholdLimit QLabel{
-            color: white;
+            color: #FFF;
         }
     """
     )

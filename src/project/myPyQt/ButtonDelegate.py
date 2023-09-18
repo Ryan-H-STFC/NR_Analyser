@@ -61,20 +61,22 @@ class ButtonDelegate(QItemDelegate):
         button.setIcon(QIcon("./src/img/expand-down-component.svg"))
         color = "#B0C0BC" if "No Peak" in index.data() else "#759395"
         button.setStyleSheet(f"background-color: {color};")
-        button.toggled.connect(lambda: self.CollapseTableRows(button.isChecked(), index.row()))
+        button.toggled.connect(lambda: self.CollapseTableRows(button.isChecked(), index.row(), button))
         return button
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
 
-    def CollapseTableRows(self, collapse: bool, row: int):
+    def CollapseTableRows(self, collapse: bool, row: int, button):
         rowCount = self.tableModel.rowCount(0)
         titleRowIndex = self.tableModel.titleRows.index(row)
         endRow = rowCount if titleRowIndex == -1 else self.tableModel.titleRows[titleRowIndex + 1]
         interval = range(row + 1, endRow)
         if collapse:
+            button.setIcon(QIcon("./src/img/expand-up-component.svg"))
             for i in interval:
                 self.tableView.hideRow(i)
         else:
+            button.setIcon(QIcon("./src/img/expand-down-component.svg"))
             for i in interval:
                 self.tableView.showRow(i)

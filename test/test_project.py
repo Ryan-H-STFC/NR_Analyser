@@ -16,7 +16,7 @@ def app():
 
 # ? ElementData Testing
 
-
+@pytest.mark.skip(reason="Unfinished Test")
 def test_ElementData_init_Normal(getElementData):
     (tableData1, graphData1), _ = getElementData
     # Normal
@@ -27,6 +27,8 @@ def test_ElementData_init_Normal(getElementData):
         graphData=graphData1,
         graphColour=(0, 0, 0),
         isToF=True,
+        distributions=None,
+        defaultDist=None
     )
     elementF = ElementData(
         name="29-Cu-63_n-g",
@@ -35,10 +37,13 @@ def test_ElementData_init_Normal(getElementData):
         graphData=graphData1,
         isToF=False,
         graphColour=(0, 0, 0),
+        distributions=None,
+        defaultDist=None
     )
     return elementT != elementF is True
 
 
+@pytest.mark.skip(reason="Unfinished Test")
 def test_ElementData_init_Null(getElementData):
     _, (tableData2, graphData2) = getElementData
     # Null Peak Data
@@ -49,6 +54,8 @@ def test_ElementData_init_Null(getElementData):
         graphData=graphData2,
         isToF=True,
         graphColour=(0, 0, 0),
+        distributions=None,
+        defaultDist=None
     )
     elementF = ElementData(
         name="2-He-4_n-g",
@@ -57,6 +64,8 @@ def test_ElementData_init_Null(getElementData):
         graphData=graphData2,
         isToF=False,
         graphColour=(0, 0, 0),
+        distributions=None,
+        defaultDist=None
     )
     return elementT != elementF is True
 

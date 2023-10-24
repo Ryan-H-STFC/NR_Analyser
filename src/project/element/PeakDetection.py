@@ -18,18 +18,22 @@ class PeakDetector:
 
     def maxima(self, data: DataFrame, threshold: float = 100) -> tuple[list[float]]:
         """
-        maxima finds the coordinates of any peak which is found higher than the threshold, within the sample.
+        ``maxima`` finds the coordinates of any peak which is found higher than the threshold, within the sample.
         As well as the peak widths.
         Args:
-            self (PeakDetector): PeakDetector Instance.
-            data (DataFrame): Pandas Dataframe with the graph data for the sample.
-            threshold (float): Threshold for what level peaks should be found from.
+            ``self`` (PeakDetector): PeakDetector Instance.
+
+            ``data`` (DataFrame): Pandas Dataframe with the graph data for the sample.
+
+            ``threshold`` (float): Threshold for what level peaks should be found from.
+
         Returns:
             (maxima_list_x, maxima_list_y): Tuple of lists, list of x-coords, list of y-coords.
         """
         x, y = data.iloc[:, 0], data.iloc[:, 1]
         maxima, _ = sp.signal.find_peaks(y, height=threshold)
-        width = sp.signal.peak_widths(y, maxima, rel_height=1, wlen=300)
+
+        width = sp.signal.peak_widths(y, maxima, rel_height=1, wlen=110)
         # Extracting maxima coordinates
         maxima_list_x = []
         maxima_list_y = []
@@ -69,17 +73,17 @@ class PeakDetector:
 
     def minima(self, data: DataFrame) -> tuple[list[float]]:
         """
-        minima finds the coordinates of the minimas within the selected sample.
+        ``minima`` finds the coordinates of the minimas within the selected sample.
 
         Args:
-            self (PeakDetector): PeakDetector Instance.
-            data (DataFrame): Pandas Dataframe with the graph data for the sample.
+            ``self`` (PeakDetector): PeakDetector Instance.
+            ``data`` (DataFrame): Pandas Dataframe with the graph data for the sample.
 
         Returns:
             (minima_list_x, minima_list_y): Tuple of lists, list of x-coords, list of y-coords.
         """
-        x = data[0]
-        y = (lambda data: -1 * data[1])(data)
+        x = data.iloc[:, 0]
+        y = (lambda data: -1 * data.iloc[:, 1])(data)
         minima, _ = sp.signal.find_peaks(y, height=-0.90, prominence=0.0035)
         width = sp.signal.peak_widths(y, minima, rel_height=1, wlen=300)
         # Extracting peak center coordinates

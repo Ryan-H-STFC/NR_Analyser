@@ -12,6 +12,8 @@ def nearestnumber(x: list[float], target: float) -> float:
     Returns:
         float: Nearest value in x from target
     """
+    if target in x:
+        return target
     array = np.asarray(x)
     value_index = (
         np.abs(array - target)

@@ -5,6 +5,8 @@ import os
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
+sys.path.append(os.path.abspath("./src/project/helpers"))
+sys.path.append(os.path.abspath("./src/project/myMatplotlib"))
 from ElementDataStructure import ElementData
 
 

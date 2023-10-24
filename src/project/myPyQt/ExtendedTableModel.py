@@ -1,6 +1,5 @@
 from __future__ import annotations
-from PyQt5.QtCore import QAbstractTableModel, Qt, QVariant
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QAbstractTableModel, Qt
 
 
 class ExtendedQTableModel(QAbstractTableModel):
@@ -35,26 +34,9 @@ class ExtendedQTableModel(QAbstractTableModel):
         row: int = index.row()
         column: int = index.column()
         value = self._data.iloc[row, column]
-        header_flag: bool = False
-
-        if index.column() == 0:
-            try:
-                int(value)
-                header_flag = False
-            except ValueError:
-                header_flag = True
 
         if role == Qt.DisplayRole:
             return str(value)
-        if role == Qt.BackgroundColorRole:
-            if not self._data.columns[column] == "Rank by Integral":
-                return QVariant()
-
-            if header_flag:
-                bgcolor = (
-                    QColor("#B0C0BC") if "No Peak" in value else QColor("#759395")
-                )
-                return QVariant(bgcolor)
 
     def rowCount(self, index):
         return self._data.shape[0]

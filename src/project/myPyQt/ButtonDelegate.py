@@ -58,10 +58,14 @@ class ButtonDelegate(QItemDelegate):
         button.setCheckable(True)
         button.setObjectName("tableCollapseBtn")
         button.setText(index.data())
-        button.setIcon(QIcon("./src/img/expand-down-component.svg"))
-        color = "#B0C0BC" if "No Peak" in index.data() else "#759395"
-        button.setStyleSheet(f"background-color: {color};")
-        button.toggled.connect(lambda: self.CollapseTableRows(button.isChecked(), index.row(), button))
+        color = "#7D9797" if "No Peak" in index.data() else "#507373"
+        button.setStyleSheet(f"""background-color: {color};
+                             border-radius: 0px;
+                             color: #FFF;
+                             """)
+        if "No Peak" not in index.data():
+            button.setIcon(QIcon("./src/img/expand-down-component.svg"))
+            button.toggled.connect(lambda: self.CollapseTableRows(button.isChecked(), index.row(), button))
         return button
 
     def updateEditorGeometry(self, editor, option, index):

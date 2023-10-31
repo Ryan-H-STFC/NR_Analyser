@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pyparsing import Generator
 from PyQt5.QtWidgets import QWidget
 

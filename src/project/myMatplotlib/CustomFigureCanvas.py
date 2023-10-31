@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QMenu, QAction

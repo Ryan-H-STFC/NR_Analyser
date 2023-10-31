@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pandas import DataFrame
 from scipy.integrate import trapezoid, simpson
 

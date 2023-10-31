@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from numpy.random import random
 
 
-def getRandomColor():
+def getRandomColor() -> tuple[float]:
     """
     Returns a random color, with muted extremities.
 

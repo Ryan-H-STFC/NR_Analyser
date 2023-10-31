@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def supremum(x: list[float], target: float) -> float | None:
     """
     ``supremum`` Finds the supremum of ``target`` for a given list ``x``.

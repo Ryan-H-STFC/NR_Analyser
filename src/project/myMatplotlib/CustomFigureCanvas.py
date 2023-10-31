@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PyQt5.QtWidgets import QMenu, QAction
@@ -5,9 +7,9 @@ from PyQt5.QtGui import QIcon
 
 
 class FigureCanvas(FigureCanvasQTAgg):
-    def __init__(self, figure: Figure = None, parent=None):
+    def __init__(self, figure: Figure = None, widgetParent=None):
         super(FigureCanvasQTAgg, self).__init__(figure)
-        self.parent = parent
+        self.widgetParent = widgetParent
 
     def contextMenuEvent(self, event):
 
@@ -28,13 +30,13 @@ class FigureCanvas(FigureCanvasQTAgg):
             graphLine.remove()
 
             # graphDict[res.text()][1].remove()
-            self.parent.plottedSubstances.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
+            self.widgetParent.plottedSubstances.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
 
-            for anno in self.parent.elementData[res.text()].annotations:
+            for anno in self.widgetParent.elementData[res.text()].annotations:
                 anno.remove()
-            self.parent.elementDataNames.clear()
-            self.parent.elementData.pop(res.text())
-            for row in self.parent.titleRows:
-                self.parent.table.setItemDelegateForRow(row, None)
-            self.parent.updateLegend()
-            self.parent.addTableData()
+            self.widgetParent.elementDataNames.clear()
+            self.widgetParent.elementData.pop(res.text())
+            for row in self.widgetParent.titleRows:
+                self.widgetParent.table.setItemDelegateForRow(row, None)
+            self.widgetParent.updateLegend()
+            self.widgetParent.addTableData()

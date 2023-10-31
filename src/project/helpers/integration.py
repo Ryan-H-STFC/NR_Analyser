@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pandas import DataFrame
 from scipy.integrate import trapezoid, simpson
 
@@ -28,7 +30,7 @@ def integrate_trapz(graphData: DataFrame, leftLimit: float, rightLimit: float) -
 
     x, y = graphData.iloc[:, 0], graphData.iloc[:, 1]
 
-    return trapezoid(y, x) - ((peakL[1] + peakR[1]) * (peakR[0] - peakL[0]) / 2)
+    return trapezoid(y, x) - (peakR[0] - peakL[0]) * (peakL[1] + peakR[1]) / 2
 
 
 def integrate_simps(graphData: DataFrame, leftLimit: tuple[float], rightLimit: tuple[float]) -> float:
@@ -55,4 +57,4 @@ def integrate_simps(graphData: DataFrame, leftLimit: tuple[float], rightLimit: t
 
     x, y = graphData.iloc[:, 0], graphData.iloc[:, 1]
 
-    return simpson(y, x) - ((peakL[1] + peakR[1]) * (peakR[0] - peakL[0]) / 2)
+    return simpson(y, x) - (peakR[0] - peakL[0]) * (peakL[1] + peakR[1]) / 2

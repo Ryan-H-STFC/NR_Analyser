@@ -16,7 +16,7 @@ def app():
 
 # ? ElementData Testing
 
-@pytest.mark.skip(reason="Unfinished Test")
+
 def test_ElementData_init_Normal(getElementData):
     (tableData1, graphData1), _ = getElementData
     # Normal
@@ -43,7 +43,6 @@ def test_ElementData_init_Normal(getElementData):
     return elementT != elementF is True
 
 
-@pytest.mark.skip(reason="Unfinished Test")
 def test_ElementData_init_Null(getElementData):
     _, (tableData2, graphData2) = getElementData
     # Null Peak Data

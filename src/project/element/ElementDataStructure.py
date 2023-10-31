@@ -93,21 +93,21 @@ class ElementData:
             if self.defaultDist != self.distributions:
                 self.isDistAltered = True
                 self.onDistChange()
-                self.UpdateMaximas()
+                self.UpdatePeaks()
 
         except errors.EmptyDataError:
             self.graphData = DataFrame()
 
-        self.graphColour = graphColour
-
         try:
-            if not self.graphData.empty:
+            if not self.graphData.empty and not self.isDistAltered:
                 self.maxima = np.array(pd.maxima(graphData, threshold))
 
                 self.minima = np.array(pd.minima(graphData))
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
+        self.graphColour = graphColour
+
         try:
             name = self.name[8:] if 'element' in self.name else self.name
             limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'
@@ -170,14 +170,15 @@ class ElementData:
         ``onDistChange`` Will retrieve an elements the corresponding isotopes graphData appling the weights specified in
         the menu.
         """
-        if not self.isDistAltered or 'element' not in self.name:
+        if not self.isDistAltered and not ('element' in self.name or 'compound' in self.name):
             return
-        if "element" in self.name:
-            self.weightedIsoGraphData = {name: pandas.read_csv(f"{dataFilepath}{name}_{self.name.split('_')[-1]}.csv",
-                                                               names=['x', 'y'],
-                                                               header=None) * [1, dist]
-                                         for name, dist in self.distributions.items() if dist != 0}
-            self.setGraphDataFromDist(self.weightedIsoGraphData.values())
+
+        self.weightedIsoGraphData = {name: pandas.read_csv(f"""{dataFilepath}{name.strip('_n-g')}_{
+            self.name.split('_')[-1]}.csv""",
+                                                           names=['x', 'y'],
+                                                           header=None) * [1, dist]
+                                     for name, dist in self.distributions.items() if dist != 0}
+        self.setGraphDataFromDist(self.weightedIsoGraphData.values())
 
     def setGraphDataFromDist(self, weightedGraphData: list[DataFrame]) -> None:
         """
@@ -211,17 +212,17 @@ class ElementData:
         # p.join()
         self.graphData = pandas.DataFrame(sorted(zip(self.graphDataX, np.sum(isoY, axis=0))))
 
-    def UpdateMaximas(self) -> None:
+    def UpdatePeaks(self) -> None:
         """
-        ``UpdateMaximas`` recalulates maxima coordinates and updates associated variables.
+        ``UpdatePeaks`` recalulates maxima coordinates and updates associated variables.
         Used when threshold values have been altered.
         """
-        pd = PeakDetector()
-        self.maxima = np.array(pd.maxima(self.graphData, self.threshold))
-        self.maxPeakLimitsX, self.maxPeakLimitsY = np.array(pd.GetMaxPeakLimits())
+        peakD = PeakDetector()
+        self.maxima = np.array(peakD.maxima(self.graphData, self.threshold))
+        self.maxPeakLimitsX, self.maxPeakLimitsY = np.array(peakD.GetMaxPeakLimits())
         self.numPeaks = len(self.maxima[0])
 
-        self.minima = np.array(pd.minima(self.graphData))
+        self.minima = np.array(peakD.minima(self.graphData))
 
     def HideAnnotations(self, globalHide: bool = False) -> None:
         """

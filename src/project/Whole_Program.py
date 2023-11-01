@@ -1,13 +1,14 @@
 from __future__ import annotations
 import os
 import sys
-import matplotlib.rcsetup
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.rcsetup
+import matplotlib.pyplot as plt
 # from matplotlib.backends.backend_qt5agg import (
 #     FigureCanvasQTAgg as FigureCanvas,
 # )
+from matplotlib.ticker import AutoMinorLocator
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
@@ -554,7 +555,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.gridCheck.setEnabled(False)
         self.toggleLayout.addWidget(self.gridCheck)
-        self.gridCheck.stateChanged.connect(self.toggleGridlines)
+        self.gridCheck.stateChanged.connect(lambda: self.toggleGridlines(self.gridCheck.isChecked(),
+                                                                         **self.gridSettings))
 
         self.thresholdCheck = QCheckBox("Peak Detection Limits", self)
         self.thresholdCheck.setCursor(pointingCursor)
@@ -1299,7 +1301,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         optionsWindowDialog.setModal(False)
         optionsWindowDialog.setUpdatesEnabled(True)
+        optionsWindowDialog.blockSignals(True)
         optionsWindowDialog.show()
+        optionsWindowDialog.blockSignals(False)
 
     def editMaxPeaks(self) -> None:
         """
@@ -1855,6 +1859,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             return
         if imported:
             self.data = name
+            self.threshold = 100
         # Checks for adding mutliple graphs for the same selection, energy/tof types.
         if (self.data, tof) in self.plottedSubstances and not distAltered:
             QMessageBox.warning(self, "Warning", "Graph is already plotted")
@@ -1979,6 +1984,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.ax.set_yscale("log")
             self.ax.set_xscale("log")
             self.ax.minorticks_on()
+            self.ax.xaxis.set_tick_params('both', bottom=True)
 
         # Allows user to plot in ToF if chosen # -----------------------------------------------------------------------
         if elementData.isToF and not imported:
@@ -2050,8 +2056,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             for origLine in self.ax.get_lines():
                 if origLine.get_label() == legLine.get_label():
                     legLine.set_picker(True)
-                    legLine.set_pickradius(7)
-                    legLine.set_color(origLine.get_color())
+                    legLine.set_linewidth(1.5)
+                    legLine.set_pickradius(1.5)
+                    legLine.set_color(self.elementData[origLine.get_label()].graphColour)
+                    legLine.set_alpha(1.0 if origLine.get_visible() else 0.2)
+
                     self.legOrigLines[legLine] = origLine
 
     def energyToTOF(self, xData: list[float], length: float) -> list[float]:
@@ -2101,24 +2110,24 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         origLine = legOrigLines[legline]
         orgline_name = legline.get_label()
         # Hiding relevant line
-        visible = not origLine.get_visible()
+        newVisible = not origLine.get_visible()
         # Change the alpha on the line in the legend so we can see what lines
         # have been toggled.
-        legline.set_alpha(1.0 if visible else 0.2)
-        origLine.set_visible(visible)
+        legline.set_alpha(1.0 if newVisible else 0.2)
+        origLine.set_visible(newVisible)
         # Hiding relevant labels
         elementData = self.elementData[orgline_name]
-        elementData.isGraphHidden = not visible
+        elementData.isGraphHidden = not newVisible
         elementData.HideAnnotations(self.peakLabelCheck.isChecked())
         for line in axis.lines:
             if line.get_gid() == f"pd_threshold-{orgline_name}":
-                line.set_visible(visible)
+                line.set_visible(newVisible)
                 continue
             if f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max" in line.get_gid():
-                line.set_visible(visible)
+                line.set_visible(newVisible)
                 continue
             if f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-min" in line.get_gid():
-                line.set_visible(visible)
+                line.set_visible(newVisible)
                 continue
 
         self.canvas.draw()
@@ -2170,24 +2179,34 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         Args:
             ``visible`` (bool): Whether or not gridlines should be shown.
 
-            ``which`` (Literal[&quot;major&quot;, &quot;minor&quot;, &quot;both&quot;], optional):
+            ``which`` (Literal["major", "minor", "both"], optional):
             Whether to show major, minor or both gridline types. Defaults to "major".
 
-            ``axis`` (Literal[&quot;both&quot;, &quot;x&quot;, &quot;y&quot;], optional):
+            ``axis`` (Literal["both", "x", "y"], optional):
             Whether or not to show gridlines on x, y, or both. Defaults to "both".
 
-            ``color`` (str, optional): _description_. Defaults to "#444".
+            ``color`` (str, optional): Gridline Color. Defaults to "#444".
         """
         try:
-            self.ax.grid(False)
+            # if self.gridSettings["which"] == "major":
+            #     plt.minorticks_off()
+            #     self.ax.minorticks_off()
+            # else:
+            #     plt.minorticks_on()
+            #     self.ax.minorticks_on()
+            self.ax.minorticks_on()
+
+            self.ax.tick_params(which='minor', axis='x')
+            self.ax.tick_params(**self.gridSettings)
+            self.ax.grid(visible=False, which='both')
             if visible and self.ax.get_visible():
                 self.ax.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
             else:
-                self.ax.grid(visible=visible)
+                self.ax.grid(visible=visible, which="both")
             if visible and self.ax2.get_visible():
                 self.ax2.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
             else:
-                self.ax.grid(visible=visible)
+                self.ax.grid(visible=visible, which="both")
         except AttributeError:
             pass
         self.canvas.draw()
@@ -2573,6 +2592,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         except NotImplementedError:
             print("Function 'ThresholdforPeak' Not Yet Implemented.")
 
+    # ! ------------------------------------------------------------------------------------
+
     def importdata(self) -> None:
         """
         Allows user to select a file on their computer to open and analyse.
@@ -2713,7 +2734,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         if self.ax2 is None:
             self.ax2 = self.figure.add_subplot(111)
 
-        self.toggleGridlines(self.gridCheck.isChecked())
+        self.toggleGridlines(self.gridCheck.isChecked(), **self.gridSettings)
 
         self.ax2.set_visible(True)
         label = f"{elementData.name}-ToF" if elementData.isToF else f"{elementData.name}-Energy"

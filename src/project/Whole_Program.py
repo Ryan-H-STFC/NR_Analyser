@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 # from matplotlib.backends.backend_qt5agg import (
 #     FigureCanvasQTAgg as FigureCanvas,
 # )
-from matplotlib.ticker import AutoMinorLocator
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
@@ -71,7 +70,7 @@ from helpers.getWidgets import getLayoutWidgets
 # todo   correctly yet.
 # todo - Matplotlib icons
 # todo - PyQt5 Unit Testing
-# todo - Incorporate multiprocessing and multithreading
+# todo - Incorporate multiprocessing and multithreading?
 # todo - Fix issues with Maxima not displaying after zoom
 
 
@@ -96,7 +95,8 @@ from helpers.getWidgets import getLayoutWidgets
 # !    font_manager.fontManager.addfont(font)
 # ! matplotlib.rcParams["font.family"] = 'Roboto Mono'
 
-matplotlib.rcParamsDefault["path.simplify"] = False
+matplotlib.rcParamsDefault["path.simplify"] = True
+matplotlib.rcParamsDefault["agg.path.chunksize"] = 10000
 
 
 class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
@@ -1160,7 +1160,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         def onElementChange():
             inputThreshold.setPlaceholderText(str(self.elementData[elements.currentText()].threshold))
-        elements.currentTextChanged.connect(onElementChange)
+        elements.activated.connect(onElementChange)
 
         def onThresholdTextChange():
             if inputThreshold.text() == '':
@@ -1181,8 +1181,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.drawAnnotations(self.elementData[substance_name])
             for element in self.elementData.values():
                 if element.isMaxDrawn:
+                    element.isGraphUpdating = True
                     self.PlottingPD(element, True)
                 if element.isMinDrawn:
+                    element.isGraphUpdating = True
                     self.PlottingPD(element, False)
         applyBtn.clicked.connect(onAccept)
 
@@ -1957,14 +1959,31 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             self.elementData[title] = newElement
 
+        redrawMax = False
+        redrawMin = False
         if distAltered:
             for line in self.ax.get_lines():
                 if newElement.name in line.get_label():
                     line.remove()
+            try:
+                for line in self.ax2.get_lines():
+                    if 'max' in line.get_gid():
+                        redrawMax = True
+                    if 'min' in line.get_gid():
+                        redrawMin = True
+                    if newElement.name in line.get_label() or newElement.name in line.get_gid():
+                        line.remove()
+
+            except AttributeError:
+                pass
 
         distAltered = False
 
         self.plot(newElement, filepath, imported, name)
+        if redrawMax:
+            self.PlottingPD(newElement, True)
+        if redrawMin:
+            self.PlottingPD(newElement, False)
         self.addTableData()
 
         self.canvas.draw()
@@ -2057,7 +2076,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if origLine.get_label() == legLine.get_label():
                     legLine.set_picker(True)
                     legLine.set_linewidth(1.5)
-                    legLine.set_pickradius(1.5)
+                    legLine.set_pickradius(7)
                     legLine.set_color(self.elementData[origLine.get_label()].graphColour)
                     legLine.set_alpha(1.0 if origLine.get_visible() else 0.2)
 
@@ -2716,9 +2735,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             ``isMax`` (bool): Maxima if True else Minima
         """
-        if elementData.isMinDrawn and not isMax:
+        if elementData.isMinDrawn and not isMax and not elementData.isGraphUpdating:
             return
-        if elementData.isMaxDrawn and isMax:
+        if elementData.isMaxDrawn and isMax and not elementData.isGraphUpdating:
             return
         if isMax:
             peaksX, peaksY = elementData.maxima[0], elementData.maxima[1]
@@ -2737,8 +2756,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.toggleGridlines(self.gridCheck.isChecked(), **self.gridSettings)
 
         self.ax2.set_visible(True)
+
         label = f"{elementData.name}-ToF" if elementData.isToF else f"{elementData.name}-Energy"
-        if not elementData.isMaxDrawn and not elementData.isMinDrawn:
+        if not elementData.isMaxDrawn and not elementData.isMinDrawn and not elementData.isGraphUpdating:
             self.ax2.plot(
                 elementData.graphData[0],
                 elementData.graphData[1],
@@ -2771,10 +2791,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     removeIds.append(point.get_gid().split('-')[-1])
             if removeIds != []:
                 for point in pdPoints:
-                    for id in removeIds:
-                        if id == point.get_gid().split('-')[-1]:
-                            point.remove()
-                            break
+                    if point.get_gid().split('-')[-1] in removeIds:
+                        point.remove()
 
             for i, (x, y) in enumerate(zip(peaksX, peaksY)):
                 if (x, y) in pdPointsXY:
@@ -2831,15 +2849,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         legendPD = self.ax2.legend(fancybox=True, shadow=True)
         self.legOrigLinesPD = {}
         origlines = [line for line in self.ax2.get_lines() if not ('max' in line.get_gid() or 'min' in line.get_gid())]
-        for legline, origline in zip(legendPD.get_lines(), origlines):
-            legline.set_picker(True)
-            legline.set_pickradius(7)
-            legline.set_color(origline.get_color())
-            self.legOrigLinesPD[legline] = origline
+        for legLine, origLine in zip(legendPD.get_lines(), origlines):
+            legLine.set_picker(True)
+            legLine.set_linewidth(1.5)
+            legLine.set_pickradius(7)
+            legLine.set_color(self.elementData[origLine.get_label()].graphColour)
+            legLine.set_alpha(1.0 if origLine.get_visible() else 0.2)
+            self.legOrigLinesPD[legLine] = origLine
 
         self.figure.tight_layout()
         self.toolbar.update()
         self.toolbar.push_current()
+        elementData.isGraphUpdating = False
         self.canvas.draw()
 
 

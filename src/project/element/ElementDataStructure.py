@@ -46,6 +46,7 @@ class ElementData:
     isImported: bool = False
     isGraphHidden: bool = False
     isGraphDrawn: bool = False
+    isGraphUpdating: bool = False
     isDistAltered: bool = False
     isMaxDrawn: bool = False
     isMinDrawn: bool = False
@@ -110,8 +111,7 @@ class ElementData:
 
         try:
             name = self.name[8:] if 'element' in self.name else self.name
-            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'
-                                                                              ], header=None)
+            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'], header=None)
             for max in self.maxima[0]:
                 lim = limits[(limits['left'] < max) & (limits['right'] > max)]
                 if lim.empty:

@@ -7,12 +7,14 @@ from PyQt5.QtGui import QIcon
 
 
 class FigureCanvas(FigureCanvasQTAgg):
-    def __init__(self, figure: Figure = None, widgetParent=None):
+    def __init__(self, figure: Figure = None, widgetParent=None, contextConnect: bool = True):
         super(FigureCanvasQTAgg, self).__init__(figure)
         self.widgetParent = widgetParent
+        self.contextConnect = contextConnect
 
     def contextMenuEvent(self, event):
-
+        if not self.contextConnect:
+            return
         menu = QMenu()
 
         actionDelete = menu.addMenu(QIcon(".\\src\\img\\delete-component.svg"), 'Remove Graph')

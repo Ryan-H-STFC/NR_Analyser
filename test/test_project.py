@@ -10,7 +10,7 @@ from ElementDataStructure import ElementData
 
 @pytest.fixture
 def app():
-    # w = project.Whole_Program.DatabaseGUI()
+    # w = projec.NTRI-NRCA_Explorer.DatabaseGUI()
     pass
 
 

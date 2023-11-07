@@ -7,7 +7,7 @@ from pandas import DataFrame, errors
 
 from element.PeakDetection import PeakDetector
 from helpers.getSpacedElements import getSpacedElements
-from helpers.integration import integrate_simps, integrate_trapz
+from helpers.integration import integrate_trapz, integrate_simps
 from helpers.nearestNumber import nearestnumber
 from helpers.timeme import timeme
 
@@ -273,8 +273,8 @@ class ElementData:
             if row.empty:
                 continue
             else:
-                max_x = row[xCol].iloc[0]
-                max_y = row[yCol].iloc[0]
+                max_x = nearestnumber(self.maxima[0], row[xCol].iloc[0])
+                max_y = nearestnumber(self.maxima[1], row[yCol].iloc[0])
             self.annotationsOrder[i] = (max_x, max_y)
 
     def PeakIntegral(self, leftLimit: float, rightLimit: float) -> float:

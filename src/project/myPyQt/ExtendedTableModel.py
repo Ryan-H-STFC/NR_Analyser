@@ -1,6 +1,8 @@
 from __future__ import annotations
 from PyQt5.QtCore import QAbstractTableModel, Qt
 
+# todo - Add dictionary for row indexes for each section of data associated with each plotted element.
+
 
 class ExtendedQTableModel(QAbstractTableModel):
     """

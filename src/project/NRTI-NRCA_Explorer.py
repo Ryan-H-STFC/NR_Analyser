@@ -211,7 +211,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                  #label_check:disabled
                  {{
                      color: #AAA;
-                 
                  }}
         QCheckBox#grid_check:enabled,
                  #thresholdCheck:enabled,
@@ -789,8 +788,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def editPeakLimits(self) -> None:
         """
-        ``editPeakLimits`` Edit Peaks opens a dialog window to alter limits of integration for peaks of the selected element, recaluating
-        the integral and peak widths to place into the table.
+        ``editPeakLimits`` Edit Peaks opens a dialog window to alter limits of integration for peaks of the selected
+        element, recaluating the integral and peak widths to place into the table.
         """
         # Click count to disconnect after two limits have been selected
         if self.plottedSubstances == []:
@@ -1414,7 +1413,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         elements.lineEdit().setPlaceholderText("Select an Isotope / Element")
         elements.addItems([self.combobox.itemText(i)
-                           for i in range(self.combobox.count()) if 'element' in self.combobox.itemText(i)])
+                           for i in range(self.combobox.count())])
+        # elements.addItems([self.combobox.itemText(i)
+        #                    for i in range(self.combobox.count()) if 'element' in self.combobox.itemText(i)])
 
         totalLabel = QLabel("Total: 0")
 
@@ -1510,7 +1511,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             newQLineEdit.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
 
             newQLineEdit.setValidator(QRegExpValidator(
-                QRegExp("(0?(\\.[0-9]{1,4})?|1(\\.0{1,4})?)")))
+                QRegExp("(0?(\\.[0-9]{1,6})?|1(\\.0{1,6})?)")))
             newQLineEdit.setPlaceholderText("0")
             title = QLabel(f"{elementName}:")
             removeBtn = QPushButton()
@@ -1565,7 +1566,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     continue
                 total += float(distribution)
 
-            total = round(total, 4)
+            total = round(total, 6)
             totalLabel.setText(f"Total: {total}")
             applyBtn.setEnabled(False)
             if total < 1:
@@ -1814,6 +1815,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         except AttributeError:
             pass
         try:
+            self.table.blockSignals(True)
             file = pd.read_csv(filepath, header=0)
             # Reset any changes to spans before displaying selection data.
             self.table.clearSpans()
@@ -1881,6 +1883,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.table.setSpan(row, 0, 1, 10)
             self.table.setItemDelegateForRow(row, ButtonDelegate(self, self.table, self.table_model))
             self.table.openPersistentEditor(self.table_model.index(row, 0))
+        self.table.blockSignals(False)
 
     def updateGuiData(self, tof: bool = False, filepath: str = None, imported: bool = False, name: str = None,
                       distAltered: bool = False) -> None:
@@ -1955,7 +1958,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if self.plotCount == -1:
                     self.toggleCheckboxControls(enableAll=False)
                     self.toggleBtnControls(plotEnergyBtn=True, plotToFBtn=True, clearBtn=True, pdBtn=False)
-                    return
+                return
             except FileNotFoundError:
                 if self.elementData.get(element, False):
                     self.elementData[element].graphData.to_csv(self.plotFilepath, index=False, header=False)
@@ -2408,7 +2411,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Creating a second canvas for singular peak plotting
         peakFigure = plt.figure()
         self.peakCanvas = FigureCanvas(peakFigure, contextConnect=False)
-        toolbar = NavigationToolbar(self.peakCanvas)
+        toolbar = NavigationToolbar(self.peakCanvas, self)
         canvasLayout = QVBoxLayout()
 
         canvasProxyWidget = QWidget()
@@ -2433,7 +2436,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         threshold_check2.setObjectName("peakCheck")
         threshold_check2.setChecked(True)
         toggle_layout2.addWidget(threshold_check2)
-        threshold_check2.stateChanged.connect(self.togglePeakLimits)
+
         # Adding checkbox to toggle the peak detection limits on and off
         threshold_check3 = QCheckBox("Peak Detection Limits", peakWindow)
         threshold_check3.setObjectName("peakCheck")
@@ -2483,8 +2486,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         except FileNotFoundError:
             QMessageBox.warning(self, "Error", "No peak limits for this Selection")
-
-        threshold_check3.stateChanged.connect(lambda: self.togglePeakThreshold(threshold_check3.isChecked(), element))
+        except AttributeError:
+            QMessageBox.warning(self, "Warning", "Plot the Graph First")
 
         rank = [str([ann[0] for ann in element.annotationsOrder.items() if ann[1][0] == maxima[0]][0])]
         limits = [str(element.maxPeakLimitsX[maxima[0]])]
@@ -2507,6 +2510,34 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         graphData = element.graphData[(element.graphData[0] >= leftLimit) & (element.graphData[0] <= rightLimit)]
 
+        def togglePeakLimits(self) -> None:
+            for line in self.peakAxis.get_lines():
+                if "PeakWindow-lim" in line.get_gid():
+                    line.set_visible(threshold_check2.isChecked())
+        threshold_check2.clicked.connect(togglePeakLimits)
+
+        def togglePeakThreshold(self, checked, element) -> None:
+            if not threshold_check3.isChecked():
+                for line in self.peakAxis.get_lines():
+                    if line.get_gid() == f"PeakWindow-Threshold-{element.name}":
+                        line.remove()
+            else:
+                self.peakAxis.axhline(y=element.threshold,
+                                      linestyle="--",
+                                      color=element.graphColour,
+                                      linewidth=0.5,
+                                      gid=f"PeakWindow-Threshold-{element.name}")
+        threshold_check3.clicked.connect(togglePeakThreshold)
+
+        peakWindow.show()
+
+        self.peakAxis.set_xscale('log')
+        self.peakAxis.set_yscale('log')
+
+        self.peakAxis.set(
+            xlabel="Energy (eV)", ylabel="Cross section (b)", title=elementTitle
+        )
+
         self.peakAxis.plot(graphData[0],
                            graphData[1],
                            color=element.graphColour,
@@ -2523,6 +2554,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                            alpha=0.6,
                            gid=f"{elementTitle}-PeakWindow-max"
                            )
+
         for i, (peakX, peakY) in enumerate(zip(element.maxPeakLimitsX[maxima[0]], element.maxPeakLimitsY[maxima[0]])):
             self.peakAxis.plot(peakX,
                                peakY,
@@ -2531,43 +2563,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                                markersize=8,
                                gid=f"{elementTitle}-PeakWindow-lim-{i}")
 
-        self.peakAxis.set_xscale('log')
-        self.peakAxis.set_yscale('log')
-
-        self.peakAxis.set(
-            xlabel="Energy (eV)", ylabel="Cross section (b)", title=elementTitle
-        )
-
-        # Filling in the peak info table information----------------------------------------------------------------
-        # rank = self.table.iloc[row_clicked, 0]
-        # peak_center_coord = self.table.item(row_clicked, 1)
-        # isotopic_origin = self.table.item(row_clicked, 9)
         self.peakAxis.autoscale()
         peakFigure.tight_layout()
         self.peakAxis.legend(fancybox=True, shadow=True)
-
-        peakWindow.show()
-        # except Exception:
-        #     QMessageBox.warning(
-        #         self, "Error", "You need to plot the graph first or select a valid row"
-        #     )
-
-    def togglePeakLimits(self, checked) -> None:
-        for line in self.peakAxis.get_lines():
-            if "PeakWindow-lim" in line.get_gid():
-                line.set_visible(checked)
-
-    def togglePeakThreshold(self, checked, element) -> None:
-        if not checked:
-            for line in self.peakAxis.get_lines():
-                if line.get_gid() == f"PeakWindow-Threshold-{element.name}":
-                    line.remove()
-        else:
-            self.peakAxis.axhline(y=element.threshold,
-                                  linestyle="--",
-                                  color=element.graphColour,
-                                  linewidth=0.5,
-                                  gid=f"PeakWindow-Threshold-{element.name}")
 
     # ! ------------------------------------------------------------------------------------
 

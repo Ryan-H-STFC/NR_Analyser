@@ -10,6 +10,7 @@ class NavigationBar(NavigationToolbar):
             [name for name, *_ in toolitems].index("Subplots") + 1,
             ("Customize", "Edit axis, curve and image parameters",
              "qt4_editor_options", "edit_parameters"))
+        super(NavigationBar, self).__init__(canvas_, parent_)
 
     def configure_subplots(self):
         return super().configure_subplots()

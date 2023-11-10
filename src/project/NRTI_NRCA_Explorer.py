@@ -542,7 +542,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             index=self.combobox.currentIndex(),
             comboboxName=self.combobox.objectName()
         ))
-
         # * ----------------------------------------------
 
         pointingCursor = QCursor(Qt.PointingHandCursor)
@@ -551,41 +550,41 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.btnLayout = QVBoxLayout()
 
-        plotEnergyBtn = QPushButton("Plot in Energy", self)
-        plotEnergyBtn.setObjectName("plotEnergyBtn")
-        plotEnergyBtn.setCursor(pointingCursor)
-        plotEnergyBtn.__name__ = "plotEnergyBtn"
-        plotEnergyBtn.resize(plotEnergyBtn.sizeHint())
-        plotEnergyBtn.setEnabled(False)
-        self.btnLayout.addWidget(plotEnergyBtn)
-        plotEnergyBtn.clicked.connect(self.updateGuiData)
+        self.plotEnergyBtn = QPushButton("Plot in Energy", self)
+        self.plotEnergyBtn.setObjectName("plotEnergyBtn")
+        self.plotEnergyBtn.setCursor(pointingCursor)
+        self.plotEnergyBtn.__name__ = "plotEnergyBtn"
+        self.plotEnergyBtn.resize(self.plotEnergyBtn.sizeHint())
+        self.plotEnergyBtn.setEnabled(False)
+        self.btnLayout.addWidget(self.plotEnergyBtn)
+        self.plotEnergyBtn.clicked.connect(self.updateGuiData)
 
-        plotTOFBtn = QPushButton("Plot in ToF", self)
-        plotTOFBtn.setCursor(pointingCursor)
-        plotTOFBtn.setObjectName("plotTOFBtn")
-        plotTOFBtn.__name__ = "plotToFBtn"
-        plotTOFBtn.resize(plotTOFBtn.sizeHint())
-        plotTOFBtn.setEnabled(False)
-        self.btnLayout.addWidget(plotTOFBtn)
-        plotTOFBtn.clicked.connect(lambda: self.updateGuiData(tof=True))
+        self.plotTOFBtn = QPushButton("Plot in ToF", self)
+        self.plotTOFBtn.setCursor(pointingCursor)
+        self.plotTOFBtn.setObjectName("plotTOFBtn")
+        self.plotTOFBtn.__name__ = "plotToFBtn"
+        self.plotTOFBtn.resize(self.plotTOFBtn.sizeHint())
+        self.plotTOFBtn.setEnabled(False)
+        self.btnLayout.addWidget(self.plotTOFBtn)
+        self.plotTOFBtn.clicked.connect(lambda: self.updateGuiData(tof=True))
 
-        clearBtn = QPushButton("Clear All", self)
-        clearBtn.setObjectName("clearBtn")
-        clearBtn.setCursor(pointingCursor)
-        clearBtn.__name__ = "clearBtn"
-        clearBtn.resize(clearBtn.sizeHint())
-        clearBtn.setEnabled(False)
-        self.btnLayout.addWidget(clearBtn)
-        clearBtn.clicked.connect(self.clear)
+        self.clearBtn = QPushButton("Clear All", self)
+        self.clearBtn.setObjectName("clearBtn")
+        self.clearBtn.setCursor(pointingCursor)
+        self.clearBtn.__name__ = "clearBtn"
+        self.clearBtn.resize(self.clearBtn.sizeHint())
+        self.clearBtn.setEnabled(False)
+        self.btnLayout.addWidget(self.clearBtn)
+        self.clearBtn.clicked.connect(self.clear)
 
-        pdBtn = QPushButton("Peak Detection", self)
-        pdBtn.setObjectName("pdBtn")
-        pdBtn.setCursor(pointingCursor)
-        pdBtn.__name__ = "pdBtn"
-        pdBtn.resize(pdBtn.sizeHint())
-        pdBtn.setEnabled(False)
-        self.btnLayout.addWidget(pdBtn)
-        pdBtn.clicked.connect(self.GetPeaks)
+        self.pdBtn = QPushButton("Peak Detection", self)
+        self.pdBtn.setObjectName("pdBtn")
+        self.pdBtn.setCursor(pointingCursor)
+        self.pdBtn.__name__ = "pdBtn"
+        self.pdBtn.resize(self.pdBtn.sizeHint())
+        self.pdBtn.setEnabled(False)
+        self.btnLayout.addWidget(self.pdBtn)
+        self.pdBtn.clicked.connect(self.GetPeaks)
 
         sidebarLayout.addLayout(self.btnLayout)
 
@@ -1753,7 +1752,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         ``displayData`` Will display relevant peak information in the table for the selection made (self.data).
         Once a select is made, the relevant controls are enabled.
         """
-
         if self.data == "" and self.plotCount > -1:  # Null selection and graphs shown
             self.toggleBtnControls(clearBtn=True)
             return

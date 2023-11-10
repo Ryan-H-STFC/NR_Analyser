@@ -42,7 +42,10 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 
 
 ## **Improvements Coming Soon**
-
+Peak Integration Limit Algorithm:
+- More accurate data collection
+- Allowing for experiemental data to be analysed throughtout the program.
+- Changing threshold, natural abundance of elements, creating compounds, etc, will all be able to be analysed and data updated accordingly.
 
 ## **Accessibility**
 

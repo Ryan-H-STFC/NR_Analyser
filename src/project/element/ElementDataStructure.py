@@ -287,9 +287,7 @@ class ElementData:
             integrals = []
             for name, graphData in isoGraphData.items():
                 # regionGraphData = graphData[(graphData['x'] >= leftLimit) & (graphData['x'] <= rightLimit)]
-                integrals.append(np.mean([integrate_simps(graphData, leftLimit, rightLimit),
-                                          integrate_trapz(graphData, leftLimit, rightLimit)]
-                                         ) * self.distributions[name])
+                integrals.append(integrate_simps(graphData, leftLimit, rightLimit) * self.distributions[name])
 
             return sum(integrals)
         else:

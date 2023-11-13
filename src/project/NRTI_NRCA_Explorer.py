@@ -56,6 +56,7 @@ from myPyQt.ExtendedTableModel import ExtendedQTableModel
 from myPyQt.InputElementsDialog import InputElementsDialog
 
 from myMatplotlib.CustomFigureCanvas import FigureCanvas
+from myMatplotlib.BlittedCursor import BlittedCursor
 
 from helpers.nearestNumber import nearestnumber
 from helpers.getRandomColor import getRandomColor
@@ -425,10 +426,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         editpeakAction.setShortcut("Ctrl+E")
         editpeakAction.triggered.connect(self.editPeakLimits)
 
-        selectlimitsAction = QAction(QIcon("./src/img/select-component.svg"), "&Select Limits", self)
-        selectlimitsAction.setShortcut("Ctrl+L")
-        # ! selectlimitsAction.triggered.connect(self.connectClickLimits)
-
         editThresholdAction = QAction(QIcon("./src/img/edit-component.svg"), "&Edit Threshold", self)
         editThresholdAction.setShortcut("Ctrl+Shift+T")
         editThresholdAction.triggered.connect(self.editThresholdLimit)
@@ -440,7 +437,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         editMenu = menubar.addMenu("&Edit")
         editMenu.addAction(editpeakAction)
-        editMenu.addAction(selectlimitsAction)
         editMenu.addAction(editThresholdAction)
         editMenu.addAction(editDistribution)
 
@@ -801,19 +797,33 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.elements.setMaxVisibleItems(5)
 
         elementPeaks = ExtendedComboBox()
+        elementPeaks.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
 
+        firstLimitLayout = QHBoxLayout()
         firstLimitX = QLineEdit()
-        firstLimitX.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
 
+        firstLimitX.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
+        firstLimitBtn = QPushButton()
+        firstLimitBtn.setObjectName("first")
+        firstLimitBtn.setIcon(QIcon(".\\src\\img\\add-component.svg"))
+        firstLimitLayout.addWidget(firstLimitX)
+        firstLimitLayout.addWidget(firstLimitBtn)
+
+        secondLimitLayout = QHBoxLayout()
         secondLimitX = QLineEdit()
         secondLimitX.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
+        secondLimitBtn = QPushButton()
+        secondLimitBtn.setObjectName("second")
+        secondLimitBtn.setIcon(QIcon(".\\src\\img\\add-component.svg"))
+        secondLimitLayout.addWidget(secondLimitX)
+        secondLimitLayout.addWidget(secondLimitBtn)
 
         optionsWindow.inputForm.addRow(QLabel("Peak X-Coord:"), elementPeaks)
-        optionsWindow.inputForm.addRow(QLabel("1st Limit X:"), firstLimitX)
-        optionsWindow.inputForm.addRow(QLabel("2nd Limit X:"), secondLimitX)
+        optionsWindow.inputForm.addRow(QLabel("1st Limit X:"), firstLimitLayout)
+        optionsWindow.inputForm.addRow(QLabel("2nd Limit X:"), secondLimitLayout)
 
-        maximaBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Ok)
-        maximaBtn.setText("Apply")
+        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Ok)
+        applyBtn.setText("Apply")
         cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Cancel)
 
         optionsWindow.inputForm.setSpacing(5)
@@ -823,6 +833,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.mainLayout.setSizeConstraint(QLayout.SetFixedSize)
         optionsWindow.setLayout(optionsWindow.mainLayout)
         elements = optionsWindow.elements
+
+        ax = self.ax2 if self.ax2 is not None else self.ax
 
         def onAccept():
 
@@ -845,129 +857,140 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             print(f"Peak: {peak}\n")
             print(f"Integral: {integral}\t-\tEstimate: {result}")
-        maximaBtn.clicked.connect(onAccept)
-        cancelBtn.clicked.connect(optionsWindow.reject)
+            self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
+            self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
+        applyBtn.clicked.connect(onAccept)
 
-        def onElementChange():
+        def onClose():
+            self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
+            self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
+            optionsWindow.close()
+        cancelBtn.clicked.connect(onClose)
 
-            element = self.elementData[elements.currentText()]
-            elementPeaks.currentIndexChanged.disconnect(onPeakChange)
+        def onElementChange(index):
 
+            element = self.elementData.get(elements.currentText(), False)
+            elementPeaks.blockSignals(True)
+            firstLimitX.setText(None)
+            secondLimitX.setText(None)
             elementPeaks.clear()
+            if not element:
+                elements.lineEdit().setText(None)
+                elements.setCurrentIndex(0)
+                return
+
             if element.maxima[0].size == 0 or element.maxPeakLimitsX == {}:
                 elementPeaks.setEnabled(False)
                 firstLimitX.setEnabled(False)
                 secondLimitX.setEnabled(False)
-                maximaBtn.setEnabled(False)
+                applyBtn.setEnabled(False)
                 elementPeaks.setCurrentText("Null")
                 firstLimitX.setPlaceholderText("Null")
                 secondLimitX.setPlaceholderText("Null")
-                elementPeaks.currentIndexChanged.connect(onPeakChange)
+                elementPeaks.blockSignals(False)
+
                 return
             elementPeaks.setEnabled(True)
             firstLimitX.setEnabled(True)
             secondLimitX.setEnabled(True)
             elementPeaks.addItems([str(peak) for peak in element.maxima[0] if element.maxPeakLimitsX.get(peak, False)])
-            elementPeaks.currentIndexChanged.connect(onPeakChange)
+            elementPeaks.blockSignals(False)
 
-            onPeakChange()
+            onPeakChange(elements.currentIndex())
 
-        def onPeakChange():
+        def onPeakChange(index):
 
-            element = self.elementData[elements.currentText()]
-
+            element = self.elementData.get(elements.currentText(), False)
+            if not element or elementPeaks.currentText() == '':
+                elements.lineEdit().setText(None)
+                elements.setCurrentIndex(0)
+                elementPeaks.setCurrentIndex(0)
+                return
+            firstLimitX.setText(None)
+            secondLimitX.setText(None)
             if element.maxPeakLimitsX == {}:
+                elements.setCurrentIndex(0)
                 elementPeaks.setCurrentText("Null")
                 firstLimitX.setPlaceholderText("Null")
                 secondLimitX.setPlaceholderText("Null")
-                maximaBtn.setEnabled(False)
+                applyBtn.setEnabled(False)
                 return
+            applyBtn.setEnabled(True)
             peak = float(elementPeaks.currentText())
             firstLimitX.setPlaceholderText(str(element.maxPeakLimitsX[peak][0]))
             secondLimitX.setPlaceholderText(str(element.maxPeakLimitsX[peak][1]))
 
+            try:
+                optionsWindow.blittedCursor.on_remove()
+                del optionsWindow.blitterCursor
+
+            except AttributeError:
+                pass
+
         def onLimitChange():
+
             limitLeft = firstLimitX.placeholderText() if firstLimitX.text(
             ) == '' else firstLimitX.text()
             limitRight = secondLimitX.placeholderText() if secondLimitX.text(
             ) == '' else secondLimitX.text()
             peak = float(elementPeaks.currentText())
             if limitLeft == 'Null' or limitRight == 'Null':
-                maximaBtn.setEnabled(False)
+                applyBtn.setEnabled(False)
                 return
             if float(limitLeft) > peak or float(limitRight) < peak:
-                maximaBtn.setEnabled(False)
+                applyBtn.setEnabled(False)
                 return
-            maximaBtn.setEnabled(True)
-        optionsWindow.elements.currentIndexChanged.connect(onElementChange)
-        elementPeaks.currentIndexChanged.connect(onPeakChange)
+            try:
+                optionsWindow.blittedCursor.on_remove()
+                del optionsWindow.blittedCursor
+
+            except AttributeError:
+                pass
+            for line in ax.get_lines() + ax.texts:
+                if 'cursor' in line.get_gid():
+                    line.remove()
+            applyBtn.setEnabled(True)
+
+        def onLimitSelect(event):
+            if not optionsWindow.blittedCursor.valid:
+                return
+            else:
+                if optionsWindow.which == 'first':
+                    firstLimitX.setText(f"{round(optionsWindow.blittedCursor.x, 3)}")
+                if optionsWindow.which == 'second':
+                    secondLimitX.setText(f"{round(optionsWindow.blittedCursor.x, 3)}")
+
+            try:
+                optionsWindow.blittedCursor.on_remove()
+                del optionsWindow.blittedCursor
+
+            except AttributeError:
+                pass
+            self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
+            self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
+
+        def connectLimitSelect(btn):
+            optionsWindow.which = btn.objectName()
+            optionsWindow.blittedCursor = BlittedCursor(ax=ax, axisType='x', which=optionsWindow.which)
+
+            self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
+            self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
+            optionsWindow.motionEvent = self.figure.canvas.mpl_connect(
+                'motion_notify_event',
+                lambda event: optionsWindow.blittedCursor.on_mouse_move(event, float(elementPeaks.currentText())))
+            optionsWindow.buttonPressEvent = self.figure.canvas.mpl_connect("button_press_event", onLimitSelect)
+        firstLimitBtn.pressed.connect(lambda: connectLimitSelect(firstLimitBtn))
+        secondLimitBtn.pressed.connect(lambda: connectLimitSelect(secondLimitBtn))
+
+        optionsWindow.elements.currentIndexChanged.connect(
+            lambda: onElementChange(index=optionsWindow.elements.currentIndex()))
+        elementPeaks.currentIndexChanged.connect(lambda: onPeakChange(elements.currentIndex()))
         firstLimitX.textChanged.connect(onLimitChange)
         secondLimitX.textChanged.connect(onLimitChange)
 
-        onElementChange()
+        onElementChange(elements.currentIndex())
         optionsWindow.setModal(False)
         optionsWindow.show()
-
-        # ? self.clickcount = 0
-        # ? # Ordering peaks
-        # ? peak_order = "Rank by eV    (eV) \n"
-        # ? for i in range(0, len(self.peakList)):
-        # ?     peak_order += str(i) + "    " + str(self.peakList[i]) + "\n"
-        # ? # Choose which peak they are editing
-        # ? self.peaknum, ok = QInputDialog.getText(self,
-        # ?                                         "Peak Editing",
-        # ?                                         "Choose which peak to edit by entering its peak "
-        # ?                                         "number \n (Rank by eV) \n" + peak_order)
-        # ? typecheck = QMessageBox.question(self,
-        # ?                                  "Selecting Peak Limits",
-        # ?                                  "Do you want to select limits by inputting the coordinates?",
-        # ?                                  QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-        # ? if typecheck == QMessageBox.Yes:
-        # ?     firstLimitX, ok = QInputDialog.getText(
-        # ?         self, "Peak Limits in X", "Enter the first peak limit x-coordinate: "
-        # ?     )
-        # ?     secondLimitX, ok = QInputDialog.getText(
-        # ?         self, "Peak Limits in X", "Enter the second peak limit x-coordinate: "
-        # ?     )
-        # ?     # Finding the corresponding y-value
-        # ?     first_limit_y = self.y[self.x.index(firstLimitX)]
-        # ?     second_limit_y = self.y[self.x.index(secondLimitX)]
-        # ?     peak = self.peakList[int(self.peaknum)]
-        # ?     self.peakLimitsX[str(peak) + "_first"] = float(firstLimitX)
-        # ?     self.peakLimitsX[str(peak) + "_second"] = float(secondLimitX)
-        # ?     self.peakLimitsY[str(peak) + "_first"] = float(first_limit_y)
-        # ?     self.peakLimitsY[str(peak) + "_second"] = float(second_limit_y)
-        # ?     print("LIMITS: ", self.peakLimitsX)
-        # ?     # Re-plotting with new limits
-        # ?     # getting list of minima/maxima for plotting again
-        # ?     maxima_x = []
-        # ?     maxima_y = []
-        # ?     for i in self.peakLimitsX.keys():
-        # ?         sorting = i.split("_")
-        # ?         maxima_x.append(sorting[0])
-        # ?         index = self.x.index(float(sorting[0]))
-        # ?         maxima_y.append(self.y[index])
-        # ?     maxima_x = list(dict.fromkeys(maxima_x))
-        # ?     maxima_y = list(dict.fromkeys(maxima_y))
-        # ?     maxima_x_float = []
-        # ?     for i in maxima_x:
-        # ?         maxima_x_float.append(float(i))
-        # ?     self.PlottingPD(maxima_x_float, maxima_y)
-
-        # Plotting the individual peak
-        # peak = self.peakList[int(self.peaknum)]
-        # first_limit_i = self.x.index(self.peakLimitsX[str(peak) + '_first'])
-        # second_limit_i = self.x.index(self.peakLimitsX[str(peak) + '_second'])
-        # x = self.x[first_limit_i-50:second_limit_i+50]
-        # y = self.y[first_limit_i-50:second_limit_i+50]
-        # # Clearing the figure
-        # self.figure.clear()
-        # self.ax = self.figure.add_subplot(111)
-        # self.ax.plot(x, y, '-', color='b')
-        # self.ax.set(xlabel='eV', ylabel = 'Cross section', title='Peak ' + str(self.peaknum))
-        # self.canvas.draw()
-        # # Allowing for selecting coordinates
-        # self.interact = self.canvas.mpl_connect('button_press_event', self.selectLimits)
 
     def editDistribution(self) -> None:
         """
@@ -1008,16 +1031,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     dist = float(widget.findChild(QLineEdit).placeholderText())
                 else:
                     dist = float(widget.findChild(QLineEdit).text())
-                # fadeEffect = QtWidgets.QGraphicsColorizeEffect(widget.findChild(QLineEdit))
-                # fadeEffect.setColor(QColor(76, 143, 38))
-
-                # fadeAnim = QPropertyAnimation(fadeEffect, b"color")
-                # fadeAnim.setStartValue("QLineEdit{ color: rgb(76, 143, 38);}")
-                # fadeAnim.setKeyValueAt(0.5, "QLineEdit { color: rgb(120, 143, 108);}")
-                # fadeAnim.setEndValue("QLineEdit { color: rgb(255, 255, 255);}")
-
-                # fadeAnim.setDuration(1000)
-                # fadeAnim.setLoopCount(1)
 
                 self.elementDistributions[elementName][title] = dist
 
@@ -1033,13 +1046,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.isCompound = self.elementData[title].isCompound
                     self.data = elementName
 
-                    # if self.elementData[title].distributions == self.elementData[title].defaultDist:
-                    #     self.Plot(tof=Tof)
-                    # else:
                     self.updateGuiData(tof=Tof, distAltered=True)
                     break
-
-            # fadeAnim.start(QAbstractAnimation.DeleteWhenStopped)
         applyBtn.clicked.connect(onAccept)
         cancelBtn.clicked.connect(optionsWindow.reject)
 
@@ -1048,9 +1056,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             applyBtn.setEnabled(True)
         resetBtn.clicked.connect(onReset)
 
-        def onElementChange(index=None, reset: bool = False):
+        def onElementChange(index=0, reset: bool = False):
 
-            elementName = elements.itemText(elements.currentIndex() or 0)
+            elementName = elements.itemText(index)
             if elementName == '':
                 elements.setCurrentIndex(0)
                 return
@@ -1088,11 +1096,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             optionsWindow.updateGeometry()
             totalLabel.setText(f"Total: {round(total, int(acc)-1)}")
         optionsWindow.elements.setFocus()
-        optionsWindow.elements.currentIndexChanged.connect(onElementChange)
+        optionsWindow.elements.editTextChanged.connect(lambda: onElementChange(optionsWindow.elements.currentIndex()))
 
         def onDistributionChange():
 
             elementName = elements.itemText(elements.currentIndex() or 0)
+            if elementName == '':
+                return
             total: float = 0
             acc = min([len(str(a)) - 2 for a in self.defaultDistributions[elementName].values()])
             for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget):
@@ -1112,63 +1122,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 totalLabel.setStyleSheet("color: #0F0;")
                 applyBtn.setEnabled(True)
 
-        onElementChange()
+        onElementChange(optionsWindow.elements.currentIndex())
         optionsWindow.setModal(False)
         optionsWindow.show()
-
-    # def connectClickLimits(self) -> None:
-    #     # Allowing for selecting coordinates
-    #     if self.plottedSubstances == []:
-    #         QMessageBox.warning(self, "Error", "You have not plotted anything")
-    #         return
-    #     self.interact = self.canvas.mpl_connect("button_press_event", self.selectLimits)
-
-    def selectLimits(self, event) -> None:
-        if self.clickcount is None:
-            self.clickcount = 0
-        self.xi, self.yj = event.xdata, event.ydata
-        self.clickcount = self.clickcount + 1
-        print(self.clickcount)
-        # if self.clickcount >= 2:
-        #     self.canvas.mpl_disconnect(self.interact)
-        print(self.xi, self.yj)
-        # Taking note of which coordinates are picked
-        peak = self.peakList[int(self.peaknum)]
-        if self.clickcount == 1:
-            self.firstClickX = self.xi
-        if self.clickcount == 2:
-            second_click_x = self.xi
-            firstLimitX = self.nearestnumber(
-                self.x, float(self.firstClickX)
-            )  # Finding the nearest x-value on the spectrum to where was clicked
-            secondLimitX = self.nearestnumber(self.x, float(second_click_x))
-            # Finding the corresponding y-value
-            first_limit_y = self.y[self.x.index(firstLimitX)]
-            second_limit_y = self.y[self.x.index(secondLimitX)]
-            # Altering it in dictionary
-            self.peakLimitsX[str(peak) + "_first"] = firstLimitX
-            self.peakLimitsX[str(peak) + "_second"] = secondLimitX
-            self.peakLimitsY[str(peak) + "_first"] = first_limit_y
-            self.peakLimitsY[str(peak) + "_second"] = second_limit_y
-            print("LIMITS: ", self.peakLimitsX)
-            # Re-plotting with new limits
-            # getting list of minima/maxima for plotting again
-            maxima_x = []
-            maxima_y = []
-            for i in self.peakLimitsX.keys():
-                sorting = i.split("_")
-                maxima_x.append(sorting[0])
-                index = self.x.index(float(sorting[0]))
-                maxima_y.append(self.y[index])
-            maxima_x = list(dict.fromkeys(maxima_x))
-            maxima_y = list(dict.fromkeys(maxima_y))
-            maxima_x_float = []
-            for i in maxima_x:
-                maxima_x_float.append(float(i))
-            print(maxima_x_float)
-            self.PlottingPD(maxima_x_float, maxima_y)
-        # Disconnecting clicking
-        self.canvas.mpl_disconnect(self.interact)
 
     def editThresholdLimit(self) -> None:
         """
@@ -1205,9 +1161,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             optionsWindow.close()
         cancelBtn.clicked.connect(close)
 
-        def onElementChange():
-            inputThreshold.setPlaceholderText(str(self.elementData[elements.currentText()].threshold))
-        elements.activated.connect(onElementChange)
+        def onElementChange(index):
+            if elements.itemText(index) == '':
+                elements.setCurrentIndex(0)
+                inputThreshold.setText(None)
+                return
+            inputThreshold.setPlaceholderText(str(self.elementData[elements.itemText(index)].threshold))
+        elements.editTextChanged.connect(lambda: onElementChange(elements.currentIndex()))
 
         def onThresholdTextChange():
             if inputThreshold.text() == '':
@@ -1235,6 +1195,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.PlottingPD(element, False)
         applyBtn.clicked.connect(onAccept)
 
+        inputThreshold.setFocus(True)
         optionsWindow.setModal(False)
         optionsWindow.show()
 
@@ -1475,9 +1436,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             onRemove()
         resetBtn.clicked.connect(onReset)
 
-        def onElementChange():
+        def onElementChange(index):
 
-            elementName = elements.itemText(elements.currentIndex() or 0)
+            elementName = elements.itemText(index)
             if elementName == '':
                 addBtn.setEnabled(False)
                 return
@@ -1485,7 +1446,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 addBtn.setEnabled(False)
                 return
             addBtn.setEnabled(True)
-        elements.currentIndexChanged.connect(onElementChange)
+        elements.editTextChanged.connect(lambda: onElementChange(elements.currentIndex()))
 
         def onAddRow(index=None):
 
@@ -1500,7 +1461,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 elementNames = elements.getAllItemText()
                 elements.clear()
                 elements.addItems([name for name in elementNames if compoundMode[0] in name])
-                elements.currentIndexChanged.connect(onElementChange)
+                elements.editTextChanged.connect(lambda: onElementChange(elements.currentIndex()))
 
             totalLabel.setStyleSheet("color: #FFF;")
 
@@ -2086,7 +2047,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         if not elementData.graphData.empty:
 
-            self.ax.plot(
+            plot = self.ax.plot(
                 elementData.graphData.iloc[:, 0],
                 elementData.graphData.iloc[:, 1],
                 "-",
@@ -2097,7 +2058,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 gid=elementData.name if self.data is None else self.data,
             )
             elementData.isGraphDrawn = True
-
             self.updateLegend()
 
             # Establishing plot count
@@ -2108,7 +2068,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.ax.autoscale()  # Tidying up
 
             self.figure.tight_layout()
-
         self.canvas.draw()
 
     def updateLegend(self):
@@ -2565,8 +2524,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         peakFigure.tight_layout()
         self.peakAxis.legend(fancybox=True, shadow=True)
 
-    # ! ------------------------------------------------------------------------------------
-
     def importdata(self) -> None:
         """
         Allows user to select a file on their computer to open and analyse.
@@ -2584,7 +2541,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         else:
             self.updateGuiData(False, filepath, True, name)
 
-    # ------------------------ PEAK DETECTION BITS ## ------------------------
     def GetPeaks(self) -> None:
         """
         Ask the user for which function to plot the maxima or minima of which element

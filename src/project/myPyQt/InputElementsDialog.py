@@ -40,3 +40,6 @@ class InputElementsDialog(QDialog):
         self.mainLayout.addWidget(self.elements)
         self.mainLayout.addWidget(self.buttonBox)
         self.setUpdatesEnabled(True)
+
+        self.motionEvent = None
+        self.buttonPressEvent = None

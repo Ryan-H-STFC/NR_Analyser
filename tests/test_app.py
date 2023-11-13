@@ -1,4 +1,5 @@
-from unittest import TestCase, main, skip
+import unittest
+from unittest import TestCase, main
 import sys
 import os
 from PyQt5 import QtWidgets
@@ -12,11 +13,9 @@ from NRTI_NRCA_Explorer import DatabaseGUI
 app = QtWidgets.QApplication(sys.argv)
 
 
-@skip
 class TestApp(TestCase):
-    @skip
     def test_plot(self):
-
+        return
         app = DatabaseGUI()
         app.combobox.setCurrentIndex(139)
         app.combobox.activated.emit(app.combobox.currentIndex())
@@ -24,8 +23,8 @@ class TestApp(TestCase):
         self.assertIn("29-Cu-63_n-g-Energy", [line.get_label() for line in app.ax.get_lines()])
         self.assertTrue(app.elementData["29-Cu-63_n-g-Energy"].isGraphDrawn)
 
-    @skip
     def test_clear(self):
+        return
         app = DatabaseGUI()
         app.combobox.setCurrentIndex(5)
         app.combobox.activated.emit(app.combobox.currentIndex())

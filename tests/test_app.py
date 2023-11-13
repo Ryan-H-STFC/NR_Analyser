@@ -21,6 +21,7 @@ class TestApp(TestCase):
         app.combobox.activated.emit(app.combobox.currentIndex())
         app.plotEnergyBtn.click()
         self.assertIn("29-Cu-63_n-g-Energy", [line.get_label() for line in app.ax.get_lines()])
+        self.assertTrue(app.elementData["29-Cu-63_n-g-Energy"].isGraphDrawn)
 
     def test_clear(self):
         app = DatabaseGUI()

@@ -27,8 +27,9 @@ jobs:
           pip install tox tox-gh-actions
       - name: Installing PyQt5
         run: |
-          pip install PyQt5==5.9.2
-          pip install pyqt5-plugins
+          pip install PyQt5==5.15.9
+          pip install pyqt5-plugins==5.15.9.2.3
+          pip install pyqt5-tools==5.15.9.3.3
 
       - name: Test with tox
         run: |

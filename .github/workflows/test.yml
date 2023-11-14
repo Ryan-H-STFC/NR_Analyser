@@ -6,6 +6,8 @@ on:
 jobs:
   test:
     runs-on: ${{matrix.os}}
+    env: 
+      QT_QPA_PLATFORM: offscreen
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]

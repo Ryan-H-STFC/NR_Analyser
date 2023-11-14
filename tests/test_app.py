@@ -73,4 +73,4 @@ class TestApp(TestCase):
 
 
 if __name__ == '__main__':
-    main(verbosity=0)
+    main(verbosity=1)

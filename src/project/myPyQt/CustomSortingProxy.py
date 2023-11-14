@@ -43,8 +43,5 @@ class CustomSortingProxy(QSortFilterProxyModel):
         return super(QSortFilterProxyModel, self).lessThan(left, right)
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
-        # print(source_parent)
-        # self.sourceModel().index(source_parent)
-        # if source_parent
 
         return super().filterAcceptsRow(source_row, source_parent)

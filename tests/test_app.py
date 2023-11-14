@@ -13,6 +13,9 @@ app = QtWidgets.QApplication(sys.argv)
 
 
 class TestApp(TestCase):
+    def setUp(self) -> None:
+        return super().setUp()
+
     def test_plot(self):
         app = DatabaseGUI()
         app.combobox.setCurrentIndex(139)

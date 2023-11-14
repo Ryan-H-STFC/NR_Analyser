@@ -33,11 +33,12 @@ jobs:
       - name: Setup PyQt5
         shell: bash
         run: |
-          export QT_QPA_PLATFORM=offscreen
+          sudo apt-get update
+          sudo apt-get install xvfb
 
       - name: Test with tox
         run: |
           echo Python ${{matrix.python-version}}
-          tox -e py${{matrix.python-version}}
+          xvfb-run --auto-servernum tox -e py${{matrix.python-version}}
       - name: Test Linting
         run: tox -e flake8

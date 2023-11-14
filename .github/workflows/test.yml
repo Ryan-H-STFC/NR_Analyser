@@ -6,12 +6,12 @@ on:
 jobs:
   test:
     runs-on: ${{matrix.os}}
-    env: 
-      QT_QPA_PLATFORM: offscreen
+
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+
 
     steps:
       - uses: actions/checkout@v3
@@ -32,6 +32,7 @@ jobs:
           pip install PyQt5==5.15.9
           pip install pyqt5-plugins==5.15.9.2.3
           pip install pyqt5-tools==5.15.9.3.3
+          export QT_QPA_PLATFORM=offscreen
 
       - name: Test with tox
         run: |

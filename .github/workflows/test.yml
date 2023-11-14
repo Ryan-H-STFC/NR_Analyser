@@ -25,18 +25,18 @@ jobs:
       - name: Installing Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip cache purge
           pip install tox
           pip install tox tox-gh-actions
-      - name: Installing PyQt5
-        run: |
-          pip install PyQt5==5.15.9
-      - name: Setup PyQt5 Env
+      - name: Installing Dependencies (Linux)
+        if: runner.os == 'ubuntu-latest'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
           export QT_QPA_PLATFORM=offscreen
+      - name: Installing PyQt5
+        run: |
+          pip install PyQt5==5.15.9
 
       - name: Test with tox
         shell: bash

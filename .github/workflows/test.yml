@@ -30,6 +30,9 @@ jobs:
       - name: Installing PyQt5
         run: |
           pip install PyQt5==5.15.9
+      - name: Setup PyQt5
+        shell: bash
+        run: |
           export QT_QPA_PLATFORM=offscreen
 
       - name: Test with tox

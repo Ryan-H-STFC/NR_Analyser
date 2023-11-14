@@ -39,7 +39,7 @@ class TestApp(TestCase):
         self.assertIsNone(app.table_model)
         self.assertIsNone(app.ax2)
 
-    def test_toggles(self):
+    def test_toggle_states(self):
         app = DatabaseGUI()
         # ¦ Null Selection
         self.assertFalse(app.plotEnergyBtn.isEnabled())

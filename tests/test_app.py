@@ -1,4 +1,3 @@
-import unittest
 from unittest import TestCase, main
 import sys
 import os
@@ -15,7 +14,6 @@ app = QtWidgets.QApplication(sys.argv)
 
 class TestApp(TestCase):
     def test_plot(self):
-        return
         app = DatabaseGUI()
         app.combobox.setCurrentIndex(139)
         app.combobox.activated.emit(app.combobox.currentIndex())
@@ -24,7 +22,6 @@ class TestApp(TestCase):
         self.assertTrue(app.elementData["29-Cu-63_n-g-Energy"].isGraphDrawn)
 
     def test_clear(self):
-        return
         app = DatabaseGUI()
         app.combobox.setCurrentIndex(5)
         app.combobox.activated.emit(app.combobox.currentIndex())
@@ -41,6 +38,38 @@ class TestApp(TestCase):
         self.assertEqual(app.elementDistributions, app.defaultDistributions)
         self.assertIsNone(app.table_model)
         self.assertIsNone(app.ax2)
+
+    def test_toggles(self):
+        app = DatabaseGUI()
+        # ¦ Null Selection
+        self.assertFalse(app.plotEnergyBtn.isEnabled())
+        self.assertFalse(app.plotTOFBtn.isEnabled())
+        self.assertFalse(app.clearBtn.isEnabled())
+        self.assertFalse(app.pdBtn.isEnabled())
+        self.assertFalse(app.gridCheck.isEnabled())
+        self.assertFalse(app.thresholdCheck.isEnabled())
+        self.assertFalse(app.peakLabelCheck.isEnabled())
+
+        app.combobox.setCurrentIndex(5)
+        app.combobox.activated.emit(app.combobox.currentIndex())
+        # ¦ Selection Made
+        self.assertTrue(app.plotEnergyBtn.isEnabled())
+        self.assertTrue(app.plotTOFBtn.isEnabled())
+        self.assertTrue(app.clearBtn.isEnabled())
+        self.assertFalse(app.pdBtn.isEnabled())
+        self.assertFalse(app.gridCheck.isEnabled())
+        self.assertFalse(app.thresholdCheck.isEnabled())
+        self.assertFalse(app.peakLabelCheck.isEnabled())
+
+        app.plotEnergyBtn.click()
+        # ¦ After Plotting
+        self.assertTrue(app.plotEnergyBtn.isEnabled())
+        self.assertTrue(app.plotTOFBtn.isEnabled())
+        self.assertTrue(app.clearBtn.isEnabled())
+        self.assertTrue(app.pdBtn.isEnabled())
+        self.assertTrue(app.gridCheck.isEnabled())
+        self.assertTrue(app.thresholdCheck.isEnabled())
+        self.assertTrue(app.peakLabelCheck.isEnabled())
 
 
 if __name__ == '__main__':

@@ -1603,15 +1603,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             return
 
         for btn in getLayoutWidgets(self.btnLayout):
-            match btn.__name__:
-                case "plotEnergyBtn":
-                    btn.setEnabled(plotEnergyBtn)
-                case "plotToFBtn":
-                    btn.setEnabled(plotToFBtn)
-                case "clearBtn":
-                    btn.setEnabled(clearBtn)
-                case "pdBtn":
-                    btn.setEnabled(pdBtn)
+            if btn.__name__ == 'plotEnergyBtn':
+                btn.setEnabled(plotEnergyBtn)
+            if btn.__name__ == 'plotToFBtn':
+                btn.setEnabled(plotToFBtn)
+            if btn.__name__ == 'clearBtn':
+                btn.setEnabled(clearBtn)
+            if btn.__name__ == 'pdBtn':
+                btn.setEnabled(pdBtn)
 
     def toggleCheckboxControls(self, enableAll: bool, gridlines: bool = False,
                                peakLimit: bool = False, hidePeakLabels: bool = False) -> None:
@@ -1644,13 +1643,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             return
 
         for btn in getLayoutWidgets(self.toggleLayout):
-            match btn.__name__:
-                case "self.gridCheck":
-                    btn.setEnabled(gridlines)
-                case "peakCheck":
-                    btn.setEnabled(peakLimit)
-                case "pdCheck":
-                    btn.setEnabled(hidePeakLabels)
+            if btn.__name__ == 'gridCheck':
+                btn.setEnabled(gridlines)
+            if btn.__name__ == 'peakCheck':
+                btn.setEnabled(hidePeakLabels)
+            if btn.__name__ == 'pdCheck':
+                btn.setEnabled(peakLimit)
 
     def plotSelectionProxy(self, index, comboboxName):
         """
@@ -2047,7 +2045,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         if not elementData.graphData.empty:
 
-            plot = self.ax.plot(
+            self.ax.plot(
                 elementData.graphData.iloc[:, 0],
                 elementData.graphData.iloc[:, 1],
                 "-",

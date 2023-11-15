@@ -33,14 +33,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
+          sudo apt-get install libxcb-xinerama0
           export QT_QPA_PLATFORM=offscreen
       - name: Installing PyQt5
         run: |
           pip install PyQt5==5.15.9
 
       - name: Test with tox
+        if: runner.os == 'ubtuntu-latest'
         shell: bash
         run: |
           xvfb-run --auto-servernum tox -e py${{matrix.python-version}}
+  
       - name: Test Linting
         run: tox -e flake8

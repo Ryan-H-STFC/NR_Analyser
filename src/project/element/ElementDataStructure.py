@@ -23,6 +23,7 @@ class ElementData:
 
     name: str
     numPeaks: int
+    maxPeaks: int = 50
     tableData: DataFrame
     graphData: DataFrame
     distributions: dict
@@ -32,7 +33,6 @@ class ElementData:
     annotations: list
     annotationsOrder: dict
     threshold: float = 100.0
-    maxPeaks: int = 50
 
     maxima: ndarray = None
     minima: ndarray = None
@@ -42,17 +42,17 @@ class ElementData:
     minPeakLimitsY: dict
     minPeakLimitsX: dict
 
-    isToF: bool = False
-    isImported: bool = False
-    isGraphHidden: bool = False
-    isGraphDrawn: bool = False
-    isGraphUpdating: bool = False
+    isAnnotationsDrawn: bool = False
+    isAnnotationsHidden: bool = False
+    isCompound: bool = False
     isDistAltered: bool = False
+    isGraphDrawn: bool = False
+    isGraphHidden: bool = False
+    isGraphUpdating: bool = False
+    isImported: bool = False
     isMaxDrawn: bool = False
     isMinDrawn: bool = False
-    isAnnotationsHidden: bool = False
-    isAnnotationsDrawn: bool = False
-    isCompound: bool = False
+    isToF: bool = False
 
     def __init__(self,
                  name: str,
@@ -99,6 +99,16 @@ class ElementData:
         except errors.EmptyDataError:
             self.graphData = DataFrame()
 
+        self.graphColour = graphColour
+
+        if self.name[-1] == "t":
+            length = 23.404
+        else:
+            length = 22.804
+
+        if self.isToF and not self.graphData.empty:
+            graphData[0] = self.energyToTOF(graphData[0], length=length)
+            graphData.sort_values(0, ignore_index=True, inplace=True)
         try:
             if not self.graphData.empty and not self.isDistAltered:
                 self.maxima = np.array(pd.maxima(graphData, threshold))
@@ -107,11 +117,14 @@ class ElementData:
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
-        self.graphColour = graphColour
-
         try:
             name = self.name[8:] if 'element' in self.name else self.name
-            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'], header=None)
+            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'])
+            if self.isToF:
+                limits['left'] = self.energyToTOF(limits['left'], length)
+                limits['right'] = self.energyToTOF(limits['right'], length)
+                limits['left'], limits['right'] = limits['right'], limits['left']
+
             for max in self.maxima[0]:
                 lim = limits[(limits['left'] < max) & (limits['right'] > max)]
                 if lim.empty:
@@ -163,6 +176,32 @@ class ElementData:
             float: Interpolated y-values for graphData over the given domain.
         """
         return np.interp(self.graphDataX, graphData.iloc[:, 0], graphData.iloc[:, 1])
+
+    def energyToTOF(self, xData: float | list[float], length: float) -> list[float]:
+        """
+        Maps all X Values from energy to TOF
+
+        Args:
+            ``xData`` (list[float]): List of the substances x-coords of its graph data
+
+            ``length`` (float): Constant value associated to whether the element data is with repsect to n-g or n-tot
+
+
+        Returns:
+            list[float]: Mapped x-coords
+        """
+        if length is None:
+            length = 22.804
+        neutronMass = float(1.68e-27)
+        electronCharge = float(1.60e-19)
+
+        tofX = list(
+            map(
+                lambda x: length * 1e6 * (0.5 * neutronMass / (x * electronCharge)) ** 0.5,
+                xData
+            )
+        )
+        return tofX
 
     @timeme
     def onDistChange(self) -> None:

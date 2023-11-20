@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QWidget
 
 def getLayoutWidgets(layout, widgetType: type = None) -> Generator[QWidget, None, None]:
     """
-    ``getLayoutWidgets`` returns a list of widgets from an inputted layout. Will return specific widgets of a specified 
+    ``getLayoutWidgets`` returns a list of widgets from an inputted layout. Will return specific widgets of a specified
     type using ``widgetType``
 
     Args:

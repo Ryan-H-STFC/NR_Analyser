@@ -1,6 +1,6 @@
-from unittest import TestCase, main
 import sys
 import os
+from unittest import TestCase, main
 from PyQt5 import QtWidgets
 
 sys.path.append(os.path.abspath("./src/project/"))

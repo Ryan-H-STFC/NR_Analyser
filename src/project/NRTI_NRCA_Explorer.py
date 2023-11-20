@@ -12,7 +12,7 @@ from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QRegExp, pyqtSignal
+from PyQt5.QtCore import Qt, QModelIndex, QRegExp, pyqtSignal
 from PyQt5.QtGui import QCursor, QRegExpValidator, QIcon
 
 from PyQt5.QtWidgets import (
@@ -112,8 +112,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         # Allows for adding more things to the QWidget template
         super(DatabaseGUI, self).__init__()
-
-        self.styleWindows = "Fusion"
 
         self.styleMain = """
         #mainWindow{{
@@ -307,16 +305,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
 
         # Setting global variables
-        self.data = None
-        self.x = []  # ! Depreciated
-        self.y = []  # ! Depreciated
-        self.xArray = []
-        self.yArray = []
+        self.selectionName = None
         self.numRows = None
         self.numTotPeaks = []
 
         self.ax = None
-        self.ax2 = None
+        self.axPD = None
+
         self.peakCanvas = None
         self.plotFilepath = None
         self.firstLimit = None
@@ -325,13 +320,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.graphs = dict()
         self.annotations = []
         self.localHiddenAnnotations = []
-        self.plottedSubstances = []
+        self.plottedSpectra = []
         self.rows = None
         self.tableLayout = dict()
-        self.arrays = dict()
-        self.selectionName = None
-        self.xi = None
-        self.yj = None
+        self.spectraNames = None
+
         self.peaknum = None
         self.interact = None
         self.clickcount = None
@@ -362,10 +355,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         file = pd.read_csv(thresholdFilepath, header=None)
 
+        # Initialise spectra thresholds dict
         for line in file.values:
             symbol = line[0].split(' ')[0]
             self.thresholds[symbol] = (line[0].split(' ')[1].replace('(', ''), line[1].replace(')', ''))
 
+        # Initialise spectra natural abundance / distributions dict
         dist_filePaths = [f for f in os.listdir(self.distributionDir) if f.endswith(".csv")]
         for filepath in dist_filePaths:
             name = filepath[:-4]
@@ -416,7 +411,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         fileMenu = menubar.addMenu("&File")
         fileMenu.addAction(newAction)
         fileMenu.addAction(importAction)
-        importAction.triggered.connect(self.importdata)
+        importAction.triggered.connect(self.importData)
 
         # * ----------------------------------------------
 
@@ -505,20 +500,20 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Establishing source and destination directories
 
         # Creating a list of substances stored in the NRCA database data directory
-        self.selectionName = [None]
+        self.spectraNames = [None]
         for file in os.listdir(f"{self.filepath}data\\Graph Data\\"):
             filename = os.fsdecode(file)
             if ".csv" not in filename[-4:]:
                 continue
             filename = filename[:-4]
-            self.selectionName.append(filename)
+            self.spectraNames.append(filename)
 
         # Creating combo box (drop down menu)
         self.combobox = ExtendedComboBox()
         self.combobox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.combobox.setObjectName("combobox")
 
-        self.combobox.addItems(self.selectionName)
+        self.combobox.addItems(self.spectraNames)
         # self.combobox.setEditable(True)
         self.combobox.lineEdit().setPlaceholderText("Select an Isotope / Element")
         # self.combobox.setInsertPolicy(QComboBox.NoInsert)
@@ -580,7 +575,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.pdBtn.resize(self.pdBtn.sizeHint())
         self.pdBtn.setEnabled(False)
         self.btnLayout.addWidget(self.pdBtn)
-        self.pdBtn.clicked.connect(self.GetPeaks)
+        self.pdBtn.clicked.connect(self.getPeaks)
 
         sidebarLayout.addLayout(self.btnLayout)
 
@@ -728,7 +723,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # If double-clicking cell, can trigger plot peak
 
-        self.table.doubleClicked.connect(self.PlotPeakWindow)
+        self.table.doubleClicked.connect(self.plotPeakWindow)
 
         self.setLayout(mainLayout)  # Generating layout
         self.show()
@@ -787,7 +782,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         element, recaluating the integral and peak widths to place into the table.
         """
         # Click count to disconnect after two limits have been selected
-        if self.plottedSubstances == []:
+        if self.plottedSpectra == []:
             QMessageBox.warning(self, "Error", "You have not plotted anything")
             return
 
@@ -834,7 +829,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.setLayout(optionsWindow.mainLayout)
         elements = optionsWindow.elements
 
-        ax = self.ax2 if self.ax2 is not None else self.ax
+        ax = self.axPD if self.axPD is not None else self.ax
 
         def onAccept():
 
@@ -884,6 +879,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 firstLimitX.setEnabled(False)
                 secondLimitX.setEnabled(False)
                 applyBtn.setEnabled(False)
+                firstLimitBtn.setEnabled(False)
+                secondLimitBtn.setEnabled(False)
                 elementPeaks.setCurrentText("Null")
                 firstLimitX.setPlaceholderText("Null")
                 secondLimitX.setPlaceholderText("Null")
@@ -893,6 +890,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             elementPeaks.setEnabled(True)
             firstLimitX.setEnabled(True)
             secondLimitX.setEnabled(True)
+            firstLimitBtn.setEnabled(True)
+            secondLimitBtn.setEnabled(True)
             elementPeaks.addItems([str(peak) for peak in element.maxima[0] if element.maxPeakLimitsX.get(peak, False)])
             elementPeaks.blockSignals(False)
 
@@ -1034,7 +1033,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
                 self.elementDistributions[elementName][title] = dist
 
-            for title, Tof in self.plottedSubstances:
+            for title, Tof in self.plottedSpectra:
 
                 if elementName == title:
                     title = f"{title}-{'ToF' if Tof else 'Energy'}"
@@ -1044,7 +1043,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.elementData[title].isDistAltered = True
                     self.elementData[title].isGraphDrawn = False
                     self.isCompound = self.elementData[title].isCompound
-                    self.data = elementName
+                    self.selectionName = elementName
 
                     self.updateGuiData(tof=Tof, distAltered=True)
                     break
@@ -1189,10 +1188,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             for element in self.elementData.values():
                 if element.isMaxDrawn:
                     element.isGraphUpdating = True
-                    self.PlottingPD(element, True)
+                    self.plottingPD(element, True)
                 if element.isMinDrawn:
                     element.isGraphUpdating = True
-                    self.PlottingPD(element, False)
+                    self.plottingPD(element, False)
         applyBtn.clicked.connect(onAccept)
 
         inputThreshold.setFocus(True)
@@ -1207,8 +1206,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         optionsWindowDialog = QDialog()
         optionsWindowDialog.setWindowTitle("Gridline Options")
+        optionsWindowDialog.setObjectName("inputWindow")
         mainLayout = QVBoxLayout()
         formLayout = QFormLayout()
+        formLayout.setObjectName("inputForm")
 
         gridlineLayout = QHBoxLayout()
         gridlineGroup = QGroupBox()
@@ -1293,6 +1294,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             majorRadioBtn.setChecked(True)
             bothAxisRadioBtn.setChecked(True)
             gridColorDialog.setCurrentColor(QtGui.QColor(68, 68, 68))
+            gridColorBtn.setStyleSheet(f"margin: 5px; background-color: {self.gridSettings['color']};")
             self.toggleGridlines(self.gridCheck.isChecked(), *self.gridSettings.values())
         onResetBtn.clicked.connect(onReset)
 
@@ -1373,7 +1375,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         elements.lineEdit().setPlaceholderText("Select an Isotope / Element")
         elements.addItems([self.combobox.itemText(i)
-                           for i in range(self.combobox.count())])
+                           for i in range(self.combobox.count()) if 'element' in self.combobox.itemText(i)])
         # elements.addItems([self.combobox.itemText(i)
         #                    for i in range(self.combobox.count()) if 'element' in self.combobox.itemText(i)])
 
@@ -1457,11 +1459,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             if compoundElements == {}:
                 compoundMode.append(elementName.split('_')[-1])
 
-                elements.currentIndexChanged.disconnect()
+                elements.blockSignals(True)
                 elementNames = elements.getAllItemText()
                 elements.clear()
                 elements.addItems([name for name in elementNames if compoundMode[0] in name])
-                elements.editTextChanged.connect(lambda: onElementChange(elements.currentIndex()))
+                elements.blockSignals(False)
 
             totalLabel.setStyleSheet("color: #FFF;")
 
@@ -1552,7 +1554,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 applyBtn.setToolTip(None)
 
         elements.setFocus()
-        onElementChange()
+        onElementChange(elements.currentIndex())
         optionsWindow.setModal(False)
         optionsWindow.show()
 
@@ -1701,20 +1703,20 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self.table.setSortingEnabled(True)
 
             elif combobox.currentText() in substanceNames:
-                self.data = combobox.currentText()
+                self.selectionName = combobox.currentText()
                 self.displayData()
         except AttributeError:
             self.table.setModel(None)
 
     def displayData(self) -> None:
         """
-        ``displayData`` Will display relevant peak information in the table for the selection made (self.data).
+        ``displayData`` Will display relevant peak information in the table for the selection made (self.selectionName).
         Once a select is made, the relevant controls are enabled.
         """
-        if self.data == "" and self.plotCount > -1:  # Null selection and graphs shown
+        if self.selectionName == "" and self.plotCount > -1:  # Null selection and graphs shown
             self.toggleBtnControls(clearBtn=True)
             return
-        elif self.data == "" and self.plotCount == -1:  # Null selection and no graphs shown
+        elif self.selectionName == "" and self.plotCount == -1:  # Null selection and no graphs shown
             self.toggleBtnControls(enableAll=False)
             self.toggleCheckboxControls(enableAll=False)
             return
@@ -1726,8 +1728,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.toggleCheckboxControls(enableAll=False)
 
         # Getting symbol from element
-        split = self.data.split("-")
-        if self.data.startswith("e"):
+        split = self.selectionName.split("-")
+        if self.selectionName.startswith("e"):
             dataSymbolSort = split[1]
             dataSymbol = dataSymbolSort[:-2]
         else:
@@ -1746,7 +1748,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             labelInfo = (
                 "Threshold for peak detection (n-tot mode, n-g mode): " + f"({self.threshold[0]},{self.threshold[1]})"
             )
-            if self.data[-1] == 't':
+            if self.selectionName[-1] == 't':
                 self.threshold = self.thresholds[dataSymbol][0]
             else:
                 self.threshold = self.thresholds[dataSymbol][1]
@@ -1763,7 +1765,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         peakInfoDir = self.filepath + "data/Peak information/"
         filepath = None
         for file in os.listdir(peakInfoDir):
-            if self.data == file.split(".")[0]:
+            if self.selectionName == file.split(".")[0]:
                 filepath = peakInfoDir + file
                 break
         try:
@@ -1777,7 +1779,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             # Reset any changes to spans before displaying selection data.
             self.table.clearSpans()
 
-            if self.data not in self.plottedSubstances:
+            if self.selectionName not in self.plottedSpectra:
                 self.numRows = file.shape[0]
             print("Number of peaks: ", self.numRows)
             # Fill Table with data
@@ -1803,6 +1805,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.numRows = None
 
     def addTableData(self, reset=False):
+        """
+        ``addTableData`` Concatenates the selected spectras table data to the other plotted spectras adding a toggle
+        drop-down title row.
+
+        Args:
+            reset (bool, optional): Whether to default back to the current state of the table. Defaults to False.
+        """
         # Amending the table for more than one plot.
         self.table.reset()
         self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
@@ -1865,35 +1874,31 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.toggleCheckboxControls(enableAll=True)
         self.toggleBtnControls(enableAll=True)
 
-        if self.data is None and not imported:
+        if self.selectionName is None and not imported:
             QMessageBox.warning(self, "Error", "You have not selected anything to plot")
             return
         if imported:
-            self.data = name
+            self.selectionName = name
             self.threshold = 100
         # Checks for adding mutliple graphs for the same selection, energy/tof types.
-        if (self.data, tof) in self.plottedSubstances and not distAltered:
+        if (self.selectionName, tof) in self.plottedSpectra and not distAltered:
             QMessageBox.warning(self, "Warning", "Graph is already plotted")
             return
 
         # Establishing the number of peaks on the graph at one time, and their type
         if not imported and self.numRows != 0:
-            if self.data not in self.plottedSubstances:
+            if self.selectionName not in self.plottedSpectra:
                 self.numTotPeaks.append(self.numRows)
 
-        if (self.data, tof) not in self.plottedSubstances:
-            self.plottedSubstances.append((self.data, tof))
+        if (self.selectionName, tof) not in self.plottedSpectra:
+            self.plottedSpectra.append((self.selectionName, tof))
         # Handles number_totpeaks when plotting energy and tof of the same graph
         self.numTotPeaks.append(self.numRows)
 
         # # Finds the mode for L0 (length) parameter
-        if self.data[-1] == "t":
-            length = 23.404
-        else:
-            length = 22.804
 
         self.titleRows = [0]
-        for (element, tof) in self.plottedSubstances:
+        for (element, tof) in self.plottedSpectra:
             title = f"{element}-{'ToF' if tof else 'Energy'}"
             # ¦ -----------------------------------
 
@@ -1911,7 +1916,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             except pd.errors.EmptyDataError:
                 QMessageBox.warning(self, "Warning", "Selection has Empty Graph Data")
-                self.plottedSubstances.remove((self.data, tof))
+                self.plottedSpectra.remove((self.selectionName, tof))
                 if self.plotCount == -1:
                     self.toggleCheckboxControls(enableAll=False)
                     self.toggleBtnControls(plotEnergyBtn=True, plotToFBtn=True, clearBtn=True, pdBtn=False)
@@ -1920,9 +1925,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if self.elementData.get(element, False):
                     self.elementData[element].graphData.to_csv(self.plotFilepath, index=False, header=False)
                     graphData = self.compoundData[element].graphData
-
-            if tof and not graphData.empty:
-                graphData[0] = self.energyToTOF(graphData[0], length=length)
 
             try:
                 elementTableData = pd.read_csv(f"{peakInfoDir}{element}.csv")
@@ -1975,7 +1977,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if newElement.name in line.get_label():
                     line.remove()
             try:
-                for line in self.ax2.get_lines():
+                for line in self.axPD.get_lines():
                     if 'max' in line.get_gid():
                         redrawMax = True
                     if 'min' in line.get_gid():
@@ -1990,20 +1992,28 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.plot(newElement, filepath, imported, name)
         if redrawMax:
-            self.PlottingPD(newElement, True)
+            self.plottingPD(newElement, True)
         if redrawMin:
-            self.PlottingPD(newElement, False)
+            self.plottingPD(newElement, False)
         self.addTableData()
 
         self.canvas.draw()
 
     def plot(self, elementData: ElementData, filepath: str = None, imported: bool = False, name: str = None) -> None:
+        """
+        ``plot`` Will plot the inputted elementData's spectra to the canvas.
+
+        Args:
+            ``elementData`` (ElementData): The elementData to be plotted
+
+            ``filepath`` (str, optional): Filepath of imported spectra. Defaults to None.
+
+            ``imported`` (bool, optional): Whether or not the data has been imported. Defaults to False.
+
+            ``name`` (str, optional): The name of the imported spectra. Defaults to None.
+        """
         if elementData is None:
             return
-        # Re-setting Arrays
-        self.x = []
-        self.y = []
-        # Establishing colours for multiple plots
 
         # General Plotting ---------------------------------------------------------------------------------------------
         if self.plotCount < 0:
@@ -2020,7 +2030,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             if self.plotCount < 0:
                 self.ax.set(
-                    xlabel="ToF (uS)", ylabel="Cross section (b)", title=self.data
+                    xlabel="ToF (uS)", ylabel="Cross section (b)", title=self.selectionName
                 )
         else:
             if self.plotCount < 0:
@@ -2028,13 +2038,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.ax.set(
                         xlabel="Time of Flight (uS)",
                         ylabel="Cross section (b)",
-                        title=self.data,
+                        title=self.selectionName,
                     )
                 else:
                     self.ax.set(
                         xlabel="Energy (eV)",
                         ylabel="Cross section (b)",
-                        title=self.data,
+                        title=self.selectionName,
                     )
             else:
                 self.ax.set(title=None)
@@ -2053,7 +2063,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 alpha=0.6,
                 linewidth=0.8,
                 label=label,
-                gid=elementData.name if self.data is None else self.data,
+                gid=elementData.name if self.selectionName is None else self.selectionName,
             )
             elementData.isGraphDrawn = True
             self.updateLegend()
@@ -2069,6 +2079,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.canvas.draw()
 
     def updateLegend(self):
+        """
+        ``updateLegend`` Will update the legend to contain all currently plotted spectras and connect the 'pick_event'
+        to each legend line to ''hideGraph''.
+        """
         # Creating a legend to toggle on and off plots--------------------------------------------------------------
 
         legend = self.ax.legend(fancybox=True, shadow=True)
@@ -2098,7 +2112,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             ``length`` (float): Constant value associated to whether the element data is with repsect to n-g or n-tot
 
-
         Returns:
             list[float]: Mapped x-coords
         """
@@ -2127,9 +2140,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         legline = event.artist
         if self.ax.get_visible():
             axis, legOrigLines = self.ax, self.legOrigLines
-        if self.ax2 is not None:
-            if self.ax2.get_visible():
-                axis, legOrigLines = self.ax2, self.legOrigLinesPD
+        if self.axPD is not None:
+            if self.axPD.get_visible():
+                axis, legOrigLines = self.axPD, self.legOrigLinesPD
 
         if legline not in legOrigLines:
             return
@@ -2160,22 +2173,22 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def clear(self) -> None:
         """
-        clear Function will empty all data from the table, all graphs from the plots,
+        ``clear`` Function will empty all data from the table, all graphs from the plots,
         along with resetting all data associated the table or plot and disables relevent controls.
         """
 
         self.figure.clear()
         self.ax.clear()
-        self.ax2 = None
+        self.axPD = None
         self.canvas.draw()
-        self.x = []
-        self.y = []
+
         self.plotCount = -1
         self.numTotPeaks = []
         self.annotations = []
         self.localHiddenAnnotations = []
         self.peaklabel.setText("")
         self.thresholdLabel.setText("")
+
         self.elementData = {}
         self.elementDataNames = []
         try:
@@ -2183,12 +2196,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self.table.setItemDelegateForRow(row, None)
         except AttributeError:
             pass
+
         self.table.setModel(None)
-        self.graphs = dict()
         self.tableLayout = dict()
+
         self.table_model = None
-        self.arrays = dict()
-        self.plottedSubstances = []
+        self.plottedSpectra = []
         self.elementDistributions = deepcopy(self.defaultDistributions)
 
         self.toggleBtnControls(plotEnergyBtn=True, plotToFBtn=True, clearBtn=True)
@@ -2229,8 +2242,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self.ax.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
             else:
                 self.ax.grid(visible=visible, which="both")
-            if visible and self.ax2.get_visible():
-                self.ax2.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
+            if visible and self.axPD.get_visible():
+                self.axPD.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
             else:
                 self.ax.grid(visible=visible, which="both")
         except AttributeError:
@@ -2239,7 +2252,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def toggleThreshold(self) -> None:
         """
-        Plots the threshold line for each plotted element at their respective limits.
+        ``toggleThreshold`` Plots the threshold line for each plotted element at their respective limits.
         """
         checked = self.thresholdCheck.isChecked()
 
@@ -2251,7 +2264,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             if "pd_threshold" in line.get_gid():
                 line.remove()
         try:
-            for line in self.ax2.get_lines():
+            for line in self.axPD.get_lines():
                 if line is None:
                     continue
                 if line.get_gid() is None:
@@ -2273,8 +2286,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                         gid=f"pd_threshold-{name}"
                     )
                 try:
-                    if self.ax2.get_visible() and (element.isMaxDrawn or element.isMinDrawn):
-                        line = self.ax2.axhline(
+                    if self.axPD.get_visible() and (element.isMaxDrawn or element.isMinDrawn):
+                        line = self.axPD.axhline(
                             y=element.threshold,
                             linestyle="--",
                             color=element.graphColour,
@@ -2289,6 +2302,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 self.canvas.draw()
 
     def onPeakOrderChange(self) -> None:
+        """
+        ``onPeakOrderChange`` Handles changing the order of peaks then redrawing the annotations.
+        """
         if self.sender().objectName() == "orderByIntegral":
             self.orderByIntegral = self.byIntegralCheck.isChecked()
 
@@ -2347,7 +2363,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def toggleAnnotations(self) -> None:
         """
-        Function Annotations shows & hides all peak annotations globally.
+        ``toggleAnnotations``Shows & hides all peak annotations globally.
         """
         for element in self.elementData.values():
             element.HideAnnotations(self.peakLabelCheck.isChecked())
@@ -2355,8 +2371,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.canvas.draw()
 
-    def PlotPeakWindow(self, row_clicked) -> None:
+    def plotPeakWindow(self, index: QModelIndex) -> None:
+        """
+        ``plotPeakWindow`` Opens a window displaying the graph about the selected peak within the bounds of integration
+        as well as data specific to the peak.
 
+        Args:
+            index (QModelIndex): Index object for the selected cell.
+        """
         peakWindow = QMainWindow(self)
         # Setting title and geometry
         peakWindow.setWindowTitle("Peak Plotting")
@@ -2379,62 +2401,81 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Setting up dock for widgets to be used around canvas
         dock = QDockWidget(parent=peakWindow)
         # Creating a widget to contain peak info in dock
-        peak_info_widget = QWidget()
+        peakInfoWidget = QWidget()
 
         # Creating layout to display peak info in the widget
-        layout2 = QVBoxLayout()
-        toggle_layout2 = QHBoxLayout()
+        bottomLayout = QVBoxLayout()
+        toggleLayout = QHBoxLayout()
 
         # Adding checkbox to toggle the peak limits on and off
         threshold_check2 = QCheckBox("Integration Limits", peakWindow)
         threshold_check2.resize(threshold_check2.sizeHint())
         threshold_check2.setObjectName("peakCheck")
         threshold_check2.setChecked(True)
-        toggle_layout2.addWidget(threshold_check2)
+        toggleLayout.addWidget(threshold_check2)
 
         # Adding checkbox to toggle the peak detection limits on and off
         threshold_check3 = QCheckBox("Peak Detection Limits", peakWindow)
         threshold_check3.setObjectName("peakCheck")
         threshold_check3.resize(threshold_check3.sizeHint())
-        toggle_layout2.addWidget(threshold_check3)
+        toggleLayout.addWidget(threshold_check3)
         # Adding to overall layout
-        layout2.addLayout(toggle_layout2)
+        bottomLayout.addLayout(toggleLayout)
 
         peakTable = QTableView()
 
-        layout2.addWidget(peakTable)
+        bottomLayout.addWidget(peakTable)
 
         # Adding label which shows what scale the user picks
         scale_label = QLabel()
         scale_label.setObjectName("peakLabel")
-        layout2.addWidget(scale_label)
+        bottomLayout.addWidget(scale_label)
 
         # Setting layout within peak info widget
-        peak_info_widget.setLayout(layout2)
-        dock.setWidget(peak_info_widget)  # Adding peak info widget to dock
+        peakInfoWidget.setLayout(bottomLayout)
+        dock.setWidget(peakInfoWidget)  # Adding peak info widget to dock
 
         peakWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
         # Setting canvas as central widget
         peakWindow.setCentralWidget(canvasProxyWidget)
 
+        self.peakAxis = None
         self.peakAxis = peakFigure.add_subplot(111)
 
         try:
-            titleIndex = sorted([index for index in self.titleRows if row_clicked.row() > index])[-1]
+            titleIndex = sorted([rowIndex for rowIndex in self.titleRows if index.row() > rowIndex])[-1]
             elementName = self.table_model.data(self.table_model.index(titleIndex, 0), 0)
-            tof = False  # ! Handle Tof / Energy peaks
-            elementTitle = f"{elementName}-{'ToF' if tof else 'Energy'}"
+            plottedSpectra = [name for name in self.plottedSpectra if elementName in name]
+            optionsDialog = InputElementsDialog()
+            if len(plottedSpectra) > 1:
+                spectraNames = [f"{name}-{'ToF' if tof else 'Energy'}" for name, tof in plottedSpectra]
+                optionsDialog.elements.addItems(spectraNames)
+                optionsDialog.mainLayout.addWidget(optionsDialog.elements)
+
+                acceptBtn = optionsDialog.buttonBox.addButton(QDialogButtonBox.Ok)
+
+                def onAccept():
+                    self.tof = 'ToF' in optionsDialog.elements.currentText()
+                    optionsDialog.close()
+                acceptBtn.clicked.connect(onAccept)
+
+                optionsDialog.mainLayout.addWidget(optionsDialog.buttonBox)
+                optionsDialog.setLayout(optionsDialog.mainLayout)
+                optionsDialog.setModal(False)
+                optionsDialog.exec_()
+            else:
+                self.tof = plottedSpectra[0][1]
+
+            elementTitle = f"{elementName}-{'ToF' if self.tof else 'Energy'}"
             element = self.elementData[elementTitle]
             if element.maxima.size == 0:
                 return
-            maximaX = nearestnumber(element.maxima[0], float(self.table_model.data(
-                self.table_model.index(row_clicked.row(), 3 if tof else 1), 0)))
-            maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
-
             if element.maxPeakLimitsX == dict():
-                peakLimits = pd.read_csv(f"{self.filepath}data\\Peak Limit Information\\{elementName}.csv")
-                leftLimit, rightLimit = peakLimits.iloc[(peakLimits.iloc[:, 0] <= maxima[0]) & (
-                    peakLimits.iloc[:, 1] >= maxima[0])]
+                maximaX = nearestnumber(element.maxima[0], float(self.table_model.data(
+                    self.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+                maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
+
+                leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
 
             else:
                 leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
@@ -2447,7 +2488,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         rank = [str([ann[0] for ann in element.annotationsOrder.items() if ann[1][0] == maxima[0]][0])]
         limits = [str(element.maxPeakLimitsX[maxima[0]])]
         peakCoords = [f"({maxima[0]}, {maxima[1]})"]
-        isoOrigin = [self.table_model.data(self.table_model.index(row_clicked.row(), 9), 0)]
+        isoOrigin = [self.table_model.data(self.table_model.index(index.row(), 9), 0)]
         data = {"Peak Number (Rank)": rank,
                 "Integration Limits (eV)": limits,
                 "Peak Co-ordinates (eV)": peakCoords,
@@ -2465,24 +2506,27 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         graphData = element.graphData[(element.graphData[0] >= leftLimit) & (element.graphData[0] <= rightLimit)]
 
-        def togglePeakLimits(self) -> None:
+        def togglePeakLimits() -> None:
             for line in self.peakAxis.get_lines():
                 if "PeakWindow-lim" in line.get_gid():
                     line.set_visible(threshold_check2.isChecked())
+            self.peakAxis.figure.canvas.draw()
         threshold_check2.clicked.connect(togglePeakLimits)
 
-        def togglePeakThreshold(self, checked, element) -> None:
+        def togglePeakThreshold(checked, element) -> None:
             if not threshold_check3.isChecked():
                 for line in self.peakAxis.get_lines():
                     if line.get_gid() == f"PeakWindow-Threshold-{element.name}":
                         line.remove()
+
             else:
                 self.peakAxis.axhline(y=element.threshold,
                                       linestyle="--",
                                       color=element.graphColour,
                                       linewidth=0.5,
                                       gid=f"PeakWindow-Threshold-{element.name}")
-        threshold_check3.clicked.connect(togglePeakThreshold)
+            self.peakAxis.figure.canvas.draw()
+        threshold_check3.clicked.connect(lambda: togglePeakThreshold(threshold_check3.isChecked(), element))
 
         peakWindow.show()
 
@@ -2522,9 +2566,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         peakFigure.tight_layout()
         self.peakAxis.legend(fancybox=True, shadow=True)
 
-    def importdata(self) -> None:
+    def importData(self) -> None:
         """
-        Allows user to select a file on their computer to open and analyse.
+        ``importData`` Allows user to select a file on their computer to open and analyse.
         """
         filename = QFileDialog.getOpenFileName(self, "Open file", self.filepath)
         if filename[0] == '':
@@ -2539,9 +2583,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         else:
             self.updateGuiData(False, filepath, True, name)
 
-    def GetPeaks(self) -> None:
+    def getPeaks(self) -> None:
         """
-        Ask the user for which function to plot the maxima or minima of which element
+        ``getPeaks`` Ask the user for which function to plot the maxima or minima of which element
         then calls the respective function on that element
         """
 
@@ -2565,7 +2609,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         inputMaxPeaks.setPlaceholderText(str(self.elementData[elements.currentText()].threshold))
         inputMaxPeaks.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
 
-        inputForm.addRow(QLabel("Substance:"), elements)
+        inputForm.addRow(QLabel("Spectra:"), elements)
         buttonBox = QDialogButtonBox()
         resetBtn = buttonBox.addButton(QDialogButtonBox.Reset)
         resetBtn.setText("Reset")
@@ -2588,11 +2632,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         inputWindow.setLayout(mainLayout)
 
         def max():
-            self.PlottingPD(self.elementData[elements.currentText()], True)
+            self.plottingPD(self.elementData[elements.currentText()], True)
         maximaBtn.clicked.connect(max)
 
         def min():
-            self.PlottingPD(self.elementData[elements.currentText()], False)
+            self.plottingPD(self.elementData[elements.currentText()], False)
         minimaBtn.clicked.connect(min)
 
         def close():
@@ -2616,11 +2660,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         def ResetPDPlots() -> None:
             try:
-                if self.ax2 is not None:
-                    self.ax2.set_visible(False)
-                    self.ax2.clear()
-                    self.ax2.remove()
-                    self.ax2 = None
+                if self.axPD is not None:
+                    self.axPD.set_visible(False)
+                    self.axPD.clear()
+                    self.axPD.remove()
+                    self.axPD = None
 
                 self.ax.set_visible(True)
                 for element in self.elementData.values():
@@ -2634,9 +2678,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.canvas.draw()
         resetBtn.clicked.connect(ResetPDPlots)
 
-    def PlottingPD(self, elementData: ElementData, isMax: bool) -> None:
+    def plottingPD(self, elementData: ElementData, isMax: bool) -> None:
         """
-        ``PlottingPD`` takes plots the maximas or minimas of the inputted ``elementData`` based on ``isMax``
+        ``plottingPD`` takes plots the maximas or minimas of the inputted ``elementData`` based on ``isMax``
 
         Args:
             ``elementData`` (ElementData): ElementData Class specifying the element
@@ -2658,16 +2702,16 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Redrawing graph and Peak Detection Limits
         self.ax.set_visible(False)
 
-        if self.ax2 is None:
-            self.ax2 = self.figure.add_subplot(111)
+        if self.axPD is None:
+            self.axPD = self.figure.add_subplot(111)
 
         self.toggleGridlines(self.gridCheck.isChecked(), **self.gridSettings)
 
-        self.ax2.set_visible(True)
+        self.axPD.set_visible(True)
 
         label = f"{elementData.name}-ToF" if elementData.isToF else f"{elementData.name}-Energy"
         if not elementData.isMaxDrawn and not elementData.isMinDrawn and not elementData.isGraphUpdating:
-            self.ax2.plot(
+            self.axPD.plot(
                 elementData.graphData[0],
                 elementData.graphData[1],
                 "-",
@@ -2679,13 +2723,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             )
         self.toggleThreshold()
         self.drawAnnotations(elementData)
-        self.ax2.set_xscale("log")
-        self.ax2.set_yscale("log")
-        self.ax2.set(xlabel="Energy (eV)", ylabel="Cross section (b)", title=str(self.data))
+        self.axPD.set_xscale("log")
+        self.axPD.set_yscale("log")
+        self.axPD.set(xlabel="Energy (eV)", ylabel="Cross section (b)", title=str(self.selectionName))
 
         if isMax:
             pdPoints = [
-                a for a in self.ax2.get_lines() if "max" in a.get_gid() and elementData.name in a.get_gid()
+                a for a in self.axPD.get_lines() if "max" in a.get_gid() and elementData.name in a.get_gid()
             ]
             pdPointsXY = [(point.get_xdata()[0], point.get_ydata()[0])
                           for point in pdPoints]
@@ -2705,13 +2749,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             for i, (x, y) in enumerate(zip(peaksX, peaksY)):
                 if (x, y) in pdPointsXY:
                     continue
-                self.ax2.plot(x,
-                              y,
-                              "x",
-                              color="black",
-                              markersize=3,
-                              alpha=0.6,
-                              gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max-p-{i}")
+                self.axPD.plot(x,
+                               y,
+                               "x",
+                               color="black",
+                               markersize=3,
+                               alpha=0.6,
+                               gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max-p-{i}")
                 elementData.isMaxDrawn = True
                 if elementData.maxPeakLimitsX.get(x, False):
                     limitXFirst = elementData.maxPeakLimitsX[x][0]
@@ -2724,39 +2768,39 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 else:
                     continue
 
-                self.ax2.plot(limitXFirst,
-                              limitYFirst,
-                              marker=2,
-                              color="r",
-                              markersize=8,
-                              gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max-limL-{i}")
-                self.ax2.plot(limitXSecond,
-                              limitYSecond,
-                              marker=2,
-                              color="r",
-                              markersize=8,
-                              gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max-limR-{i}")
+                self.axPD.plot(limitXFirst,
+                               limitYFirst,
+                               marker=2,
+                               color="r",
+                               markersize=8,
+                               gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max-limL-{i}")
+                self.axPD.plot(limitXSecond,
+                               limitYSecond,
+                               marker=2,
+                               color="r",
+                               markersize=8,
+                               gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-max-limR-{i}")
 
         else:
             for x, y in zip(peaksX, peaksY):
-                self.ax2.plot(x,
-                              y,
-                              "x",
-                              color="black",
-                              markersize=3,
-                              alpha=0.6,
-                              gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-min")
+                self.axPD.plot(x,
+                               y,
+                               "x",
+                               color="black",
+                               markersize=3,
+                               alpha=0.6,
+                               gid=f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}-min")
                 elementData.isMinDrawn = True
 
                 # limitXFirst = elementData.minPeakLimitsX[f"{x}_first"]
                 # limitYFirst = elementData.minPeakLimitsY[f"{x}_first"]
                 # limitXSecond = elementData.minPeakLimitsX[f"{x}_second"]
                 # limitYSecond = elementData.minPeakLimitsY[f"{x}_second"]
-                # self.ax2.plot(limitXFirst, limitYFirst, 0, color="r", markersize=8)
-                # self.ax2.plot(limitXSecond, limitYSecond, 0, color="r", markersize=8)
-        legendPD = self.ax2.legend(fancybox=True, shadow=True)
+                # self.axPD.plot(limitXFirst, limitYFirst, 0, color="r", markersize=8)
+                # self.axPD.plot(limitXSecond, limitYSecond, 0, color="r", markersize=8)
+        legendPD = self.axPD.legend(fancybox=True, shadow=True)
         self.legOrigLinesPD = {}
-        origlines = [line for line in self.ax2.get_lines() if not ('max' in line.get_gid() or 'min' in line.get_gid())]
+        origlines = [line for line in self.axPD.get_lines() if not ('max' in line.get_gid() or 'min' in line.get_gid())]
         for legLine, origLine in zip(legendPD.get_lines(), origlines):
             legLine.set_picker(True)
             legLine.set_linewidth(1.5)

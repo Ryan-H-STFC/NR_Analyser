@@ -15,7 +15,7 @@ class CustomSortingProxy(QSortFilterProxyModel):
 
     def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
         """Custom Sorting Function, based on which type of data in each column of the table, adjust how the values will
-         be sorted. Defaulting to the normal ``QSortFilterProxyModel.lessThan`` results. 
+         be sorted. Defaulting to the normal ``QSortFilterProxyModel.lessThan`` results.
 
         Args:
             left (QModelIndex): Value on the left of the < operation

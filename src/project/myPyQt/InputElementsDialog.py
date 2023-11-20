@@ -43,3 +43,4 @@ class InputElementsDialog(QDialog):
 
         self.motionEvent = None
         self.buttonPressEvent = None
+        self.tof = None

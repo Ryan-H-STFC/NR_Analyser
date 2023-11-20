@@ -41,4 +41,5 @@ class FigureCanvas(FigureCanvasQTAgg):
             for row in self.widgetParent.titleRows:
                 self.widgetParent.table.setItemDelegateForRow(row, None)
             self.widgetParent.updateLegend()
+            axis.figure.canvas.draw()
             self.widgetParent.addTableData()

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.rcsetup
 import matplotlib.pyplot as plt
+from matplotlib.ticker import LogLocator
 # from matplotlib.backends.backend_qt5agg import (
 #     FigureCanvasQTAgg as FigureCanvas,
 # )
@@ -92,7 +93,6 @@ from helpers.getWidgets import getLayoutWidgets
 #     fontpaths="C:\\Users\\gzi47552\\Documents\\NRTI-NRCA-Viewing-Database\\src\\fonts")
 # ! for font in fonts:
 # !    font_manager.fontManager.addfont(font)
-# ! matplotlib.rcParams["font.family"] = 'Roboto Mono'
 
 matplotlib.rcParamsDefault["path.simplify"] = True
 matplotlib.rcParamsDefault["agg.path.chunksize"] = 10000
@@ -2019,10 +2019,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         if self.plotCount < 0:
             self.ax = self.figure.add_subplot(111)
             # Setting scale to be logarithmic
+
             self.ax.set_yscale("log")
             self.ax.set_xscale("log")
-            self.ax.minorticks_on()
-            self.ax.xaxis.set_tick_params('both', bottom=True)
 
         # Allows user to plot in ToF if chosen # -----------------------------------------------------------------------
         if elementData.isToF and not imported:
@@ -2073,15 +2072,22 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             self.drawAnnotations(elementData)
             self.toggleThreshold()
+            self.ax.minorticks_on()
+            plt.minorticks_on()
+            self.ax.xaxis.set_major_locator(LogLocator(10, 'all'))
+            self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
             self.ax.autoscale()  # Tidying up
 
             self.figure.tight_layout()
+
         self.canvas.draw()
 
     def updateLegend(self):
         """
-        ``updateLegend`` Will update the legend to contain all currently plotted spectras and connect the 'pick_event'
-        to each legend line to ''hideGraph''.
+        ``updateLegend``
+        ----------------
+        Will update the legend to contain all currently plotted spectras and connect the 'pick_event'
+        to each legend line to ``hideGraph``.
         """
         # Creating a legend to toggle on and off plots--------------------------------------------------------------
 
@@ -2115,6 +2121,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         Returns:
             list[float]: Mapped x-coords
         """
+        # ! Add a way to change length at runtime per spectra
         if length is None:
             length = 22.804
         neutronMass = float(1.68e-27)
@@ -2728,8 +2735,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.axPD.set(xlabel="Energy (eV)", ylabel="Cross section (b)", title=str(self.selectionName))
 
         if isMax:
+            title = f"{elementData.name}-{'ToF' if elementData.isToF else 'Energy'}"
             pdPoints = [
-                a for a in self.axPD.get_lines() if "max" in a.get_gid() and elementData.name in a.get_gid()
+                a for a in self.axPD.get_lines() if "max" in a.get_gid() and title in a.get_gid()
             ]
             pdPointsXY = [(point.get_xdata()[0], point.get_ydata()[0])
                           for point in pdPoints]
@@ -2739,7 +2747,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if "max-p" not in point.get_gid():
                     continue
                 xy = (point.get_xdata()[0], point.get_ydata()[0])
-                if xy not in peaks:
+                if xy not in peaks and title in point.get_gid():
                     removeIds.append(point.get_gid().split('-')[-1])
             if removeIds != []:
                 for point in pdPoints:

@@ -33,14 +33,14 @@ class TestApp(TestCase):
         self.assertEqual(app.elementData, {})
         self.assertEqual(app.elementDataNames, [])
         self.assertEqual(app.plotCount, -1)
-        self.assertEqual(app.plottedSubstances, [])
+        self.assertEqual(app.plottedSpectra, [])
         self.assertEqual(app.ax.get_lines(), [])
         self.assertEqual(app.numTotPeaks, [])
         self.assertEqual(app.annotations, [])
         self.assertEqual(app.localHiddenAnnotations, [])
         self.assertEqual(app.elementDistributions, app.defaultDistributions)
         self.assertIsNone(app.table_model)
-        self.assertIsNone(app.ax2)
+        self.assertIsNone(app.axPD)
 
     def test_toggle_states(self):
         app = DatabaseGUI()

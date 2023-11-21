@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           cache: "pip"
-          
+
       - name: Display Python Version
         run: python -c "import sys; print(sys.version)"
 
@@ -31,7 +31,7 @@ jobs:
           pip install tox tox-gh-actions
 
       - name: Installing Dependencies (Linux)
-        if: runner.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           sudo apt-get update
@@ -44,7 +44,7 @@ jobs:
           pip install PyQt5==5.15.9
 
       - name: Test with tox (Linux)
-        if: runner.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           xvfb-run --auto-servernum tox -e py${{matrix.python-version}}

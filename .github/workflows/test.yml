@@ -6,10 +6,12 @@ on:
 jobs:
   test:
     runs-on: ${{matrix.os}}
+
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
+
 
     steps:
       - uses: actions/checkout@v3
@@ -18,17 +20,34 @@ jobs:
         with:
           python-version: ${{matrix.python-version}}
           cache: "pip"
+
       - name: Display Python Version
         run: python -c "import sys; print(sys.version)"
+
       - name: Installing Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install tox
           pip install tox tox-gh-actions
 
-      - name: Test with tox
+      - name: Installing Dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
         run: |
-          echo Python ${{matrix.python-version}}
-          tox -e py${{matrix.python-version}}
+          sudo apt-get update
+          sudo apt-get install xvfb
+          sudo apt-get install libxcb-xinerama0
+          export QT_QPA_PLATFORM=wayland
+
+      - name: Installing PyQt5
+        run: |
+          pip install PyQt5==5.15.9
+
+      - name: Test with tox (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          xvfb-run --auto-servernum tox -e py${{matrix.python-version}}
+  
       - name: Test Linting
         run: tox -e flake8

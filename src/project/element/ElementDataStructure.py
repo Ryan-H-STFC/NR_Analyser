@@ -7,9 +7,9 @@ from pandas import DataFrame, errors
 
 from element.PeakDetection import PeakDetector
 from helpers.getSpacedElements import getSpacedElements
-from helpers.integration import integrate_trapz, integrate_simps
+from helpers.integration import integrate_simps
 from helpers.nearestNumber import nearestnumber
-from helpers.timeme import timeme
+
 
 dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
 peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
@@ -23,6 +23,7 @@ class ElementData:
 
     name: str
     numPeaks: int
+    maxPeaks: int = 50
     tableData: DataFrame
     graphData: DataFrame
     distributions: dict
@@ -32,7 +33,6 @@ class ElementData:
     annotations: list
     annotationsOrder: dict
     threshold: float = 100.0
-    maxPeaks: int = 50
 
     maxima: ndarray = None
     minima: ndarray = None
@@ -42,17 +42,17 @@ class ElementData:
     minPeakLimitsY: dict
     minPeakLimitsX: dict
 
-    isToF: bool = False
-    isImported: bool = False
-    isGraphHidden: bool = False
-    isGraphDrawn: bool = False
-    isGraphUpdating: bool = False
+    isAnnotationsDrawn: bool = False
+    isAnnotationsHidden: bool = False
+    isCompound: bool = False
     isDistAltered: bool = False
+    isGraphDrawn: bool = False
+    isGraphHidden: bool = False
+    isGraphUpdating: bool = False
+    isImported: bool = False
     isMaxDrawn: bool = False
     isMinDrawn: bool = False
-    isAnnotationsHidden: bool = False
-    isAnnotationsDrawn: bool = False
-    isCompound: bool = False
+    isToF: bool = False
 
     def __init__(self,
                  name: str,
@@ -83,22 +83,28 @@ class ElementData:
         self.threshold = threshold
         self.isImported = isImported
         pd = PeakDetector()
-        try:
-            self.tableData = tableData
 
-        except errors.EmptyDataError:
+        self.tableData = tableData
+
+        if self.tableData is None:
             self.tableData = DataFrame()
 
-        try:
-            self.graphData = graphData
-            if self.defaultDist != self.distributions:
-                self.isDistAltered = True
-                self.onDistChange()
-                self.UpdatePeaks()
+        self.graphData = graphData
+        if self.defaultDist != self.distributions:
+            self.isDistAltered = True
+            self.onDistChange()
+            self.UpdatePeaks()
 
-        except errors.EmptyDataError:
+        if self.graphData is None:
             self.graphData = DataFrame()
 
+        self.graphColour = graphColour
+
+        length = 23.404 if self.name[-1] == "t" else 22.804
+
+        if self.isToF and not self.graphData.empty:
+            graphData[0] = self.energyToTOF(graphData[0], length=length)
+            graphData.sort_values(0, ignore_index=True, inplace=True)
         try:
             if not self.graphData.empty and not self.isDistAltered:
                 self.maxima = np.array(pd.maxima(graphData, threshold))
@@ -107,11 +113,14 @@ class ElementData:
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
-        self.graphColour = graphColour
-
         try:
             name = self.name[8:] if 'element' in self.name else self.name
-            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'], header=None)
+            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'])
+            if self.isToF:
+                limits['left'] = self.energyToTOF(limits['left'], length)
+                limits['right'] = self.energyToTOF(limits['right'], length)
+                limits['left'], limits['right'] = limits['right'], limits['left']
+
             for max in self.maxima[0]:
                 lim = limits[(limits['left'] < max) & (limits['right'] > max)]
                 if lim.empty:
@@ -145,26 +154,42 @@ class ElementData:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, ElementData):
-            return self.name == other.name and self.isToF == other.isToF
+            ck = self.name == other.name and self.isToF == other.isToF and self.graphData == other.graphData
+            return ck
         return False
 
     def __ne__(self, other) -> bool:
         if isinstance(other, ElementData):
-            return self.name != other.name or self.isToF != other.isToF
+            return self.name != other.name or self.isToF != other.isToF or self.graphData != other.graphData
+        return True
 
-    def _getGraphDataFromDist(self, graphData: ndarray[float]) -> ndarray[float]:
+    def energyToTOF(self, xData: float | list[float], length: float | None = None) -> list[float]:
         """
-        ``getGraphDataFromDist`` Will return interpolated y-values for the given graphData over the total domain.
+        Maps all X Values from energy to TOF
 
         Args:
-            ``graphData`` (ndarray[float]): x-value.
+            - ``xData`` (list[float]): List of the substances x-coords of its graph data
+
+            - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
+                                          n-g or n-tot
+
 
         Returns:
-            float: Interpolated y-values for graphData over the given domain.
+            list[float]: Mapped x-coords
         """
-        return np.interp(self.graphDataX, graphData.iloc[:, 0], graphData.iloc[:, 1])
+        if length is None:
+            length = 23.404 if self.name[-1] == "t" else 22.804
+        neutronMass = float(1.68e-27)
+        electronCharge = float(1.60e-19)
 
-    @timeme
+        tofX = list(
+            map(
+                lambda x: length * 1e6 * (0.5 * neutronMass / (x * electronCharge)) ** 0.5,
+                xData
+            )
+        )
+        return tofX
+
     def onDistChange(self) -> None:
         """
         ``onDistChange`` Will retrieve an elements the corresponding isotopes graphData appling the weights specified in
@@ -292,8 +317,7 @@ class ElementData:
             return sum(integrals)
         else:
             # regionGraphData = self.graphData[(graphData['x'] >= leftLimit) & (graphData['x'] <= rightLimit)]
-            return np.mean([integrate_simps(self.graphData, leftLimit, rightLimit),
-                            integrate_trapz(self.graphData, leftLimit, rightLimit)])
+            return integrate_simps(self.graphData, leftLimit, rightLimit)
 
     def GetPeakLimits(self, max: bool = True) -> tuple[ndarray[float]]:
         if max:

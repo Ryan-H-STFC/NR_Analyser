@@ -35,15 +35,15 @@ class PeakDetector:
 
         width = sp.signal.peak_widths(y, maxima, rel_height=1, wlen=110)
         # Extracting maxima coordinates
-        maxima_list_x = []
+        maxima_list_x: list[float] = []
         maxima_list_y = []
         maxima = maxima.tolist()
         for i in maxima:
             maxima_list_x.append(x[i])  # Get list of maxima # !
             maxima_list_y.append(y[i])
         # Extracting peak width coordinates
-        self.maxPeakLimitsX = dict()  # Re-setting if used before
-        self.maxPeakLimitsY = dict()
+        self.maxPeakLimitsX = {}  # Re-setting if used before
+        self.maxPeakLimitsY = {}
         first_limits = width[2].tolist()
         second_limits = width[3].tolist()
         # Refining peak limits
@@ -118,33 +118,6 @@ class PeakDetector:
 
         minima_list_y = list(map(lambda val: -1 * val, minima_list_y))
         return minima_list_x, minima_list_y
-
-    def PeakLimitsCheck(first_limits, second_limits, maxima) -> tuple[list[float]]:
-        first_limits_changed = []
-        second_limits_changed = []
-        for i in first_limits:
-            changed_first = False
-            changed_second = False
-            index = first_limits.index(i)
-            peak = maxima[index]
-            diff_first = peak - i
-            diff_second = second_limits[index] - peak
-            if diff_first < diff_second:
-                second_limit = peak + diff_first
-                second_limits_changed.append(second_limit)
-                changed_second = True
-            elif diff_second < diff_first:
-                first_limit = peak - diff_second
-                first_limits_changed.append(first_limit)
-                changed_first = True
-            else:
-                continue
-            if not changed_first:
-                first_limits_changed.append(i)
-            if not changed_second:
-                second_limits_changed.append(second_limits[index])
-        # print("Changed: ", first_limits_changed, second_limits_changed)
-        return first_limits_changed, second_limits_changed
 
     def GetMaxPeakLimits(self) -> tuple[dict[str]]:
         return self.maxPeakLimitsX, self.maxPeakLimitsY

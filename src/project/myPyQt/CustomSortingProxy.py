@@ -15,7 +15,7 @@ class CustomSortingProxy(QSortFilterProxyModel):
 
     def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
         """Custom Sorting Function, based on which type of data in each column of the table, adjust how the values will
-         be sorted. Defaulting to the normal ``QSortFilterProxyModel.lessThan`` results. 
+         be sorted. Defaulting to the normal ``QSortFilterProxyModel.lessThan`` results.
 
         Args:
             left (QModelIndex): Value on the left of the < operation
@@ -30,29 +30,18 @@ class CustomSortingProxy(QSortFilterProxyModel):
         dataLeft = left.data()
         dataRight = right.data()
 
-        match (col):
-            case 0:
-                # Rank of Integral (int)
-                dataLeft = int(dataLeft)
-                dataRight = int(dataRight)
-                return dataLeft < dataRight
-
-            case 2 | 6:
-                # Rank of ... in format (123) (int)
-                dataLeft = int(dataLeft[1:-1])
-                dataRight = int(dataRight[1:-1])
-                return dataLeft < dataRight
-            case 1 | 3 | 4 | 5 | 7:
-                # Numerical Data (float)
-                dataLeft = float(dataLeft)
-                dataRight = float(dataRight)
-                return dataLeft < dataRight
+        if col == 0:
+            # Rank of Integral (int)
+            return int(dataLeft) < int(dataRight)
+        if col in [2, 6]:
+            # Rank of ... in format (123) (int)
+            return int(dataLeft[1:-1]) < int(dataRight[1:-1])
+        if col in [1, 3, 4, 5, 7]:
+            # Numerical Data (float)
+            return float(dataLeft) < float(dataRight)
 
         return super(QSortFilterProxyModel, self).lessThan(left, right)
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
-        # print(source_parent)
-        # self.sourceModel().index(source_parent)
-        # if source_parent
 
         return super().filterAcceptsRow(source_row, source_parent)

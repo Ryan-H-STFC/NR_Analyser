@@ -11,24 +11,27 @@ sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from ElementDataStructure import ElementData
 
 
+filepath = f"{os.path.dirname(os.path.dirname(__file__))}"
+
+
 class TestElemenetData(TestCase):
 
     graphData = pd.read_csv(
-        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Graph Data/element_29-Cu_n-g.csv",
+        f"{filepath}/src/project/data/Graph Data/element_29-Cu_n-g.csv",
         header=None
     )
 
     tableData = pd.read_csv(
-        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Peak information/29-Cu-63_n-g.csv",
+        f"{filepath}/src/project/data/Peak information/29-Cu-63_n-g.csv",
         header=None
     )
 
     elementGraphData = pd.read_csv(
-        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Graph Data/element_48-Cd_n-g.csv",
+        f"{filepath}/src/project/data/Graph Data/element_48-Cd_n-g.csv",
         header=None)
 
     elementTableData = pd.read_csv(
-        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Peak Information/element_48-Cd_n-g.csv",
+        f"{filepath}/src/project/data/Peak Information/element_48-Cd_n-g.csv",
         header=None)
 
     def test_ElementData_init_Normal(self):

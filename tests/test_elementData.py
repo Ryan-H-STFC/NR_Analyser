@@ -11,7 +11,7 @@ sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from ElementDataStructure import ElementData
 
 
-filepath = f"{os.path.dirname(os.path.dirname(__file__))}"
+filepath = f"{os.path.dirname(__file__)}"
 
 
 class TestElemenetData(TestCase):

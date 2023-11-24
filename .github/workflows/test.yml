@@ -37,7 +37,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install xvfb
           sudo apt-get install libxcb-xinerama0
-          export QT_QPA_PLATFORM=offscreen
+          export QT_QPA_PLATFORM=wayland
 
       - name: Installing PyQt5
         run: |

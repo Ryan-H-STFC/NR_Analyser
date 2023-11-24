@@ -1,6 +1,7 @@
 import sys
 import os
 import pandas as pd
+from pandas.testing import assert_frame_equal
 from unittest import TestCase, main
 
 
@@ -12,65 +13,57 @@ from ElementDataStructure import ElementData
 
 class TestElemenetData(TestCase):
 
+    graphData = pd.read_csv(
+        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Graph Data/element_29-Cu_n-g.csv",
+        header=None
+    )
+
+    tableData = pd.read_csv(
+        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Peak information/29-Cu-63_n-g.csv",
+        header=None
+    )
+
+    elementGraphData = pd.read_csv(
+        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Graph Data/element_48-Cd_n-g.csv",
+        header=None)
+
+    elementTableData = pd.read_csv(
+        "C:/Users/gzi47552/Documents/NRTI-NRCA Explorer/src/project/data/Peak Information/element_48-Cd_n-g.csv",
+        header=None)
+
     def test_ElementData_init_Normal(self):
-        graphData = pd.DataFrame(data=[[1.00E-05, 224.843],
-                                       [1.03E-05, 221.41],
-                                       [1.06E-05, 218.13],
-                                       [1.09E-05, 214.991],
-                                       [1.13E-05, 211.984],
-                                       [1.16E-05, 209.1]
-                                       ])
-        tableData = pd.DataFrame(data=[[0, 5.780e+02, (1), 6.872e+01, 6.554e+02, 5.971e+00,
-                                        (6), 2.963e+02, (0), ['29-Cu-63_n-g']],
-                                       [1, 2.647e+03, (5), 3.212e+01, 2.043e+02, 1.668e+01,
-                                        (5), 3.486e+01, (1), ['29-Cu-63_n-g']],
-                                       [2, 2.048e+03, (4), 3.651e+01, 1.603e+02, 1.080e+02,
-                                        (0), 4.701e+00, (8), ['29-Cu-63_n-g']],
-                                       [3, 5.818e+03, (8), 2.166e+01, 9.469e+01, 3.149e+01,
-                                        (2), 8.819e+00, (4), ['29-Cu-63_n-g']],
-                                       [4, 4.396e+03, (6), 2.492e+01, 7.663e+01, 1.959e+01,
-                                        (4), 1.100e+01, (3), ['29-Cu-63_n-g']],
-                                       [5, 4.855e+03, (7), 2.371e+01, 6.794e+01, 4.733e+01,
-                                        (1), 4.437e+00, (9), ['29-Cu-63_n-g']]
-                                       ],
-                                 columns=['Rank by Integral', 'Energy (eV)', 'Rank by Energy',
-                                          'TOF (us)', 'Integral', 'Peak Width',
-                                          'Rank by Peak Width', 'Peak Height',
-                                          'Rank by Peak Height', 'Relevant Isotope'])
 
         # Normal
         elementT = ElementData(
             name="29-Cu-63_n-g",
             numPeaks=10,
-            tableData=tableData,
-            graphData=graphData,
+            tableData=self.tableData,
+            graphData=self.graphData,
             graphColour=(0, 0, 0),
             isToF=True,
-            distributions=None,
-            defaultDist=None
+            distributions={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500},
+            defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}
         )
         elementF = ElementData(
             name="29-Cu-63_n-g",
             numPeaks=10,
-            tableData=tableData,
-            graphData=graphData,
+            tableData=self.tableData,
+            graphData=self.graphData,
             isToF=False,
             graphColour=(0, 0, 0),
-            distributions=None,
-            defaultDist=None
+            distributions={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500},
+            defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}
         )
         self.assertNotEqual(elementT, elementF)
 
     def test_ElementData_init_Null(self):
-        graphData = pd.DataFrame()
-        tableData = pd.DataFrame()
 
         # Null Peak Data
         elementT = ElementData(
             name="2-He-4_n-g",
-            numPeaks=0,
-            tableData=tableData,
-            graphData=graphData,
+            numPeaks=None,
+            tableData=None,
+            graphData=None,
             isToF=True,
             graphColour=(0, 0, 0),
             distributions=None,
@@ -78,15 +71,51 @@ class TestElemenetData(TestCase):
         )
         elementF = ElementData(
             name="2-He-4_n-g",
-            numPeaks=0,
-            tableData=tableData,
-            graphData=graphData,
+            numPeaks=None,
+            tableData=None,
+            graphData=None,
             isToF=False,
             graphColour=(0, 0, 0),
             distributions=None,
             defaultDist=None
         )
-        self.assertNotEqual(elementT, elementF)
+        self.assertFalse(elementT == elementF)
+        self.assertTrue(elementT != elementF)
+        self.assertFalse(elementT == "Other Type")
+        self.assertTrue(elementT != "Other Type")
+
+    def test_ElementData_init_Dist(self):
+
+        element = ElementData(
+            name="29-Cu-63_n-g",
+            numPeaks=10,
+            tableData=self.tableData,
+            graphData=self.graphData,
+            isToF=False,
+            graphColour=(0, 0, 0),
+            distributions={"29-Cu-63": 0.5, "29-Cu-65": 0.5},
+            defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}
+        )
+
+        self.assertNotEqual(element.graphData.shape, self.graphData.shape)
+
+    def test_ElementData_energyToTOF(self):
+        element = ElementData(
+            name="29-Cu-63_n-g",
+            numPeaks=10,
+            tableData=self.tableData.copy(),
+            graphData=self.graphData.copy(),
+            isToF=False,
+            graphColour=(0, 0, 0),
+            distributions={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500},
+            defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}
+        )
+        element.graphData[0] = element.energyToTOF(element.graphData[0], 23.404)
+        self.assertFalse(all(element.graphData[0] == self.graphData[0]))
+        element.graphData = self.graphData.copy()
+
+        element.graphData[0] = element.energyToTOF(element.graphData[0], None)
+        self.assertFalse(all(element.graphData[0] == self.graphData[0]))
 
 
 if __name__ == '__main__':

@@ -8,7 +8,6 @@ sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from NRTI_NRCA_Explorer import DatabaseGUI
 
-
 app = QtWidgets.QApplication(sys.argv)
 
 

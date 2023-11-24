@@ -7,9 +7,9 @@ from pandas import DataFrame, errors
 
 from element.PeakDetection import PeakDetector
 from helpers.getSpacedElements import getSpacedElements
-from helpers.integration import integrate_trapz, integrate_simps
+from helpers.integration import integrate_simps
 from helpers.nearestNumber import nearestnumber
-from helpers.timeme import timeme
+
 
 dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
 peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
@@ -83,28 +83,24 @@ class ElementData:
         self.threshold = threshold
         self.isImported = isImported
         pd = PeakDetector()
-        try:
-            self.tableData = tableData
 
-        except errors.EmptyDataError:
+        self.tableData = tableData
+
+        if self.tableData is None:
             self.tableData = DataFrame()
 
-        try:
-            self.graphData = graphData
-            if self.defaultDist != self.distributions:
-                self.isDistAltered = True
-                self.onDistChange()
-                self.UpdatePeaks()
+        self.graphData = graphData
+        if self.defaultDist != self.distributions:
+            self.isDistAltered = True
+            self.onDistChange()
+            self.UpdatePeaks()
 
-        except errors.EmptyDataError:
+        if self.graphData is None:
             self.graphData = DataFrame()
 
         self.graphColour = graphColour
 
-        if self.name[-1] == "t":
-            length = 23.404
-        else:
-            length = 22.804
+        length = 23.404 if self.name[-1] == "t" else 22.804
 
         if self.isToF and not self.graphData.empty:
             graphData[0] = self.energyToTOF(graphData[0], length=length)
@@ -158,40 +154,31 @@ class ElementData:
 
     def __eq__(self, other) -> bool:
         if isinstance(other, ElementData):
-            return self.name == other.name and self.isToF == other.isToF
+            ck = self.name == other.name and self.isToF == other.isToF and self.graphData == other.graphData
+            return ck
         return False
 
     def __ne__(self, other) -> bool:
         if isinstance(other, ElementData):
-            return self.name != other.name or self.isToF != other.isToF
+            return self.name != other.name or self.isToF != other.isToF or self.graphData != other.graphData
+        return True
 
-    def _getGraphDataFromDist(self, graphData: ndarray[float]) -> ndarray[float]:
-        """
-        ``getGraphDataFromDist`` Will return interpolated y-values for the given graphData over the total domain.
-
-        Args:
-            ``graphData`` (ndarray[float]): x-value.
-
-        Returns:
-            float: Interpolated y-values for graphData over the given domain.
-        """
-        return np.interp(self.graphDataX, graphData.iloc[:, 0], graphData.iloc[:, 1])
-
-    def energyToTOF(self, xData: float | list[float], length: float) -> list[float]:
+    def energyToTOF(self, xData: float | list[float], length: float | None = None) -> list[float]:
         """
         Maps all X Values from energy to TOF
 
         Args:
-            ``xData`` (list[float]): List of the substances x-coords of its graph data
+            - ``xData`` (list[float]): List of the substances x-coords of its graph data
 
-            ``length`` (float): Constant value associated to whether the element data is with repsect to n-g or n-tot
+            - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
+                                          n-g or n-tot
 
 
         Returns:
             list[float]: Mapped x-coords
         """
         if length is None:
-            length = 22.804
+            length = 23.404 if self.name[-1] == "t" else 22.804
         neutronMass = float(1.68e-27)
         electronCharge = float(1.60e-19)
 
@@ -203,7 +190,6 @@ class ElementData:
         )
         return tofX
 
-    @timeme
     def onDistChange(self) -> None:
         """
         ``onDistChange`` Will retrieve an elements the corresponding isotopes graphData appling the weights specified in
@@ -331,8 +317,7 @@ class ElementData:
             return sum(integrals)
         else:
             # regionGraphData = self.graphData[(graphData['x'] >= leftLimit) & (graphData['x'] <= rightLimit)]
-            return np.mean([integrate_simps(self.graphData, leftLimit, rightLimit),
-                            integrate_trapz(self.graphData, leftLimit, rightLimit)])
+            return integrate_simps(self.graphData, leftLimit, rightLimit)
 
     def GetPeakLimits(self, max: bool = True) -> tuple[ndarray[float]]:
         if max:

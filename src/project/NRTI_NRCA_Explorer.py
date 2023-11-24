@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.rcsetup
 import matplotlib.pyplot as plt
-from matplotlib.ticker import LogLocator
+from matplotlib.ticker import LogLocator, LogFormatter
 # from matplotlib.backends.backend_qt5agg import (
 #     FigureCanvasQTAgg as FigureCanvas,
 # )
@@ -62,6 +62,7 @@ from myMatplotlib.BlittedCursor import BlittedCursor
 from helpers.nearestNumber import nearestnumber
 from helpers.getRandomColor import getRandomColor
 from helpers.getWidgets import getLayoutWidgets
+from helpers.getDerivative import getDerivative
 
 
 # todo -------------------- Issues/Feature TODO list --------------------
@@ -849,8 +850,24 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             integral = row["Integral"].iloc[0]
 
             result = self.elementData[elementName].PeakIntegral(leftLimit, rightLimit)
+            # derLeft = getDerivative(element.graphData, leftLimit)
+            # derRight = getDerivative(element.graphData, rightLimit)
+            # print("\n")
+            # print(f"Left Derivative: {derLeft}")
+            # print("\n")
+            # print(f"Right Derivative: {derRight}")
+            print("\n")
+
+            graphData = element.graphData[
+                (element.graphData.iloc[:, 0] >= leftLimit) & (element.graphData.iloc[:, 0] <= rightLimit)]
+
+            print(f"Left Count: {graphData[graphData.iloc[:, 0] < peak].shape[0]}")
+            print("\n")
+            print(f"Right Count: {graphData[graphData.iloc[:, 0] > peak].shape[0]}")
+            print("\n")
 
             print(f"Peak: {peak}\n")
+
             print(f"Integral: {integral}\t-\tEstimate: {result}")
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
@@ -2022,6 +2039,16 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             self.ax.set_yscale("log")
             self.ax.set_xscale("log")
+            self.ax.minorticks_on()
+            plt.minorticks_on()
+            self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
+            self.ax.xaxis.set_minor_formatter(LogFormatter(10, False, (np.inf, np.inf)))
+            self.ax.xaxis.set_tick_params('minor',
+                                          size=2,
+                                          color="#888",
+                                          labelsize=6,
+                                          labelrotation=30,
+                                          )
 
         # Allows user to plot in ToF if chosen # -----------------------------------------------------------------------
         if elementData.isToF and not imported:
@@ -2072,10 +2099,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             self.drawAnnotations(elementData)
             self.toggleThreshold()
-            self.ax.minorticks_on()
-            plt.minorticks_on()
-            self.ax.xaxis.set_major_locator(LogLocator(10, 'all'))
-            self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
+
             self.ax.autoscale()  # Tidying up
 
             self.figure.tight_layout()
@@ -2219,10 +2243,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                         axis: Literal["both", "x", "y"] = "both",
                         color="#444") -> None:
         """
-        ``toggleGridlines`` Will toggle visibility of the gridlines on the axis which is currently shown.
+        ``toggleGridlines``
+        -------------------
+        Will toggle visibility of the gridlines on the axis which is currently shown.
 
-
-        Args:
+        Args: 
             ``visible`` (bool): Whether or not gridlines should be shown.
 
             ``which`` (Literal["major", "minor", "both"], optional):
@@ -2259,7 +2284,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def toggleThreshold(self) -> None:
         """
-        ``toggleThreshold`` Plots the threshold line for each plotted element at their respective limits.
+        ``toggleThreshold``
+        -------------------
+        Plots the threshold line for each plotted element at their respective limits.
         """
         checked = self.thresholdCheck.isChecked()
 
@@ -2477,15 +2504,15 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             element = self.elementData[elementTitle]
             if element.maxima.size == 0:
                 return
-            if element.maxPeakLimitsX == dict():
-                maximaX = nearestnumber(element.maxima[0], float(self.table_model.data(
-                    self.table_model.index(index.row(), 3 if self.tof else 1), 0)))
-                maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
+            # if element.maxPeakLimitsX == dict():
+            maximaX = nearestnumber(element.maxima[0], float(self.table_model.data(
+                self.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+            maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
 
-                leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
+            leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
 
-            else:
-                leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
+            # else:
+            #     leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
 
         except FileNotFoundError:
             QMessageBox.warning(self, "Error", "No peak limits for this Selection")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pandas import DataFrame
 import scipy as sp
+import numpy as np
 
 
 class PeakDetector:
@@ -10,11 +11,14 @@ class PeakDetector:
     """
 
     def __init__(self) -> None:
-        self.maxPeakLimitsX = None
-        self.maxPeakLimitsY = None
-        self.minPeakLimitsX = None
-        self.minPeakLimitsY = None
-        self.peak_list = None
+        self.maxPeakLimitsX: dict = None
+        self.maxPeakLimitsY: dict = None
+        self.minPeakLimitsX: dict = None
+        self.minPeakLimitsY: dict = None
+        self.peak_list: list = None
+
+        self.derivative: np.ndarray = None
+        self.smoothder: np.ndarray = None
 
     def maxima(self, data: DataFrame, threshold: float = 100) -> tuple[list[float]]:
         """

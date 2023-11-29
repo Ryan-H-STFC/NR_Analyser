@@ -1,5 +1,5 @@
 from __future__ import annotations
-from PyQt5.QtCore import QModelIndex, QSortFilterProxyModel
+from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel
 
 
 class CustomSortingProxy(QSortFilterProxyModel):

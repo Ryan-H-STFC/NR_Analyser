@@ -1,6 +1,6 @@
-from PyQt5 import QtCore
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (
+from PyQt6 import QtCore
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (
     QItemDelegate,
     QPushButton,
     QStyle,
@@ -24,18 +24,18 @@ class ButtonDelegate(QItemDelegate):
         opt.rect = option.rect
         opt.palette = option.palette
         if self._pressed and self._pressed == (index.row(), index.column()):
-            opt.state = QStyle.State_Enabled | QStyle.State_Sunken
+            opt.state = QStyle.StateFlag.State_Enabled | QStyle.StateFlag.State_Sunken
         else:
-            opt.state = QStyle.State_Enabled | QStyle.State_Raised
-        QApplication.style().drawControl(QStyle.CE_PushButton, opt, painter)
+            opt.state = QStyle.StateFlag.State_Enabled | QStyle.StateFlag.State_Raised
+        QApplication.style().drawControl(QStyle.ControlElement.CE_PushButton, opt, painter)
         painter.restore()
 
     def editorEvent(self, event, model, option, index):
-        if event.type() == QtCore.QEvent.MouseButtonPress:
+        if event.type() == QtCore.QEvent.Type.MouseButtonPress:
             # store the position that is clicked
             self._pressed = (index.row(), index.column())
             return True
-        elif event.type() == QtCore.QEvent.MouseButtonRelease:
+        elif event.type() == QtCore.QEvent.Type.MouseButtonRelease:
             if self._pressed == (index.row(), index.column()):
                 # we are at the same place, so emit
                 self.commitData(self.sender())

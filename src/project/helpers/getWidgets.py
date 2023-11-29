@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pyparsing import Generator
-from PyQt5.QtWidgets import QWidget
+from PyQt6.QtWidgets import QWidget
 
 
 def getLayoutWidgets(layout, widgetType: type = None) -> Generator[QWidget, None, None]:

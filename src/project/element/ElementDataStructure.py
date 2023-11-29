@@ -3,13 +3,15 @@ import numpy as np
 from numpy import ndarray
 from os import path
 import pandas
-from pandas import DataFrame, errors
+from pandas import DataFrame
 
 from element.PeakDetection import PeakDetector
 from helpers.getSpacedElements import getSpacedElements
+from helpers.fitBoxes import fitBoxes
+from helpers.getIndex import getIndex
 from helpers.integration import integrate_simps
 from helpers.nearestNumber import nearestnumber
-
+from helpers.smooth import smooth
 
 dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
 peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
@@ -135,19 +137,9 @@ class ElementData:
             # Catches invalid maximas produced by scipy.signal.find_peaks
             pass
         except FileNotFoundError:
-            pass
-            # ! Figure out how to replicate peak limits programmatically
-            # if self.isToF:
-            #     maxPeakWidths = {max: width for max, width in list(zip(
-            #         self.tableData["TOF (us)"].iloc[1:], self.tableData["Peak Width"].iloc[1:]))}
-            # else:
-            #     maxPeakWidths = {max: width for max, width in list(zip(
-            #         self.tableData["Energy (eV)"].iloc[1:], self.tableData["Peak Width"].iloc[1:]))}
-
-            # if not self.tableData.empty:
-            #     self.maxPeakLimitsX = {
-            #         round(max, 1): (max - width / 2, max + width / 2) for max, width in maxPeakWidths.items()
-            #     }
+            if self.maxima is not None:
+                self.definePeaks()
+                self.recalculatePeakData()
 
         if self.numPeaks is None:
             self.numPeaks = None if self.maxima is None else len(self.maxima[0])
@@ -190,6 +182,26 @@ class ElementData:
         )
         return tofX
 
+    def e2TOF(self, xData: float, length: float | None = None) -> list[float]:
+        """
+        Maps all X Values from energy to TOF
+
+        Args:
+            - ``xData`` (float): x-Value.
+
+            - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
+                                          n-g or n-tot
+
+        Returns:
+            float: Mapped x-coords
+        """
+        if length is None:
+            length = 23.404 if self.name[-1] == "t" else 22.804
+        neutronMass = float(1.68e-27)
+        electronCharge = float(1.60e-19)
+
+        return length * 1e6 * (0.5 * neutronMass / (xData * electronCharge)) ** 0.5
+
     def onDistChange(self) -> None:
         """
         ``onDistChange`` Will retrieve an elements the corresponding isotopes graphData appling the weights specified in
@@ -198,11 +210,12 @@ class ElementData:
         if not self.isDistAltered and not ('element' in self.name or 'compound' in self.name):
             return
 
-        self.weightedIsoGraphData = {name: pandas.read_csv(f"""{dataFilepath}{name.strip('_n-g')}_{
+        self.weightedIsoGraphData = {name: pandas.read_csv(
+            f"""{dataFilepath}{'_'.join(name.split('_')[0:-1])}_{
             self.name.split('_')[-1]}.csv""",
-                                                           names=['x', 'y'],
-                                                           header=None) * [1, dist]
-                                     for name, dist in self.distributions.items() if dist != 0}
+            names=['x', 'y'],
+            header=None) * [1, dist]
+            for name, dist in self.distributions.items() if dist != 0}
         self.setGraphDataFromDist(self.weightedIsoGraphData.values())
 
     def setGraphDataFromDist(self, weightedGraphData: list[DataFrame]) -> None:
@@ -244,8 +257,8 @@ class ElementData:
         """
         peakD = PeakDetector()
         self.maxima = np.array(peakD.maxima(self.graphData, self.threshold))
-        self.maxPeakLimitsX, self.maxPeakLimitsY = np.array(peakD.GetMaxPeakLimits())
         self.numPeaks = len(self.maxima[0])
+        self.definePeaks()
 
         self.minima = np.array(peakD.minima(self.graphData))
 
@@ -319,7 +332,150 @@ class ElementData:
             # regionGraphData = self.graphData[(graphData['x'] >= leftLimit) & (graphData['x'] <= rightLimit)]
             return integrate_simps(self.graphData, leftLimit, rightLimit)
 
-    def GetPeakLimits(self, max: bool = True) -> tuple[ndarray[float]]:
-        if max:
-            return (self.maxPeakLimitsX, self.maxPeakLimitsY)
-        return (self.minPeakLimitsX, self.minPeakLimitsY)
+    def definePeaks(self):
+        """
+        ``definePeaks``
+        ---------------
+        Calculates the limits of integration for peaks.
+
+        Credits go to Ivan Alsina Ferrer - https://github.com/ialsina/NRCA-Spectra/tree/main
+
+        Peak Limit Algorithm used with all pre-existing datasets, now reimplented for use in the GUI.
+        """
+        params = {
+            # Maximum value prange can get.
+            'prangemax': 500,
+            # Maximum allowed slope (abolute value) at outermost left side of spectra.
+            # i.e. starting from left, everything will be set to 0 until the (unsigned) slope reaches this value.
+            'maxleftslope': 3000,
+            # Maximum allowed slope outside the peaks, as in, far away from them.
+            'maxouterslope': 10,
+            # Peak edges is set when its slope has fallen down to this fraction of the one nearby the peak summit.
+            'slopedrop': .1,
+            # Density of boxes (box/b) for slope computation.
+            'dboxes': 100,
+            # Smoothing iterations on slope derivative for computations.
+            'itersmooth': 1,
+            # Smoothing iterations on sample peak detection.
+            'itersmoothsamp': 0,
+            # Strip-peaks iterations for background fitting in sample imports.
+            'iterspeaks': 4,
+            # Number of coefficients in smaple background fitting, i.e., polynomial order + 1s
+            'fitting_coeff': 8,
+            # Default tolerance value (us) for finding nearby peaks in pmatch function.
+            'max_match': 3.5,
+        }
+
+        derivative = np.array(
+            [(self.graphData.iloc[i + 1, 1] - self.graphData.iloc[i, 1]
+              ) / (self.graphData.iloc[i + 1, 0] - self.graphData.iloc[i, 0])
+             for i in range(self.graphData.shape[0] - 1)])
+
+        indexPosDer = getIndex(np.int32(derivative < 0), 0)
+        target = np.hstack((np.ones((indexPosDer)), np.zeros((np.size(derivative) - indexPosDer))))
+        derivative = derivative * (np.int64(np.abs(derivative) < params['maxleftslope']) * target + (1 - target))
+        smoothDer = smooth(derivative, params['itersmooth'])
+
+        maxIndexes = [self.graphData[self.graphData[0] == max].index[0] for max in self.maxima[0]]
+        for i, max in enumerate(self.maxima[0]):
+            # Number of points at the left of the current peak
+            nleft = maxIndexes[i]
+            # Number of points at the right of the current peak
+            nright = np.shape(self.graphData)[0] - nleft - 1
+            if np.size(self.maxima > 1):
+                if i == 0 or i == np.size(self.maxima[0]) - 1:
+                    prange = min(params['prangemax'], nleft, nright)
+                else:
+                    indexPrev = maxIndexes[i - 1]
+                    indexNext = maxIndexes[i + 1]
+                    prange = min(params['prangemax'], indexNext - indexPrev, nleft, nright)
+            elif np.size(self.maxima) == 1:
+                prange = min(params['prangemax'], nleft, nright)
+            else:
+                prange = 0
+
+            maxIndex = maxIndexes[i]
+            derRegion = smoothDer[maxIndex - prange: maxIndex + prange + 1]
+            for i in range(1, 10):
+                fit, boxwidth = fitBoxes(derRegion, params['dboxes'] * i)
+                temp1, temp2 = np.unique(fit, return_counts=True)
+                if not (temp2 == 1).all():
+                    break
+            outerslope = temp1[np.argmax(temp2)]
+            if abs(outerslope) > params['maxouterslope']:
+                outerslope = 0
+            limsX = []
+            limsY = []
+            for sign in [-1, 1]:
+                decreasing, increasing, lock = False, False, False
+                derMax = None
+                for i in range(maxIndex, maxIndex + sign * (prange + 1), sign):
+                    decreasing = smoothDer[i + sign] < smoothDer[i]
+                    increasing = smoothDer[i + sign] > smoothDer[i]
+                    if not lock:
+                        if (decreasing if sign == -1 else increasing):
+                            lock = True
+                            derMax = smoothDer[i]
+                            if derMax == outerslope:
+                                raise Exception('Non-standing slope', prange)
+                    if lock:
+                        if abs((derivative[i] - outerslope) / (derMax - outerslope)) <= params['slopedrop']:
+                            limsX.append(self.graphData.iloc[i, 0])
+                            limsY.append(self.graphData.iloc[i, 1])
+                            break
+                        if smoothDer[i + sign] * smoothDer[i] <= 0:
+                            limsX.append(self.graphData.iloc[i, 0])
+                            limsY.append(self.graphData.iloc[i, 1])
+                            break
+            try:
+                self.maxPeakLimitsX[max] = (limsX[0], limsX[1])
+                self.maxPeakLimitsY[max] = (limsY[0], limsY[1])
+            except IndexError:
+                pass
+
+    def recalculatePeakData(self):
+
+        integrals = {max: self.PeakIntegral(self.maxPeakLimitsX[max][0], self.maxPeakLimitsX[max][1])
+                     for max in self.maxima[0]}
+        integralRanks = {max: i for i, max in enumerate(dict(
+            sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
+
+        peakHeightRank = {max: i for i, max in enumerate(sorted(self.maxima[1], key=lambda item: item, reverse=True))}
+
+        peakWidth = {max: self.maxPeakLimitsX[max][1] - self.maxPeakLimitsX[max][0] for max in self.maxima[0]}
+
+        peakWidthRank = {max: i for i, max in enumerate(dict(
+            sorted(peakWidth.items(), key=lambda item: item[1], reverse=True)).keys())}
+
+        tableDataTemp = [
+            [
+                integralRanks[maxCoords[0]],
+                round(maxCoords[0], 4),
+                f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",
+                round(self.e2TOF(maxCoords[0]), 4),
+                round(integrals[maxCoords[0]], 4),
+                round(peakWidth[maxCoords[0]], 4),
+                peakWidthRank[maxCoords[0]],
+                round(maxCoords[1], 4),
+                peakHeightRank[maxCoords[1]],
+                None
+            ]
+            for maxCoords in self.maxima.T]
+
+        tableData = pandas.DataFrame(tableDataTemp,
+                                     columns=[
+                                         "Rank by Integral",
+                                         "Energy (eV)",
+                                         "Rank by Energy",
+                                         "TOF (us)",
+                                         "Integral",
+                                         "Peak Width",
+                                         "Rank by Peak Width",
+                                         "Peak Height",
+                                         "Rank by Peak Height",
+                                         "Relevant Isotope"
+                                     ])
+        self.tableData = tableData.sort_values('Rank by Integral')
+        self.tableData.loc[-1] = [self.name, *[""] * 9]
+        self.tableData.index += 1
+        self.tableData.sort_index(inplace=True)

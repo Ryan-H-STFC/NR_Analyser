@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
-from NRTI_NRCA_Explorer import DatabaseGUI
+from NRTI_NRCA_Explorer import ExplorerGUI
 
 app = QtWidgets.QApplication(sys.argv)
 
@@ -16,7 +16,7 @@ class TestApp(TestCase):
         return super().setUp()
 
     def test_plot(self):
-        app = DatabaseGUI()
+        app = ExplorerGUI()
         app.combobox.setCurrentIndex(139)
         app.combobox.activated.emit(app.combobox.currentIndex())
         app.plotEnergyBtn.click()
@@ -24,7 +24,7 @@ class TestApp(TestCase):
         self.assertTrue(app.elementData["29-Cu-63_n-g-Energy"].isGraphDrawn)
 
     def test_clear(self):
-        app = DatabaseGUI()
+        app = ExplorerGUI()
         app.combobox.setCurrentIndex(5)
         app.combobox.activated.emit(app.combobox.currentIndex())
         app.plotEnergyBtn.click()
@@ -42,7 +42,7 @@ class TestApp(TestCase):
         self.assertIsNone(app.axPD)
 
     def test_toggle_states(self):
-        app = DatabaseGUI()
+        app = ExplorerGUI()
         # ¦ Null Selection
         self.assertFalse(app.plotEnergyBtn.isEnabled())
         self.assertFalse(app.plotTOFBtn.isEnabled())

@@ -1,34 +1,34 @@
-from PyQt5.QtGui import QKeyEvent
-from PyQt5.QtWidgets import QComboBox, QCompleter, QSizePolicy
-from PyQt5.QtCore import Qt, QSortFilterProxyModel
+from PyQt6.QtGui import QKeyEvent
+from PyQt6.QtWidgets import QComboBox, QCompleter, QSizePolicy
+from PyQt6.QtCore import Qt, QSortFilterProxyModel
 
 
 class ExtendedComboBox(QComboBox):
     def __init__(self, parent=None):
         super(ExtendedComboBox, self).__init__(parent)
 
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setEditable(True)
 
         self.pFilterModel = QSortFilterProxyModel(self)
-        self.pFilterModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.pFilterModel.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.pFilterModel.setSourceModel(self.model())
 
         self.completer = QCompleter(self.pFilterModel, self)
-        self.completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        self.completer.setCompletionMode(QCompleter.CompletionMode.UnfilteredPopupCompletion)
         self.setCompleter(self.completer)
 
         self.lineEdit().textEdited[str].connect(self.pFilterModel.setFilterFixedString)
         self.completer.activated.connect(self.onCompleterActivated)
         self.completer.popup().setStyleSheet("font-family: 'Roboto Mono'; font-size: 10pt; font-weight: 400;")
 
-        self.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred))
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred))
 
     def onCompleterActivated(self, text):
         if text:
             index = self.findText(text)
             self.setCurrentIndex(index)
-            self.activated[str].emit(self.itemText(index))
+            self.activated.emit(self.currentIndex())
 
     def setModel(self, model):
         super(ExtendedComboBox, self).setModel(model)

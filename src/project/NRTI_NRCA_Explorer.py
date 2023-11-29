@@ -6,18 +6,21 @@ import pandas as pd
 import matplotlib.rcsetup
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LogLocator, LogFormatter
+
+matplotlib.use('QtAgg')
+
 # from matplotlib.backends.backend_qt5agg import (
 #     FigureCanvasQTAgg as FigureCanvas,
 # )
+
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QModelIndex, QRegExp, pyqtSignal
-from PyQt5.QtGui import QCursor, QRegExpValidator, QIcon
+from PyQt6 import QtGui, QtWidgets
+from PyQt6.QtCore import Qt, QModelIndex, QRegularExpression as QRegExp, pyqtSignal
+from PyQt6.QtGui import QAction, QCursor, QRegularExpressionValidator as QRegExpValidator, QIcon
 
-from PyQt5.QtWidgets import (
-    QAction,
+from PyQt6.QtWidgets import (
     QCheckBox,
     QColorDialog,
     QComboBox,
@@ -62,7 +65,6 @@ from myMatplotlib.BlittedCursor import BlittedCursor
 from helpers.nearestNumber import nearestnumber
 from helpers.getRandomColor import getRandomColor
 from helpers.getWidgets import getLayoutWidgets
-from helpers.getDerivative import getDerivative
 
 
 # todo -------------------- Issues/Feature TODO list --------------------
@@ -96,11 +98,13 @@ from helpers.getDerivative import getDerivative
 # !    font_manager.fontManager.addfont(font)
 
 matplotlib.rcParamsDefault["path.simplify"] = True
-matplotlib.rcParamsDefault["agg.path.chunksize"] = 10000
+matplotlib.rcParamsDefault["agg.path.chunksize"] = 1000
 
 
-class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
+class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
     """
+    ``ExlorerGUI``
+    --------------
     Class responsible for creating and manipulating the GUI, used in selecting and graphing the data of elements or
     isotopes within the NRTI/NRCA Database.
     """
@@ -109,10 +113,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     # init constructure for classes
     def __init__(self) -> None:
         """
-        Initialisator for DatabaseGUI class
+        Initialisator for ExplorerGUI class
         """
         # Allows for adding more things to the QWidget template
-        super(DatabaseGUI, self).__init__()
+        super(ExplorerGUI, self).__init__()
 
         self.styleMain = """
         #mainWindow{{
@@ -125,9 +129,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             font-weight: 400;
         }}
 
-        QAction {{
-            background-color: {bg_color};
+        QMenuBar {{
             color: {text_color};
+        }}
+        QMenuBar::item:selected {{
+            color: #000;
         }}
 
         QCheckBox{{
@@ -158,7 +164,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             height: 11px;
         }}
 
-        QLabel#numPeakLabel, #thresholdLabel, #orderlabel, #compoundLabel, #peakLabel{{
+        QLabel#numPeakLabel, #thresholdLabel, #orderlabel, #compoundLabel, #peakLabel, #gridOptionLabel{{
             font: 10pt 'Roboto Mono';
             color: {text_color};
         }}
@@ -219,12 +225,44 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             color: {text_color};
         }}
 
+        QDialog {{
+            color: {text_color};
+            background-color: {bg_color};
+        }}
+
+        QDialog#inputWindow
+        {{
+            color: {text_color};
+            background-color: {bg_color};
+        }}
+
+        QDialog#inputWindow QLabel{{
+            color: {text_color};
+        }}
+
+        QDialog#optionsDialog QCombobox{{
+            background-color: {text_color};
+        }}
+
         QDockWidget{{
             background-color: {bg_color};
             color: {text_color};
         }}
 
         QDockWidget::title{{
+            color: {text_color};
+        }}
+
+        QRadioButton:enabled{{
+            color: {text_color};
+        }}
+
+        QRadioButton::indicator:unchecked{{
+            image: url(./src/img/radio-component-unchecked.svg);
+            color: #AAA;
+        }}
+        QRadioButton::indicator:checked{{
+            image: url(./src/img/radio-component-checked.svg);
             color: {text_color};
         }}
 
@@ -236,14 +274,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         QRadioButton#orderByIntegral::indicator:unchecked,
                     #orderByPeakW::indicator:unchecked
                     {{
-                        image: url(./src/img/radio-component-unchecked);
+                        image: url(./src/img/radio-component-unchecked.svg);
                         color: #AAA;
                     }}
 
         QRadioButton#orderByIntegral::indicator:checked,
                     #orderByPeakW::indicator:checked
                     {{
-                        image: url(./src/img/radio-component-checked);
+                        image: url(./src/img/radio-component-checked.svg);
                         color: {text_color};
                     }}
 
@@ -286,23 +324,6 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             color: {text_color};
         }}
 
-        QDialog {{
-            background-color: {bg_color};
-        }}
-
-        QDialog#inputWindow
-        {{
-            color: {text_color};
-            background-color: {bg_color};
-        }}
-
-        QDialog#inputWindow QLabel{{
-            color: {text_color};
-        }}
-
-        QDialog#optionsDialog QCombobox{{
-            background-color: {text_color};
-        }}
         """
 
         # Setting global variables
@@ -377,6 +398,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     def initUI(self) -> None:
         """
         ``initUI``
+        ----------
         Creates the UI.
         """
         self.setObjectName('mainWindow')
@@ -436,23 +458,23 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         editMenu.addAction(editThresholdAction)
         editMenu.addAction(editDistribution)
 
-        menubarLayout.addWidget(menubar, alignment=Qt.AlignLeft)
+        menubarLayout.addWidget(menubar, alignment=Qt.AlignmentFlag.AlignLeft)
         # Adding label which shows number of peaks
         self.peaklabel = QLabel()
         self.peaklabel.setObjectName('numPeakLabel')
         self.peaklabel.setText("")
-        self.peaklabel.setAlignment(Qt.AlignVCenter)
+        self.peaklabel.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.peaklabel.setContentsMargins(0, 10, 0, 0)
-        menubarLayout.addWidget(self.peaklabel, alignment=Qt.AlignVCenter)
+        menubarLayout.addWidget(self.peaklabel, alignment=Qt.AlignmentFlag.AlignVCenter)
         # Threshold Label
         self.thresholdLabel = QLabel()
         self.thresholdLabel.setObjectName('thresholdLabel')
         self.thresholdLabel.setText("Nothing has been selected")
-        self.thresholdLabel.setAlignment(Qt.AlignRight)
+        self.thresholdLabel.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.thresholdLabel.setContentsMargins(0, 10, 0, 0)
 
-        menubarLayout.addWidget(self.thresholdLabel, alignment=Qt.AlignRight)
+        menubarLayout.addWidget(self.thresholdLabel, alignment=Qt.AlignmentFlag.AlignRight)
 
         # * ----------------------------------------------
 
@@ -511,7 +533,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # Creating combo box (drop down menu)
         self.combobox = ExtendedComboBox()
-        self.combobox.view().setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.combobox.view().setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.combobox.setObjectName("combobox")
 
         self.combobox.addItems(self.spectraNames)
@@ -536,7 +558,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         ))
         # * ----------------------------------------------
 
-        pointingCursor = QCursor(Qt.PointingHandCursor)
+        pointingCursor = QCursor(Qt.CursorShape.PointingHandCursor)
 
         # ¦ ---------------- Button Group ----------------
 
@@ -662,7 +684,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             comboboxName=self.compoundCombobox.objectName()
         ))
         self.compoundNames = [None]
-        for file in os.listdir(f"{self.filepath}data\\Graph Data\\Compound Data\\"):
+        for file in os.listdir(f"{self.filepath}data/Graph Data/Compound Data/"):
             filename = os.fsdecode(file)
             if ".csv" not in filename[-4:]:
                 continue
@@ -680,9 +702,10 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # ¦ ----------------- Plot Canvas -----------------
         self.figure = plt.figure()  # Creating canvas to plot graph on and toolbar
         self.canvas = FigureCanvas(self.figure, self)
+
         self.canvas.__name__ = "canvas"
         self.canvas.mpl_connect('pick_event', self.hideGraph)
-        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.toolbar = NavigationToolbar(self.canvas, coordinates=True)
 
         canvasLayout.addWidget(self.toolbar)
         canvasLayout.addWidget(self.canvas)
@@ -693,7 +716,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Adding table to display peak information
         self.table = QTableView()
         self.table.setObjectName('dataTable')
-        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
         self.table.setMinimumHeight(200)
@@ -705,17 +728,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         container.setLayout(canvasLayout)
         container.setMinimumHeight(300)
 
-        splitter = QSplitter(Qt.Vertical)
+        splitter = QSplitter()
+        splitter.setOrientation(Qt.Orientation.Vertical)
         splitter.addWidget(container)
         splitter.addWidget(self.table)
         splitter.setHandleWidth(10)
 
         contentLayout = QHBoxLayout()
         contentLayout.addWidget(splitter)
-        sidebarLayout.setAlignment(Qt.AlignTop)
+        sidebarLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        mainLayout.addItem(menubarLayout, 0, 0, 1, 6, Qt.AlignTop)
-        mainLayout.addItem(sidebarLayout, 1, 0, 1, 1, Qt.AlignTop)
+        mainLayout.addItem(menubarLayout, 0, 0, 1, 6, Qt.AlignmentFlag.AlignTop)
+        mainLayout.addItem(sidebarLayout, 1, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
         mainLayout.addItem(contentLayout, 1, 1, 1, 6)
         self.btnLayout.setSpacing(10)
         self.toggleLayout.setSpacing(10)
@@ -731,7 +755,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
         """
-        ``resizeEvent`` On resize of connected widget event handler.
+        ``resizeEvent``
+        ---------------
+        On resize of connected widget event handler.
 
         Args:
             event (QtGui.QResizeEvent): Event triggered on resizing.
@@ -740,17 +766,21 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             ``None``
         """
         self.resized.emit()
-        return super(DatabaseGUI, self).resizeEvent(event)
+        return super(ExplorerGUI, self).resizeEvent(event)
 
     def adjustCanvas(self) -> None:
         """
-        ``adjustCanvas`` Apply tight layout to figure.
+        ``adjustCanvas``
+        ----------------
+        Apply tight layout to figure.
         """
         self.figure.tight_layout()
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         """
-        ``dragEnterEvent`` handles file drag enter event and verification
+        ``dragEnterEvent``
+        ------------------
+        Handles file drag enter event and verification
 
         Args:
             ``event`` (QDragEnterEvent): Event triggerd on mouse dragging into the window.
@@ -767,7 +797,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def dropEvent(self, event: QtGui.QDropEvent) -> None:
         """
-        ``dropEvent`` handles the drop event and calls to plot each data file
+        ``dropEvent``
+        -------------
+        Handles the drop event and calls to plot each data file
 
         Args:
             ``event`` (QDropEvent): PyQtEvent
@@ -779,7 +811,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def editPeakLimits(self) -> None:
         """
-        ``editPeakLimits`` Edit Peaks opens a dialog window to alter limits of integration for peaks of the selected
+        ``editPeakLimits``
+        ------------------
+        Edit Peaks opens a dialog window to alter limits of integration for peaks of the selected
         element, recaluating the integral and peak widths to place into the table.
         """
         # Click count to disconnect after two limits have been selected
@@ -818,15 +852,15 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.inputForm.addRow(QLabel("1st Limit X:"), firstLimitLayout)
         optionsWindow.inputForm.addRow(QLabel("2nd Limit X:"), secondLimitLayout)
 
-        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Ok)
+        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
         applyBtn.setText("Apply")
-        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Cancel)
+        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
 
         optionsWindow.inputForm.setSpacing(5)
         optionsWindow.mainLayout.insertItem(1, optionsWindow.inputForm)
 
         optionsWindow.setWindowTitle("Edit Peaks for Substance")
-        optionsWindow.mainLayout.setSizeConstraint(QLayout.SetFixedSize)
+        optionsWindow.mainLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         optionsWindow.setLayout(optionsWindow.mainLayout)
         elements = optionsWindow.elements
 
@@ -835,40 +869,16 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         def onAccept():
 
             elementName = elements.itemText(elements.currentIndex() or 0)
-            element = self.elementData[elementName]
             peak = float(elementPeaks.currentText())
             leftLimit = float(firstLimitX.placeholderText() if firstLimitX.text(
             ) == '' else firstLimitX.text())
             rightLimit = float(secondLimitX.placeholderText() if secondLimitX.text(
             ) == '' else secondLimitX.text())
 
-            tableMax_x = nearestnumber(element.tableData["Energy (eV)"][1:], peak)
-
-            row = element.tableData[1:].loc[
-                (element.tableData["Energy (eV)"][1:].astype(float) == tableMax_x)
-            ]
-            integral = row["Integral"].iloc[0]
-
             result = self.elementData[elementName].PeakIntegral(leftLimit, rightLimit)
-            # derLeft = getDerivative(element.graphData, leftLimit)
-            # derRight = getDerivative(element.graphData, rightLimit)
-            # print("\n")
-            # print(f"Left Derivative: {derLeft}")
-            # print("\n")
-            # print(f"Right Derivative: {derRight}")
             print("\n")
-
-            graphData = element.graphData[
-                (element.graphData.iloc[:, 0] >= leftLimit) & (element.graphData.iloc[:, 0] <= rightLimit)]
-
-            print(f"Left Count: {graphData[graphData.iloc[:, 0] < peak].shape[0]}")
-            print("\n")
-            print(f"Right Count: {graphData[graphData.iloc[:, 0] > peak].shape[0]}")
-            print("\n")
-
             print(f"Peak: {peak}\n")
-
-            print(f"Integral: {integral}\t-\tEstimate: {result}")
+            print(f"Integral: {result}")
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
         applyBtn.clicked.connect(onAccept)
@@ -1010,7 +1020,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def editDistribution(self) -> None:
         """
-        ``editDistribution`` Opens a dialog window with options to alter the natural abundence of elements and compounds
+        ``editDistribution``
+        --------------------
+        Opens a dialog window with options to alter the natural abundence of elements and compounds
         updating the graph data of any relevant plots.
         """
 
@@ -1021,13 +1033,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         totalLabel = QLabel()
 
-        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Apply)
+        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Apply)
         applyBtn.setEnabled(False)
         applyBtn.setText("Apply")
-        resetBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Reset)
-        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Cancel)
+        resetBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Reset)
+        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
 
-        optionsWindow.mainLayout.setSizeConstraint(QLayout.SetFixedSize)
+        optionsWindow.mainLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         optionsWindow.setWindowTitle("Edit Distribution")
         optionsWindow.setLayout(optionsWindow.mainLayout)
 
@@ -1144,7 +1156,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def editThresholdLimit(self) -> None:
         """
-        ``editThresholdLimit`` Creates a GUI to alter the threshold value for a selected graph, recomputing maximas and
+        ``editThresholdLimit``
+        ----------------------
+        Creates a GUI to alter the threshold value for a selected graph, recomputing maximas and
         drawing the relevant annotations
         """
         if self.elementData == {}:
@@ -1163,12 +1177,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         optionsWindow.inputForm.addRow(QLabel("Threshold:"), inputThreshold)
 
-        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Apply)
-        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Cancel)
+        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Apply)
+        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
         applyBtn.setEnabled(False)
 
         optionsWindow.setWindowTitle("Edit Threshold Value")
-        optionsWindow.mainLayout.setSizeConstraint(QLayout.SetFixedSize)
+        optionsWindow.mainLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
 
         optionsWindow.mainLayout.insertItem(1, optionsWindow.inputForm)
         optionsWindow.setLayout(optionsWindow.mainLayout)
@@ -1182,7 +1196,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 elements.setCurrentIndex(0)
                 inputThreshold.setText(None)
                 return
-            inputThreshold.setPlaceholderText(str(self.elementData[elements.itemText(index)].threshold))
+            inputThreshold.setPlaceholderText(str(self.elementData[elements.itemText(index)]))
         elements.editTextChanged.connect(lambda: onElementChange(elements.currentIndex()))
 
         def onThresholdTextChange():
@@ -1211,19 +1225,22 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.plottingPD(element, False)
         applyBtn.clicked.connect(onAccept)
 
-        inputThreshold.setFocus(True)
+        inputThreshold.setFocus()
         optionsWindow.setModal(False)
         optionsWindow.show()
 
     def gridLineOptions(self):
         """
-        ``gridLineOptions`` Opens a dialog with settings related to the gridlines of the canvas.
+        ``gridLineOptions``
+        -------------------
+        Opens a dialog with settings related to the gridlines of the canvas.
         Options include: Which axis to plot gridlines for, which type; major, minor or both ticks, as well as color.
         """
 
         optionsWindowDialog = QDialog()
+        optionsWindowDialog.setStyleSheet(self.styleSheet())
         optionsWindowDialog.setWindowTitle("Gridline Options")
-        optionsWindowDialog.setObjectName("inputWindow")
+        optionsWindowDialog.setObjectName("optionsDialog")
         mainLayout = QVBoxLayout()
         formLayout = QFormLayout()
         formLayout.setObjectName("inputForm")
@@ -1265,33 +1282,32 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         gridColorDialog = QColorDialog()
         gridColorDialog.setCurrentColor(QtGui.QColor(self.gridSettings["color"]))
         gridColorBtn = QPushButton()
-        gridColorBtn.setStyleSheet(f"margin: 5px; background-color: {self.gridSettings['color']};")
+        gridColorBtn.setStyleSheet(f"""
+                                   border: 1px solid #AAA;
+                                   background-color:{self.gridSettings['color']};
+                                   """)
 
-        formLayout.addRow(QLabel("Gridline Options:"), gridlineGroup)
-        formLayout.addRow(QLabel("Axis Options:"), axisGroup)
-        formLayout.addRow(QLabel("Gridline Color:"), gridColorBtn)
+        gridLineLabel = QLabel("Gridline Options:")
+        gridLineLabel.setObjectName("gridOptionLabel")
+        axisLabel = QLabel("Axis Options:")
+        axisLabel.setObjectName("gridOptionLabel")
+        colorLabel = QLabel("Gridline Color:")
+        colorLabel.setObjectName("gridOptionLabel")
+
+        formLayout.addRow(gridLineLabel, gridlineGroup)
+        formLayout.addRow(axisLabel, axisGroup)
+        formLayout.addRow(colorLabel, gridColorBtn)
 
         buttonBox = QDialogButtonBox()
 
-        onResetBtn = buttonBox.addButton(QDialogButtonBox.Reset)
-        onAcceptBtn = buttonBox.addButton(QDialogButtonBox.Apply)
-        onCancelBtn = buttonBox.addButton(QDialogButtonBox.Cancel)
+        onResetBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Reset)
+        onAcceptBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Apply)
+        onCancelBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
 
         mainLayout.addLayout(formLayout)
         mainLayout.addWidget(buttonBox)
 
         optionsWindowDialog.setLayout(mainLayout)
-
-        # map(lambda radio: radio.g.connect(lambda: onRadioCheck("axis", radio)),
-        #     getLayoutWidgets(axisLayout, QRadioButton))
-        # map(lambda radio: radio.clicked.connect(lambda: onRadioCheck("gridline", radio)),
-        #     getLayoutWidgets(gridlineLayout, QRadioButton))
-
-        # def onRadioCheck(group: str, radio: QRadioButton):
-        #     radioBtns = getLayoutWidgets(QRadioButton)
-        #     map(lambda radio: radio.setChecked(False),
-        #         [radio for radio in radioBtns if radio.objectName() == group])
-        #     radio.setChecked(True)
 
         def openColorDialog():
             optionsWindowDialog.blockSignals(True)
@@ -1310,7 +1326,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 getLayoutWidgets(mainLayout, QRadioButton))
             majorRadioBtn.setChecked(True)
             bothAxisRadioBtn.setChecked(True)
-            gridColorDialog.setCurrentColor(QtGui.QColor(68, 68, 68))
+            gridColorDialog.setCurrentColor(QtGui.QColor(68, 68, 68, 255))
+
             gridColorBtn.setStyleSheet(f"margin: 5px; background-color: {self.gridSettings['color']};")
             self.toggleGridlines(self.gridCheck.isChecked(), *self.gridSettings.values())
         onResetBtn.clicked.connect(onReset)
@@ -1336,7 +1353,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def editMaxPeaks(self) -> None:
         """
-        ``editMaxPeaks`` Creates a GUI element for inputting the max peak label quanitity for a selected graph, drawing
+        ``editMaxPeaks``
+        ----------------
+        Opens a Dialog window for inputting the max peak label quanitity for a selected graph, drawing
         the relevant annotations.
         """
         if self.elementData == {}:
@@ -1353,8 +1372,8 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         optionsWindow.inputForm.addRow(QLabel("Peak Quantity:"), inputMaxPeaks)
 
-        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Apply)
-        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Cancel)
+        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Apply)
+        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
 
         optionsWindow.setWindowTitle("Displayed Peaks Quantity")
         optionsWindow.mainLayout.insertItem(1, optionsWindow.inputForm)
@@ -1382,7 +1401,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def createCompound(self) -> None:
         """
-        ``createCompound`` Opens a dialog for users to create compounds from weighted combinations of varying elements,
+        ``createCompound``
+        ------------------
+        Opens a dialog for users to create compounds from weighted combinations of varying elements,
         this calculates and saves the graph data to a file for reuse.
         """
 
@@ -1398,18 +1419,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         totalLabel = QLabel("Total: 0")
 
-        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Apply)
+        applyBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Apply)
         applyBtn.setText("Create")
         applyBtn.setEnabled(False)
 
-        addBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Yes)
+        addBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Yes)
         addBtn.setText("Add")
         addBtn.setEnabled(False)
 
-        resetBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Reset)
-        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.Cancel)
+        resetBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Reset)
+        cancelBtn = optionsWindow.buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
 
-        optionsWindow.mainLayout.setSizeConstraint(QLayout.SetFixedSize)
+        optionsWindow.mainLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         optionsWindow.setWindowTitle("Compound Creater")
         optionsWindow.setLayout(optionsWindow.mainLayout)
 
@@ -1487,7 +1508,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
             sublayout = QHBoxLayout()
             proxyWidget = QWidget()
             newQLineEdit = QLineEdit()
-            newQLineEdit.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
+            newQLineEdit.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum))
 
             newQLineEdit.setValidator(QRegExpValidator(
                 QRegExp("(0?(\\.[0-9]{1,6})?|1(\\.0{1,6})?)")))
@@ -1577,42 +1598,51 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def viewDarkStyle(self) -> None:
         """
-        ``viewDarkStyle`` Applies the dark theme to the GUI.
+        ``viewDarkStyle``
+        -----------------
+        Applies the dark theme to the GUI.
         """
         self.setStyleSheet(self.styleMain.format(bg_color="#202020", text_color="#FFF"))
 
     def viewLightStyle(self) -> None:
         """
-        ``viewLightStyle`` Applies the light theme to the GUI.
+        ``viewLightStyle``
+        ------------------
+        Applies the light theme to the GUI.
         """
         self.setStyleSheet(self.styleMain.format(bg_color="#968C80", text_color="#FFF"))
 
     def viewHighContrastStyle(self) -> None:
         """
-        ``viewHighContrastStyle`` Applies the high contrast theme to the GUI.
+        ``viewHighContrastStyle``
+        -------------------------
+        Applies the high contrast theme to the GUI.
         """
         self.setStyleSheet(self.styleMain.format(bg_color="#000", text_color="#FFF"))
 
     def toggleBtnControls(self, enableAll: bool = False, plotEnergyBtn: bool = False,
                           plotToFBtn: bool = False, clearBtn: bool = False, pdBtn: bool = False) -> None:
         """
-        ``toggleBtnControls`` enables and disables the buttons controls, thus only allowing its
-        use when required. enableAll is done before any kwargs have an effect on the buttons.
-        enableAll defaults to False, True will enable all buttons regardless of other kwargs.
+        ``toggleBtnControls``
+        ---------------------
+        Enables and disables the buttons controls, thus only allowing its use when required. ``enableAll`` is done
+        before any kwargs have an effect on the buttons. ``enableAll`` defaults to False, True will enable all buttons
+        regardless of other kwargs.
+
         This way you can disable all buttons then make changes to specific buttons.
 
         Args:
-            ``enableAll`` (bool): Boolean to enable/disable (True/False) all the buttons controls.
+            - ``enableAll`` (bool): Boolean to enable/disable (True/False) all the buttons controls.
 
-            ``plotEnergyBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
+            - ``plotEnergyBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
 
-            ``plotToFBtn`` (bool): Boolean to enable/disable (True/False) Plot ToF button.
+            - ``plotToFBtn`` (bool): Boolean to enable/disable (True/False) Plot ToF button.
 
-            ``plotEnergyBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
+            - ``plotEnergyBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
 
-            ``clearBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
+            - ``clearBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
 
-            ``pdBtn`` (bool): Boolean to enable/disable (True/False) Peak Detection button.
+            - ``pdBtn`` (bool): Boolean to enable/disable (True/False) Peak Detection button.
         """
 
         for btn in getLayoutWidgets(self.btnLayout):
@@ -1634,19 +1664,22 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     def toggleCheckboxControls(self, enableAll: bool, gridlines: bool = False,
                                peakLimit: bool = False, hidePeakLabels: bool = False) -> None:
         """
-        ``toggleCheckboxControls`` enables and disables the checkboxes controls, thus only allowing its
-        use when required. enableAll is done before any kwargs have an effect on the checkboxes.
-        enableAll defaults to False, True will enable all checkboxes regardless of other kwargs.
+        ``toggleCheckboxControls``
+        --------------------------
+        Enables and disables the checkboxes controls, thus only allowing its use when required. ``enableAll`` is done
+        before any kwargs have an effect on the checkboxes. ``enableAll`` defaults to False, True will enable all
+        checkboxes regardless of other kwargs.
+
         This way you can disable all checkboxes then make changes to specific checkboxes.
 
         Args:
-            ``enableAll`` (bool): Boolean to enable/disable (True/False) all the buttons controls.
+            - ``enableAll`` (bool): Boolean to enable/disable (True/False) all the buttons controls.
 
-            ``gridlines`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
+            - ``gridlines`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
 
-            ``peakLimit`` (bool): Boolean to enable/disable (True/False) Plot ToF button.
+            - ``peakLimit`` (bool): Boolean to enable/disable (True/False) Plot ToF button.
 
-            ``hidePeakLabels`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
+            - ``hidePeakLabels`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
 
         """
 
@@ -1671,11 +1704,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def plotSelectionProxy(self, index, comboboxName):
         """
-        ``plotSelectionProxy`` Handles whether to selection made is from the compound list or not.
+        ``plotSelectionProxy``
+        ----------------------
+        Handles whether to selection made is from the compound list or not.
 
         Args:
-            index (int): Index of selection given from PyQtSignal
-            comboboxName (str): Identifier of combobox which made the signal.
+            - index (int): Index of selection given from PyQtSignal.
+            - comboboxName (str): Identifier of combobox which made the signal.
         """
 
         self.combobox.blockSignals(True)
@@ -1696,11 +1731,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def resetTableProxy(self, combobox) -> None:
         """
-        ``resetTableProxy`` Handles setting the data in the table, either displaying the data from a single selection,
-        or returning to the previous state of the table.
+        ``resetTableProxy``
+        -------------------
+        Handles setting the data in the table, either displaying the data from a single selection, or returning to the
+        previous state of the table.
 
         Args:
-            combobox (QComboBox): The Combobox from which the selection was made.
+            - combobox (QComboBox): The Combobox from which the selection was made.
         """
         substanceNames = combobox.getAllItemText()
         try:
@@ -1727,7 +1764,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def displayData(self) -> None:
         """
-        ``displayData`` Will display relevant peak information in the table for the selection made (self.selectionName).
+        ``displayData``
+        ---------------
+        Will display relevant peak information in the table for the selection made (self.selectionName).
         Once a select is made, the relevant controls are enabled.
         """
         if self.selectionName == "" and self.plotCount > -1:  # Null selection and graphs shown
@@ -1776,7 +1815,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def showTableData(self):
         """
-        ``showTableData`` Read and display the selected substances data within the table.
+        ``showTableData``
+        -----------------
+        Read and display the selected substances data within the table.
         """
         # Finding relevant file for peak information
         peakInfoDir = self.filepath + "data/Peak information/"
@@ -1823,11 +1864,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def addTableData(self, reset=False):
         """
-        ``addTableData`` Concatenates the selected spectras table data to the other plotted spectras adding a toggle
-        drop-down title row.
+        ``addTableData``
+        ----------------
+        Concatenates the selected spectras table data to the other plotted spectras adding a toggle drop-down title row.
 
         Args:
-            reset (bool, optional): Whether to default back to the current state of the table. Defaults to False.
+            - ``reset`` (bool, optional): Whether to default back to the current state of the table. Defaults to False.
         """
         # Amending the table for more than one plot.
         self.table.reset()
@@ -1871,19 +1913,21 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
     def updateGuiData(self, tof: bool = False, filepath: str = None, imported: bool = False, name: str = None,
                       distAltered: bool = False) -> None:
         """
-        ``updateGuiData`` Will initialise the new element with its peak and graph data, updating the table and plot.
+        ``updateGuiData``
+        -----------------
+        Will initialise the new element with its peak and graph data, updating the table and plot.
         Handles updates to isotopic distribution.
         Args:
-            ``tof`` (bool, optional): Whether to graph for tof or not. Defaults to False.
+            - ``tof`` (bool, optional): Whether to graph for tof or not. Defaults to False.
 
-            ``filepath`` (string, optional): Filepath for the selection to graph . Defaults to None.
+            - ``filepath`` (string, optional): Filepath for the selection to graph . Defaults to None.
 
-            ``imported`` (bool, optional): Whether the selection imported. Defaults to False.
+            - ``imported`` (bool, optional): Whether the selection imported. Defaults to False.
 
-            ``name`` (string, optional): The name of the imported selection. Defaults to None.
+            - ``name`` (string, optional): The name of the imported selection. Defaults to None.
 
-            ``distAltered`` (bool, optional): Whether or not the function is plotted for altered isotope distributions.
-            Defaults to False.
+            - ``distAltered`` (bool, optional): Whether or not the function is plotted for altered isotope
+            distributions. Defaults to False.
 
         """
 
@@ -2018,16 +2062,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def plot(self, elementData: ElementData, filepath: str = None, imported: bool = False, name: str = None) -> None:
         """
-        ``plot`` Will plot the inputted elementData's spectra to the canvas.
+        ``plot``
+        --------
+        Will plot the inputted elementData's spectra to the canvas.
 
         Args:
-            ``elementData`` (ElementData): The elementData to be plotted
+            - ``elementData`` (ElementData): The elementData to be plotted
 
-            ``filepath`` (str, optional): Filepath of imported spectra. Defaults to None.
+            - ``filepath`` (str, optional): Filepath of imported spectra. Defaults to None.
 
-            ``imported`` (bool, optional): Whether or not the data has been imported. Defaults to False.
+            - ``imported`` (bool, optional): Whether or not the data has been imported. Defaults to False.
 
-            ``name`` (str, optional): The name of the imported spectra. Defaults to None.
+            - ``name`` (str, optional): The name of the imported spectra. Defaults to None.
         """
         if elementData is None:
             return
@@ -2135,15 +2181,17 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def energyToTOF(self, xData: list[float], length: float) -> list[float]:
         """
-        Maps all X Values from energy to TOF
+        ``energyToTOF``
+        ---------------
+        Maps all X Values in the given array from energy to TOF
 
         Args:
-            ``xData`` (list[float]): List of the substances x-coords of its graph data
+            - ``xData`` (list[float]): List of the substances x-coords of its graph data
 
-            ``length`` (float): Constant value associated to whether the element data is with repsect to n-g or n-tot
+            - ``length`` (float): Constant value associated to whether the element data is with repsect to n-g or n-tot
 
         Returns:
-            list[float]: Mapped x-coords
+            ``list[float]``: Mapped x-coords
         """
         # ! Add a way to change length at runtime per spectra
         if length is None:
@@ -2161,10 +2209,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def hideGraph(self, event) -> None:
         """
+        ``hideGraph``
+        -------------
         Function to show or hide the selected graph by clicking the legend.
 
         Args:
-            ``event`` (pick_event): event on clicking a graphs legend
+            - ``event`` (pick_event): event on clicking a graphs legend
         """
         # Tells you which plot number you need to deleteLater() labels for
 
@@ -2204,14 +2254,18 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def clear(self) -> None:
         """
-        ``clear`` Function will empty all data from the table, all graphs from the plots,
-        along with resetting all data associated the table or plot and disables relevent controls.
+        ``clear``
+        ---------
+        Function will empty all data from the table, all graphs from the plots, along with resetting all data associated
+        the table or plot and disables relevent controls.
         """
-
-        self.figure.clear()
-        self.ax.clear()
-        self.axPD = None
-        self.canvas.draw()
+        try:
+            self.figure.clear()
+            self.ax.clear()
+            self.axPD = None
+            self.canvas.draw()
+        except AttributeError:
+            pass
 
         self.plotCount = -1
         self.numTotPeaks = []
@@ -2247,37 +2301,37 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         -------------------
         Will toggle visibility of the gridlines on the axis which is currently shown.
 
-        Args: 
-            ``visible`` (bool): Whether or not gridlines should be shown.
+        Args:
+            - ``visible`` (bool): Whether or not gridlines should be shown.
 
-            ``which`` (Literal["major", "minor", "both"], optional):
+            - ``which`` (Literal["major", "minor", "both"], optional):
             Whether to show major, minor or both gridline types. Defaults to "major".
 
-            ``axis`` (Literal["both", "x", "y"], optional):
+            - ``axis`` (Literal["both", "x", "y"], optional):
             Whether or not to show gridlines on x, y, or both. Defaults to "both".
 
-            ``color`` (str, optional): Gridline Color. Defaults to "#444".
+            - ``color`` (str, optional): Gridline Color. Defaults to "#444".
         """
         try:
-            # if self.gridSettings["which"] == "major":
-            #     plt.minorticks_off()
-            #     self.ax.minorticks_off()
-            # else:
-            #     plt.minorticks_on()
-            #     self.ax.minorticks_on()
             self.ax.minorticks_on()
-
             self.ax.tick_params(which='minor', axis='x')
             self.ax.tick_params(**self.gridSettings)
             self.ax.grid(visible=False, which='both')
+
             if visible and self.ax.get_visible():
                 self.ax.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
             else:
                 self.ax.grid(visible=visible, which="both")
+
+            self.axPD.minorticks_on()
+            self.axPD.tick_params(which='minor', axis='x')
+            self.axPD.tick_params(**self.gridSettings)
+            self.axPD.grid(visible=False, which='both')
+
             if visible and self.axPD.get_visible():
                 self.axPD.grid(visible=visible, which=which, axis=axis, color=color, alpha=0.2)
             else:
-                self.ax.grid(visible=visible, which="both")
+                self.axPD.grid(visible=visible, which="both")
         except AttributeError:
             pass
         self.canvas.draw()
@@ -2337,7 +2391,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def onPeakOrderChange(self) -> None:
         """
-        ``onPeakOrderChange`` Handles changing the order of peaks then redrawing the annotations.
+        ``onPeakOrderChange``
+        ---------------------
+        Handles changing the order of peaks then redrawing the annotations.
         """
         if self.sender().objectName() == "orderByIntegral":
             self.orderByIntegral = self.byIntegralCheck.isChecked()
@@ -2350,10 +2406,12 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def drawAnnotations(self, element: ElementData) -> None:
         """
-        ``drawAnnotations`` will plot each numbered annotation in the order of Integral or Peak Width
+        ``drawAnnotations``
+        -------------------
+        Will plot each numbered annotation in the order of Integral or Peak Width.
 
         Args:
-            ``element`` (ElementData): The data for the element your annotating
+            - ``element`` (ElementData): The data for the element your annotating
         """
         self.elementDataNames = []
 
@@ -2397,7 +2455,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def toggleAnnotations(self) -> None:
         """
-        ``toggleAnnotations``Shows & hides all peak annotations globally.
+        ``toggleAnnotations``
+        ---------------------
+        Toggles visibility of all peak annotations globally.
         """
         for element in self.elementData.values():
             element.HideAnnotations(self.peakLabelCheck.isChecked())
@@ -2407,7 +2467,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def plotPeakWindow(self, index: QModelIndex) -> None:
         """
-        ``plotPeakWindow`` Opens a window displaying the graph about the selected peak within the bounds of integration
+        ``plotPeakWindow``
+        ------------------
+        Opens a window displaying the graph about the selected peak within the bounds of integration
         as well as data specific to the peak.
 
         Args:
@@ -2486,7 +2548,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
                 optionsDialog.elements.addItems(spectraNames)
                 optionsDialog.mainLayout.addWidget(optionsDialog.elements)
 
-                acceptBtn = optionsDialog.buttonBox.addButton(QDialogButtonBox.Ok)
+                acceptBtn = optionsDialog.buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
 
                 def onAccept():
                     self.tof = 'ToF' in optionsDialog.elements.currentText()
@@ -2533,7 +2595,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         peakTable.setModel(ExtendedQTableModel(tableData))
 
         peakTable.setObjectName('dataTable')
-        peakTable.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
+        peakTable.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         peakTable.setAlternatingRowColors(True)
         peakTable.verticalHeader().setVisible(False)
         peakTable.setMinimumHeight(200)
@@ -2602,7 +2664,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def importData(self) -> None:
         """
-        ``importData`` Allows user to select a file on their computer to open and analyse.
+        ``importData``
+        --------------
+        Allows user to select a file on their computer to open and analyse.
         """
         filename = QFileDialog.getOpenFileName(self, "Open file", self.filepath)
         if filename[0] == '':
@@ -2619,7 +2683,9 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def getPeaks(self) -> None:
         """
-        ``getPeaks`` Ask the user for which function to plot the maxima or minima of which element
+        ``getPeaks``
+        ------------
+        Ask the user for which function to plot the maxima or minima of which element
         then calls the respective function on that element
         """
 
@@ -2633,11 +2699,11 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         elements.setMaxVisibleItems(5)
 
         elements.completer().setCompletionMode(
-            QCompleter.UnfilteredPopupCompletion
+            QCompleter.CompletionMode.UnfilteredPopupCompletion
         )
 
-        elements.completer().setCaseSensitivity(Qt.CaseInsensitive)
-        elements.completer().setFilterMode(Qt.MatchContains)
+        elements.completer().setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        elements.completer().setFilterMode(Qt.MatchFlag.MatchContains)
 
         inputMaxPeaks = QLineEdit()
         inputMaxPeaks.setPlaceholderText(str(self.elementData[elements.currentText()].threshold))
@@ -2645,13 +2711,13 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         inputForm.addRow(QLabel("Spectra:"), elements)
         buttonBox = QDialogButtonBox()
-        resetBtn = buttonBox.addButton(QDialogButtonBox.Reset)
+        resetBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Reset)
         resetBtn.setText("Reset")
-        maximaBtn = buttonBox.addButton(QDialogButtonBox.Yes)
+        maximaBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Yes)
         maximaBtn.setText("Maxima")
-        minimaBtn = buttonBox.addButton(QDialogButtonBox.No)
+        minimaBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.No)
         minimaBtn.setText("Minima")
-        cancelBtn = buttonBox.addButton(QDialogButtonBox.Cancel)
+        cancelBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
         cancelBtn.setText("Cancel")
 
         inputForm.setSpacing(5)
@@ -2666,6 +2732,7 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
         inputWindow.setLayout(mainLayout)
 
         def max():
+            self.ax.autoscale(True)
             self.plottingPD(self.elementData[elements.currentText()], True)
         maximaBtn.clicked.connect(max)
 
@@ -2714,12 +2781,14 @@ class DatabaseGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def plottingPD(self, elementData: ElementData, isMax: bool) -> None:
         """
-        ``plottingPD`` takes plots the maximas or minimas of the inputted ``elementData`` based on ``isMax``
+        ``plottingPD``
+        --------------
+        Takes plots the maximas or minimas of the inputted ``elementData`` based on ``isMax``
 
         Args:
-            ``elementData`` (ElementData): ElementData Class specifying the element
+            - ``elementData`` (ElementData): ElementData Class specifying the element
 
-            ``isMax`` (bool): Maxima if True else Minima
+            - ``isMax`` (bool): Maxima if True else Minima
         """
         if elementData.isMinDrawn and not isMax and not elementData.isGraphUpdating:
             return
@@ -2856,7 +2925,7 @@ def main() -> None:
     app = QtWidgets.QApplication(sys.argv)
     app.setObjectName('MainWindow')
 
-    app.setStyle('Fusion')
+    # app.setStyle('Fusion')
     QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Thin.ttf')
     QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Regular.ttf')
     QtGui.QFontDatabase.addApplicationFont('src\\fonts\\RobotoMono-Medium.ttf')
@@ -2866,7 +2935,7 @@ def main() -> None:
 
     app.setWindowIcon(QIcon("./src/img/final_logo.png"))
 
-    _ = DatabaseGUI()
+    _ = ExplorerGUI()
     app.setPalette(Colours)
     app.exec()
 

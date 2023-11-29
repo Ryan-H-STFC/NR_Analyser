@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PyQt5.QtWidgets import QMenu, QAction
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QMenu
+from PyQt6.QtGui import QAction, QIcon
 
 
 class FigureCanvas(FigureCanvasQTAgg):
@@ -26,13 +26,13 @@ class FigureCanvas(FigureCanvasQTAgg):
         except IndexError:
             return
 
-        res = menu.exec_(event.globalPos())
+        res = menu.exec(event.globalPos())
         if res is not None:
             graphLine = graphDict[res.text()][0]
             graphLine.remove()
 
             # graphDict[res.text()][1].remove()
-            self.widgetParent.plottedSubstances.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
+            self.widgetParent.plottedSpectra.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
 
             for anno in self.widgetParent.elementData[res.text()].annotations:
                 anno.remove()

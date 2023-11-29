@@ -1,5 +1,5 @@
 from __future__ import annotations
-from PyQt5.QtCore import QAbstractTableModel, Qt
+from PyQt6.QtCore import QAbstractTableModel, Qt
 
 # todo - Add dictionary for row indexes for each section of data associated with each plotted element.
 
@@ -37,7 +37,7 @@ class ExtendedQTableModel(QAbstractTableModel):
         column: int = index.column()
         value = self._data.iloc[row, column]
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return str(value)
 
     def rowCount(self, index):
@@ -47,9 +47,9 @@ class ExtendedQTableModel(QAbstractTableModel):
         return self._data.shape[1]
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return self.columns[section]
-        if orientation == Qt.Vertical and role == Qt.DisplayRole:
+        if orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
             return self._data.index[section]
 
     def sort(self, column: int, order: Qt.SortOrder = ...) -> None:

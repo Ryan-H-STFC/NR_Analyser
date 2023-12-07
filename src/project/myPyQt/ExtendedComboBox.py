@@ -7,6 +7,7 @@ class ExtendedComboBox(QComboBox):
     def __init__(self, parent=None):
         super(ExtendedComboBox, self).__init__(parent)
 
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setEditable(True)
 

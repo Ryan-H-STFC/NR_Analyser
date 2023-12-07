@@ -8,7 +8,7 @@ from unittest import TestCase, main
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
-from ElementDataStructure import ElementData
+from SpectraDataStructure import SpectraData
 
 
 filepath = f"{os.path.dirname(__file__)}"
@@ -37,7 +37,7 @@ class TestElemenetData(TestCase):
     def test_ElementData_init_Normal(self):
 
         # Normal
-        elementT = ElementData(
+        elementT = SpectraData(
             name="element_29-Cu-63_n-g",
             numPeaks=10,
             tableData=self.tableData,
@@ -47,7 +47,7 @@ class TestElemenetData(TestCase):
             distributions={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500},
             defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}
         )
-        elementF = ElementData(
+        elementF = SpectraData(
             name="element_29-Cu-63_n-g",
             numPeaks=10,
             tableData=self.tableData,
@@ -62,7 +62,7 @@ class TestElemenetData(TestCase):
     def test_ElementData_init_Null(self):
 
         # Null Peak Data
-        elementT = ElementData(
+        elementT = SpectraData(
             name="2-He-4_n-g",
             numPeaks=None,
             tableData=None,
@@ -72,7 +72,7 @@ class TestElemenetData(TestCase):
             distributions=None,
             defaultDist=None
         )
-        elementF = ElementData(
+        elementF = SpectraData(
             name="2-He-4_n-g",
             numPeaks=None,
             tableData=None,
@@ -89,7 +89,7 @@ class TestElemenetData(TestCase):
 
     def test_ElementData_init_Dist(self):
 
-        element = ElementData(
+        element = SpectraData(
             name="element_48-Cd_n-g",
             numPeaks=10,
             tableData=self.elementTableData,
@@ -113,7 +113,7 @@ class TestElemenetData(TestCase):
         self.assertNotEqual(element.graphData.shape, self.graphData.shape)
 
     def test_ElementData_energyToTOF(self):
-        element = ElementData(
+        element = SpectraData(
             name="element_48-Cd_n-g",
             numPeaks=10,
             tableData=self.tableData.copy(),

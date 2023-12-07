@@ -68,13 +68,13 @@ Classes
         Args:
             ``event`` (QDragEnterEvent): Event triggerd on mouse dragging into the window.
 
-    `drawAnnotations(self, element: ElementData) ‑> None`
+    `drawAnnotations(self, element: SpectraData) ‑> None`
     :   ``drawAnnotations``
         -------------------
         Will plot each numbered annotation in the order of Integral or Peak Width.
         
         Args:
-            - ``element`` (ElementData): The data for the element your annotating
+            - ``element`` (SpectraData): The data for the element your annotating
 
     `dropEvent(self, event: QtGui.QDropEvent) ‑> None`
     :   ``dropEvent``
@@ -156,13 +156,13 @@ Classes
         ---------------------
         Handles changing the order of peaks then redrawing the annotations.
 
-    `plot(self, elementData: ElementData, filepath: str = None, imported: bool = False, name: str = None) ‑> None`
+    `plot(self, spectraData: SpectraData, filepath: str = None, imported: bool = False, name: str = None) ‑> None`
     :   ``plot``
         --------
-        Will plot the inputted elementData's spectra to the canvas.
+        Will plot the inputted spectraData's spectra to the canvas.
         
         Args:
-            - ``elementData`` (ElementData): The elementData to be plotted
+            - ``spectraData`` (SpectraData): The spectraData to be plotted
         
             - ``filepath`` (str, optional): Filepath of imported spectra. Defaults to None.
         
@@ -188,13 +188,13 @@ Classes
             - index (int): Index of selection given from PyQtSignal.
             - comboboxName (str): Identifier of combobox which made the signal.
 
-    `plottingPD(self, elementData: ElementData, isMax: bool) ‑> None`
+    `plottingPD(self, spectraData: SpectraData, isMax: bool) ‑> None`
     :   ``plottingPD``
         --------------
-        Takes plots the maximas or minimas of the inputted ``elementData`` based on ``isMax``
+        Takes plots the maximas or minimas of the inputted ``spectraData`` based on ``isMax``
         
         Args:
-            - ``elementData`` (ElementData): ElementData Class specifying the element
+            - ``spectraData`` (SpectraData): SpectraData Class specifying the element
         
             - ``isMax`` (bool): Maxima if True else Minima
 

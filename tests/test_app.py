@@ -21,7 +21,7 @@ class TestApp(TestCase):
         app.combobox.activated.emit(app.combobox.currentIndex())
         app.plotEnergyBtn.click()
         self.assertIn("29-Cu-63_n-g-Energy", [line.get_label() for line in app.ax.get_lines()])
-        self.assertTrue(app.elementData["29-Cu-63_n-g-Energy"].isGraphDrawn)
+        self.assertTrue(app.spectraData["29-Cu-63_n-g-Energy"].isGraphDrawn)
 
     def test_clear(self):
         app = ExplorerGUI()
@@ -29,12 +29,11 @@ class TestApp(TestCase):
         app.combobox.activated.emit(app.combobox.currentIndex())
         app.plotEnergyBtn.click()
         app.clearBtn.click()
-        self.assertEqual(app.elementData, {})
+        self.assertEqual(app.spectraData, {})
         self.assertEqual(app.elementDataNames, [])
         self.assertEqual(app.plotCount, -1)
         self.assertEqual(app.plottedSpectra, [])
         self.assertEqual(app.ax.get_lines(), [])
-        self.assertEqual(app.numTotPeaks, [])
         self.assertEqual(app.annotations, [])
         self.assertEqual(app.localHiddenAnnotations, [])
         self.assertEqual(app.elementDistributions, app.defaultDistributions)

@@ -17,9 +17,9 @@ dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
 peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
 
 
-class ElementData:
+class SpectraData:
     """
-    Data class ElementData used to create a structure for each unique element selection and its data. along with
+    Class SpectraData used to create a structure for each unique element selection and its data. along with
     altered python dunder functions utilised throughout the program.
     """
 
@@ -95,7 +95,7 @@ class ElementData:
         if self.defaultDist != self.distributions:
             self.isDistAltered = True
             self.onDistChange()
-            self.UpdatePeaks()
+            self.updatePeaks()
 
         if self.graphData is None:
             self.graphData = DataFrame()
@@ -138,20 +138,40 @@ class ElementData:
             pass
         except FileNotFoundError:
             if self.maxima is not None:
-                self.definePeaks()
-                self.recalculatePeakData()
+                if self.maxima.size != 0:
+                    self.definePeaks()
+                    self.recalculatePeakData()
 
         if self.numPeaks is None:
             self.numPeaks = None if self.maxima is None else len(self.maxima[0])
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, ElementData):
+        """
+        Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data. 
+
+        Args:
+            other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of type
+                         SpectraData.
+
+        Returns:
+            bool: Whether or not the two SpectraData Objects are equal.
+        """
+        if isinstance(other, SpectraData):
             ck = self.name == other.name and self.isToF == other.isToF and self.graphData == other.graphData
             return ck
         return False
 
     def __ne__(self, other) -> bool:
-        if isinstance(other, ElementData):
+        """
+        Returns whether or not two SpectraData objects are not equal, based on the names, TOF state and graph data.
+
+        Args:
+            other (Any): Object on the right-hand side of the equal to comparison.
+
+        Returns:
+            bool: Whether or not two instances are not equal to one another.
+        """
+        if isinstance(other, SpectraData):
             return self.name != other.name or self.isToF != other.isToF or self.graphData != other.graphData
         return True
 
@@ -163,8 +183,7 @@ class ElementData:
             - ``xData`` (list[float]): List of the substances x-coords of its graph data
 
             - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
-                                          n-g or n-tot
-
+                                            n-g or n-tot
 
         Returns:
             list[float]: Mapped x-coords
@@ -184,13 +203,13 @@ class ElementData:
 
     def e2TOF(self, xData: float, length: float | None = None) -> list[float]:
         """
-        Maps all X Values from energy to TOF
+        Converts a single X Value from energy to TOF
 
         Args:
             - ``xData`` (float): x-Value.
 
             - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
-                                          n-g or n-tot
+                                            n-g or n-tot.
 
         Returns:
             float: Mapped x-coords
@@ -250,21 +269,22 @@ class ElementData:
         # p.join()
         self.graphData = pandas.DataFrame(sorted(zip(self.graphDataX, np.sum(isoY, axis=0))))
 
-    def UpdatePeaks(self) -> None:
+    def updatePeaks(self) -> None:
         """
-        ``UpdatePeaks`` recalulates maxima coordinates and updates associated variables.
+        ``updatePeaks`` recalulates maxima coordinates and updates associated variables.
         Used when threshold values have been altered.
         """
         peakD = PeakDetector()
         self.maxima = np.array(peakD.maxima(self.graphData, self.threshold))
         self.numPeaks = len(self.maxima[0])
         self.definePeaks()
+        self.recalculatePeakData()
 
         self.minima = np.array(peakD.minima(self.graphData))
 
-    def HideAnnotations(self, globalHide: bool = False) -> None:
+    def hideAnnotations(self, globalHide: bool = False) -> None:
         """
-        HideAnnotations will only hide if 'Hide Peak Label' is checked, or the graph is hidden,
+        hideAnnotations will only hide if 'Hide Peak Label' is checked, or the graph is hidden,
         otherwise it will show the annotation.
 
         Args:
@@ -278,9 +298,9 @@ class ElementData:
             point.set_visible(boolCheck)
         self.isAnnotationsHidden = boolCheck
 
-    def OrderAnnotations(self, byIntegral: bool = True) -> None:
+    def orderAnnotations(self, byIntegral: bool = True) -> None:
         """
-        ``OrderAnnotations`` alters the rank value assoicated with each peak in the annotations dictionary
+        ``orderAnnotations`` alters the rank value assoicated with each peak in the annotations dictionary
         either ranked by integral or by peak width
 
         Args:
@@ -315,7 +335,7 @@ class ElementData:
                 max_y = nearestnumber(self.maxima[1], row[yCol].iloc[0])
             self.annotationsOrder[i] = (max_x, max_y)
 
-    def PeakIntegral(self, leftLimit: float, rightLimit: float) -> float:
+    def peakIntegral(self, leftLimit: float, rightLimit: float) -> float:
         if "element" in self.name:
             isoGraphData = {name: pandas.read_csv(f"{dataFilepath}{name}_{self.name.split('_')[-1]}.csv",
                                                   names=['x', 'y'],
@@ -332,7 +352,7 @@ class ElementData:
             # regionGraphData = self.graphData[(graphData['x'] >= leftLimit) & (graphData['x'] <= rightLimit)]
             return integrate_simps(self.graphData, leftLimit, rightLimit)
 
-    def definePeaks(self):
+    def definePeaks(self) -> None:
         """
         ``definePeaks``
         ---------------
@@ -433,9 +453,15 @@ class ElementData:
             except IndexError:
                 pass
 
-    def recalculatePeakData(self):
+    def recalculatePeakData(self) -> None:
+        """
+        ``recalculatePeakData``
+        -----------------------
+        Loops over the existing peaks of the instance and calculates the data associated with each. Updating the table
+        data.
+        """
 
-        integrals = {max: self.PeakIntegral(self.maxPeakLimitsX[max][0], self.maxPeakLimitsX[max][1])
+        integrals = {max: self.peakIntegral(self.maxPeakLimitsX[max][0], self.maxPeakLimitsX[max][1])
                      for max in self.maxima[0]}
         integralRanks = {max: i for i, max in enumerate(dict(
             sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
@@ -450,32 +476,33 @@ class ElementData:
         tableDataTemp = [
             [
                 integralRanks[maxCoords[0]],
-                round(maxCoords[0], 4),
+                float(f"{maxCoords[0]:.5g}"),
                 f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",
-                round(self.e2TOF(maxCoords[0]), 4),
-                round(integrals[maxCoords[0]], 4),
-                round(peakWidth[maxCoords[0]], 4),
-                peakWidthRank[maxCoords[0]],
-                round(maxCoords[1], 4),
-                peakHeightRank[maxCoords[1]],
+                float(f"{self.e2TOF(maxCoords[0]):.5g}"),
+                float(f"{integrals[maxCoords[0]]:.5g}"),
+                float(f"{peakWidth[maxCoords[0]]:.5g}"),
+                f"({peakWidthRank[maxCoords[0]]})",
+                float(f"{maxCoords[1]:.5g}"),
+                f"({peakHeightRank[maxCoords[1]]:.5g})",
                 None
             ]
             for maxCoords in self.maxima.T]
+        tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
-        tableData = pandas.DataFrame(tableDataTemp,
-                                     columns=[
-                                         "Rank by Integral",
-                                         "Energy (eV)",
-                                         "Rank by Energy",
-                                         "TOF (us)",
-                                         "Integral",
-                                         "Peak Width",
-                                         "Rank by Peak Width",
-                                         "Peak Height",
-                                         "Rank by Peak Height",
-                                         "Relevant Isotope"
-                                     ])
-        self.tableData = tableData.sort_values('Rank by Integral')
+        self.tableData = pandas.DataFrame(tableDataTemp,
+                                          columns=[
+                                              "Rank by Integral",
+                                              "Energy (eV)",
+                                              "Rank by Energy",
+                                              "TOF (us)",
+                                              "Integral",
+                                              "Peak Width",
+                                              "Rank by Peak Width",
+                                              "Peak Height",
+                                              "Rank by Peak Height",
+                                              "Relevant Isotope"
+                                          ])
+
         self.tableData.loc[-1] = [self.name, *[""] * 9]
         self.tableData.index += 1
         self.tableData.sort_index(inplace=True)

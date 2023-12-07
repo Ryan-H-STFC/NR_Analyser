@@ -34,10 +34,10 @@ class FigureCanvas(FigureCanvasQTAgg):
             # graphDict[res.text()][1].remove()
             self.widgetParent.plottedSpectra.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
 
-            for anno in self.widgetParent.elementData[res.text()].annotations:
+            for anno in self.widgetParent.spectraData[res.text()].annotations:
                 anno.remove()
             self.widgetParent.elementDataNames.clear()
-            self.widgetParent.elementData.pop(res.text())
+            self.widgetParent.spectraData.pop(res.text())
             for row in self.widgetParent.titleRows:
                 self.widgetParent.table.setItemDelegateForRow(row, None)
             self.widgetParent.updateLegend()

@@ -31,10 +31,12 @@ class SpectraData:
     distributions: dict
     defaultDist: dict
     graphColour: tuple
+    plotType: str
 
     annotations: list
     annotationsOrder: dict
     threshold: float = 100.0
+    length: dict[float] = None
 
     maxima: ndarray = None
     minima: ndarray = None
@@ -68,9 +70,11 @@ class SpectraData:
                  isCompound: bool = False,
                  isAnnotationsHidden: bool = False,
                  threshold: float = 100,
+                 length: dict[float] = {"n-g": 22.804, "n-tot": 23.404},
                  isImported: bool = False) -> None:
 
         self.name = name
+        self.plotType = 'n-tot' if 't' in self.name else 'n-g'
         self.numPeaks = numPeaks
         self.isToF = isToF
         self.distributions = distributions
@@ -83,6 +87,7 @@ class SpectraData:
 
         self.isAnnotationsHidden = isAnnotationsHidden
         self.threshold = threshold
+        self.length = length
         self.isImported = isImported
         pd = PeakDetector()
 
@@ -102,10 +107,11 @@ class SpectraData:
 
         self.graphColour = graphColour
 
-        length = 23.404 if self.name[-1] == "t" else 22.804
+        if self.length is None:
+            self.length = {"n-g": 22.804, "n-tot": 23.404}
 
         if self.isToF and not self.graphData.empty:
-            graphData[0] = self.energyToTOF(graphData[0], length=length)
+            graphData[0] = self.energyToTOF(graphData[0], length=self.length)
             graphData.sort_values(0, ignore_index=True, inplace=True)
         try:
             if not self.graphData.empty and not self.isDistAltered:
@@ -119,8 +125,8 @@ class SpectraData:
             name = self.name[8:] if 'element' in self.name else self.name
             limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'])
             if self.isToF:
-                limits['left'] = self.energyToTOF(limits['left'], length)
-                limits['right'] = self.energyToTOF(limits['right'], length)
+                limits['left'] = self.energyToTOF(limits['left'], self.length)
+                limits['right'] = self.energyToTOF(limits['right'], self.length)
                 limits['left'], limits['right'] = limits['right'], limits['left']
 
             for max in self.maxima[0]:
@@ -150,7 +156,7 @@ class SpectraData:
         Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data. 
 
         Args:
-            other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of type
+            - other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of type
                          SpectraData.
 
         Returns:
@@ -166,7 +172,7 @@ class SpectraData:
         Returns whether or not two SpectraData objects are not equal, based on the names, TOF state and graph data.
 
         Args:
-            other (Any): Object on the right-hand side of the equal to comparison.
+            - other (Any): Object on the right-hand side of the equal to comparison.
 
         Returns:
             bool: Whether or not two instances are not equal to one another.
@@ -175,33 +181,32 @@ class SpectraData:
             return self.name != other.name or self.isToF != other.isToF or self.graphData != other.graphData
         return True
 
-    def energyToTOF(self, xData: float | list[float], length: float | None = None) -> list[float]:
+    def energyToTOF(self,
+                    xData: float | list[float],
+                    length: dict[float] = {"n-g": 22.804, "n-tot": 23.404}) -> list[float]:
         """
         Maps all X Values from energy to TOF
 
         Args:
             - ``xData`` (list[float]): List of the substances x-coords of its graph data
 
-            - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
-                                            n-g or n-tot
-
         Returns:
             list[float]: Mapped x-coords
         """
-        if length is None:
-            length = 23.404 if self.name[-1] == "t" else 22.804
+        if self.length is not None:
+            length = self.length
         neutronMass = float(1.68e-27)
         electronCharge = float(1.60e-19)
 
         tofX = list(
             map(
-                lambda x: length * 1e6 * (0.5 * neutronMass / (x * electronCharge)) ** 0.5,
+                lambda x: length[self.plotType] * 1e6 * (0.5 * neutronMass / (x * electronCharge)) ** 0.5,
                 xData
             )
         )
         return tofX
 
-    def e2TOF(self, xData: float, length: float | None = None) -> list[float]:
+    def e2TOF(self, xData: float, length: dict[float] = {"n-g": 22.804, "n-tot": 23.404}) -> float:
         """
         Converts a single X Value from energy to TOF
 
@@ -212,26 +217,28 @@ class SpectraData:
                                             n-g or n-tot.
 
         Returns:
-            float: Mapped x-coords
+            float: Mapped x-coord
         """
-        if length is None:
-            length = 23.404 if self.name[-1] == "t" else 22.804
+        if self.length is not None:
+            length = self.length
         neutronMass = float(1.68e-27)
         electronCharge = float(1.60e-19)
 
-        return length * 1e6 * (0.5 * neutronMass / (xData * electronCharge)) ** 0.5
+        return length[self.plotType] * 1e6 * (0.5 * neutronMass / (xData * electronCharge)) ** 0.5
 
     def onDistChange(self) -> None:
         """
-        ``onDistChange`` Will retrieve an elements the corresponding isotopes graphData appling the weights specified in
+        ``onDistChange``
+        ----------------
+
+        Will retrieve an elements corresponding isotope graphData appling the weights specified in
         the menu.
         """
         if not self.isDistAltered and not ('element' in self.name or 'compound' in self.name):
             return
-
+        plotType = "n-tot" if 't' in self.name else "n-g"
         self.weightedIsoGraphData = {name: pandas.read_csv(
-            f"""{dataFilepath}{'_'.join(name.split('_')[0:-1])}_{
-            self.name.split('_')[-1]}.csv""",
+            f"""{dataFilepath}{name}_{plotType}.csv""",
             names=['x', 'y'],
             header=None) * [1, dist]
             for name, dist in self.distributions.items() if dist != 0}
@@ -239,10 +246,12 @@ class SpectraData:
 
     def setGraphDataFromDist(self, weightedGraphData: list[DataFrame]) -> None:
         """
-        ``setGraphDataFromDist`` Given a list of graphData return a sum of its merged date.
-        By merging the x-data either retrieve or linearly interplote for each graphData in the list to produce a y-value
-        for the new x-domain. Then sum the resulting y-values inplace and setting the graphData of the instance.
+        ``setGraphDataFromDist``
+        ------------------------
 
+        Given a list of graphData return a sum of its merged date. By merging the x-data either retrieve or linearly
+        interpolate for each graphData in the list to produce a y-value for the new x-domain. Then sum the resulting
+        y-values in-place and setting the graphData of the instance.
 
         Args:
             ``weightedGraphData`` (list[DataFrame]): List of graph data for each element or isotope to be summed.
@@ -271,7 +280,10 @@ class SpectraData:
 
     def updatePeaks(self) -> None:
         """
-        ``updatePeaks`` recalulates maxima coordinates and updates associated variables.
+        ``updatePeaks``
+        ---------------
+
+        Recalculates maxima coordinates and updates associated variables.
         Used when threshold values have been altered.
         """
         peakD = PeakDetector()
@@ -284,11 +296,14 @@ class SpectraData:
 
     def hideAnnotations(self, globalHide: bool = False) -> None:
         """
-        hideAnnotations will only hide if 'Hide Peak Label' is checked, or the graph is hidden,
+        ``hideAnnotations``
+        -------------------
+
+        Will only hide if 'Hide Peak Label' is checked, or the graph is hidden,
         otherwise it will show the annotation.
 
         Args:
-            globalHide (bool, optional): Wheher or not the 'Hide Peak Label' is checked or not. Defaults to False.
+            globalHide (bool, optional): Whether or not the 'Hide Peak Label' is checked or not. Defaults to False.
         """
         if self.annotations == []:
             return
@@ -300,7 +315,10 @@ class SpectraData:
 
     def orderAnnotations(self, byIntegral: bool = True) -> None:
         """
-        ``orderAnnotations`` alters the rank value assoicated with each peak in the annotations dictionary
+        ``orderAnnotations``
+        --------------------
+
+        Alters the rank value associated with each peak in the annotations dictionary
         either ranked by integral or by peak width
 
         Args:
@@ -336,6 +354,20 @@ class SpectraData:
             self.annotationsOrder[i] = (max_x, max_y)
 
     def peakIntegral(self, leftLimit: float, rightLimit: float) -> float:
+        """
+        ``peakIntegral``
+        ----------------
+
+        Calculates the integral of a peak within the region specificed by the limits, uses the simpson rule and removes
+        a trapezium created between the axis and the coordinates of the limits.
+
+        Args:
+            leftLimit (float): X-Coord of the left limit of integration
+            rightLimit (float): X-Coord of the right limit of integration
+
+        Returns:
+            float: Integral Value
+        """
         if "element" in self.name:
             isoGraphData = {name: pandas.read_csv(f"{dataFilepath}{name}_{self.name.split('_')[-1]}.csv",
                                                   names=['x', 'y'],
@@ -356,11 +388,12 @@ class SpectraData:
         """
         ``definePeaks``
         ---------------
+
         Calculates the limits of integration for peaks.
 
         Credits go to Ivan Alsina Ferrer - https://github.com/ialsina/NRCA-Spectra/tree/main
 
-        Peak Limit Algorithm used with all pre-existing datasets, now reimplented for use in the GUI.
+        Peak Limit Algorithm used with all pre-existing datasets, now reimplemented for use in the GUI.
         """
         params = {
             # Maximum value prange can get.
@@ -457,10 +490,12 @@ class SpectraData:
         """
         ``recalculatePeakData``
         -----------------------
+
         Loops over the existing peaks of the instance and calculates the data associated with each. Updating the table
         data.
         """
-
+        if self.maxima.size == 0:
+            return
         integrals = {max: self.peakIntegral(self.maxPeakLimitsX[max][0], self.maxPeakLimitsX[max][1])
                      for max in self.maxima[0]}
         integralRanks = {max: i for i, max in enumerate(dict(

@@ -15,21 +15,19 @@ class PeakDetector:
         self.maxPeakLimitsY: dict = None
         self.minPeakLimitsX: dict = None
         self.minPeakLimitsY: dict = None
-        self.peak_list: list = None
-
-        self.derivative: np.ndarray = None
-        self.smoothder: np.ndarray = None
 
     def maxima(self, data: DataFrame, threshold: float = 100) -> tuple[list[float]]:
         """
-        ``maxima`` finds the coordinates of any peak which is found higher than the threshold, within the sample.
-        As well as the peak widths.
+        ``maxima``
+        ----------
+
+        Finds the coordinates of any peak which is found higher than the threshold, within the sample. As well as the
+        peak widths.
         Args:
-            ``self`` (PeakDetector): PeakDetector Instance.
 
-            ``data`` (DataFrame): Pandas Dataframe with the graph data for the sample.
+            - ``data`` (DataFrame): Pandas Dataframe with the graph data for the sample.
 
-            ``threshold`` (float): Threshold for what level peaks should be found from.
+            - ``threshold`` (float): Threshold for what level peaks should be found from.
 
         Returns:
             (maxima_list_x, maxima_list_y): Tuple of lists, list of x-coords, list of y-coords.
@@ -52,7 +50,6 @@ class PeakDetector:
         second_limits = width[3].tolist()
         # Refining peak limits
         # first_limits, second_limits = self.PeakLimitsCheck(first_limits, second_limits, maxima)
-        # print("FL", first_limits)
         for i in first_limits:
             index = first_limits.index(i)
             peak = maxima_list_x[index]
@@ -70,17 +67,17 @@ class PeakDetector:
             coordinate_index = x.loc[x == coordinate].index[0]
             self.maxPeakLimitsX[f"{peak}_second"] = coordinate
             self.maxPeakLimitsY[f"{peak}_second"] = y[coordinate_index]
-        # print("Peak limits x: ", self.maxPeakLimitsX)
-        # print("Peak limits y: ", self.maxPeakLimitsY)
-        self.peak_list = maxima_list_x
+        #
         return (maxima_list_x, maxima_list_y)
 
     def minima(self, data: DataFrame) -> tuple[list[float]]:
         """
-        ``minima`` finds the coordinates of the minimas within the selected sample.
+        ``minima``
+        ----------
+
+        Finds the coordinates of the minimas within the selected sample.
 
         Args:
-            ``self`` (PeakDetector): PeakDetector Instance.
             ``data`` (DataFrame): Pandas Dataframe with the graph data for the sample.
 
         Returns:
@@ -122,9 +119,3 @@ class PeakDetector:
 
         minima_list_y = list(map(lambda val: -1 * val, minima_list_y))
         return minima_list_x, minima_list_y
-
-    def GetMaxPeakLimits(self) -> tuple[dict[str]]:
-        return self.maxPeakLimitsX, self.maxPeakLimitsY
-
-    def GetMinPeakLimits(self) -> tuple[dict[str]]:
-        return self.minPeakLimitsX, self.minPeakLimitsY

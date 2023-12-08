@@ -84,7 +84,7 @@ from helpers.getWidgets import getLayoutWidgets
 
 # Asking for filepath where the user has saved script
 # filepath is where the data and the code has been saved. The sourceFilepath is the path to the latest data folder
-# ! Maybe Change back to inputs if requried
+# ! Maybe Change back to inputs if required
 
 #  input('Enter the filepath where the latest NRCA code data folder is \n For Example:'
 #                         'C://Users/ccj88542/NRCA/Rehana/Latest/main/data: \n')
@@ -103,7 +103,7 @@ matplotlib.rcParamsDefault["agg.path.chunksize"] = 1000
 
 class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
     """
-    ``ExlorerGUI``
+    ``ExplorerGUI``
     --------------
     Class responsible for creating and manipulating the GUI, used in selecting and graphing the data of elements or
     isotopes within the NRTI/NRCA Explorer.
@@ -113,7 +113,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
     # init constructure for classes
     def __init__(self) -> None:
         """
-        Initialisator for ExplorerGUI class
+        Initialisar for ExplorerGUI class
         """
         # Allows for adding more things to the QWidget template
         super(ExplorerGUI, self).__init__()
@@ -356,6 +356,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.maxPeak = 50
         self.thresholds = dict()
+        self.length = {"n-g": 22.804, "n-tot": 23.404}
 
         self.dir = f"{os.path.dirname(__file__)}\\"
         self.graphDataDir = f"{self.dir}data\\Graph Data\\"
@@ -442,12 +443,17 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         editDistribution = QAction(QIcon("./src/img/edit-component.svg"), "&Edit Distribution", self)
         editDistribution.setShortcut("Ctrl+Shift+D")
         editDistribution.triggered.connect(self.editDistribution)
+
+        editLength = QAction(QIcon("./src/img/edit-component.svg"), "&Edit Length", self)
+        editLength.setShortcut("Ctrl+Shift+L")
+        editLength.triggered.connect(self.editLength)
         # fileMenu.addAction(saveAction)
 
         editMenu = menubar.addMenu("&Edit")
         editMenu.addAction(editpeakAction)
         editMenu.addAction(editThresholdAction)
         editMenu.addAction(editDistribution)
+        editMenu.addAction(editLength)
 
         menubarLayout.addWidget(menubar, alignment=Qt.AlignmentFlag.AlignLeft)
         # Adding label which shows number of peaks
@@ -774,7 +780,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Handles file drag enter event and verification
 
         Args:
-            ``event`` (QDragEnterEvent): Event triggerd on mouse dragging into the window.
+            ``event`` (QDragEnterEvent): Event triggered on mouse dragging into the window.
         """
         if event.mimeData().hasUrls():
             for file in event.mimeData().urls():
@@ -805,7 +811,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         ``editPeakLimits``
         ------------------
         Edit Peaks opens a dialog window to alter limits of integration for peaks of the selected
-        element, recaluating the integral and peak widths to place into the table.
+        element, recalculating the integral and peak widths to place into the table.
         """
         # Click count to disconnect after two limits have been selected
         if self.plottedSpectra == []:
@@ -1013,7 +1019,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         ``editDistribution``
         --------------------
-        Opens a dialog window with options to alter the natural abundence of elements and compounds
+        Opens a dialog window with options to alter the natural abundance of elements and compounds
         updating the graph data of any relevant plots.
         """
 
@@ -1071,13 +1077,13 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         cancelBtn.clicked.connect(optionsWindow.reject)
 
         def onReset():
-            onElementChange(reset=True)
+            onElementChange(index=elements.currentIndex(), reset=True)
             applyBtn.setEnabled(True)
         resetBtn.clicked.connect(onReset)
 
         def onElementChange(index=0, reset: bool = False):
 
-            elementName = elements.itemText(index)
+            elementName = elements.itemText(elements.currentIndex())
             if elementName == '':
                 elements.setCurrentIndex(0)
                 return
@@ -1113,7 +1119,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 newQLineEdit.textChanged.connect(onDistributionChange)
                 optionsWindow.mainLayout.insertWidget(i + 1, proxyWidget)
             optionsWindow.updateGeometry()
-            totalLabel.setText(f"Total: {round(total, int(acc)-1)}")
+            totalLabel.setText(f"Total: {round(total, int(acc) - 1)}")
         optionsWindow.elements.setFocus()
         optionsWindow.elements.editTextChanged.connect(lambda: onElementChange(optionsWindow.elements.currentIndex()))
 
@@ -1218,6 +1224,69 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         applyBtn.clicked.connect(onAccept)
 
         inputThreshold.setFocus()
+        optionsWindow.setModal(False)
+        optionsWindow.show()
+
+    def editLength(self):
+
+        optionsWindow = QDialog(self)
+        optionsWindow.setObjectName("inputWindow")
+        mainLayout = QVBoxLayout()
+        inputForm = QFormLayout()
+
+        buttonBox = QDialogButtonBox(optionsWindow)
+        applyBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Apply)
+        applyBtn.setEnabled(False)
+
+        cancelBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Cancel)
+
+        mainLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+        optionsWindow.setWindowTitle("Edit Length")
+        optionsWindow.setLayout(mainLayout)
+        lineEditNG = QLineEdit()
+        lineEditNG.setValidator(QRegExpValidator(QRegExp("([0-9]*[.])?[0-9]+")))
+        lineEditNG.setPlaceholderText(str(self.length["n-g"]))
+        lineEditNTOT = QLineEdit()
+        lineEditNTOT.setValidator(QRegExpValidator(QRegExp("([0-9]*[.])?[0-9]+")))
+        lineEditNTOT.setPlaceholderText(str(self.length["n-tot"]))
+
+        inputForm.addRow(QLabel("n-g Length:"), lineEditNG)
+        inputForm.addRow(QLabel("n-tot Length:"), lineEditNTOT)
+
+        mainLayout.addLayout(inputForm)
+        mainLayout.addWidget(buttonBox)
+
+        def onInputChange():
+            applyBtn.setEnabled(lineEditNG.text() != '' and lineEditNTOT.text() != '')
+        lineEditNG.textEdited.connect(onInputChange)
+        lineEditNTOT.textEdited.connect(onInputChange)
+
+        def onCancel():
+            optionsWindow.close()
+        cancelBtn.clicked.connect(onCancel)
+
+        def onAccept():
+            lengthConversion = deepcopy(self.length)
+
+            self.length["n-g"] = float(lineEditNG.text())
+            self.length["n-tot"] = float(lineEditNTOT.text())
+
+            lengthConversion["n-g"] = self.length["n-g"] / lengthConversion["n-g"]
+            lengthConversion["n-tot"] = self.length["n-tot"] / lengthConversion["n-tot"]
+            for spectra in self.spectraData.values():
+                spectra.length = self.length
+                if spectra.isToF:
+                    spectra.graphData = spectra.graphData * \
+                        [lengthConversion[spectra.plotType], 1]
+
+                for line in self.ax.lines:
+                    if f"{spectra.name}-{'ToF'}" == line.get_label():
+                        line.set_xdata(spectra.graphData[0])
+                        break
+
+            self.canvas.draw()
+        applyBtn.clicked.connect(onAccept)
+
         optionsWindow.setModal(False)
         optionsWindow.show()
 
@@ -1347,8 +1416,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         ``editMaxPeaks``
         ----------------
-        Opens a Dialog window for inputting the max peak label quanitity for a selected graph, drawing
-        the relevant annotations.
+        Opens a Dialog window for inputting the max peak label quantity for a selected graph, drawingthe relevant
+        annotations.
         """
         if self.spectraData == {}:
             return
@@ -1395,8 +1464,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         ``createCompound``
         ------------------
-        Opens a dialog for users to create compounds from weighted combinations of varying elements,
-        this calculates and saves the graph data to a file for reuse.
+        Opens a dialog for users to create compounds from weighted combinations of varying elements, this calculates and
+        saves the graph data to a file for reuse.
         """
 
         optionsWindow = InputElementsDialog(self, self.styleSheet())
@@ -1438,7 +1507,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget)
             }
             name = f"""compound_{'-'.join([f'{name.split("-", 1)[1].split("_")[0]}[{str(dist)}]'
-                                            for name, dist in compoundDist.items()])}_{compoundMode[0]}"""
+                                           for name, dist in compoundDist.items()])}_{compoundMode[0]}"""
             weightedGraphData = {name: pd.read_csv(f"{self.graphDataDir}{name}.csv",
                                                    names=['x', 'y'],
                                                    header=None) * [1, dist]
@@ -1575,7 +1644,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget)
             }
             name = f"""compound_{'-'.join([f'{name.split("-", 1)[1].split("_")[0]}[{str(dist)}]'
-                                            for name, dist in compoundDist.items()])}"""
+                                           for name, dist in compoundDist.items()])}"""
             if name in self.compoundNames:
                 applyBtn.setEnabled(False)
                 applyBtn.setToolTip("Compound Already Exists")
@@ -1630,9 +1699,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             - ``plotToFBtn`` (bool): Boolean to enable/disable (True/False) Plot ToF button.
 
-            - ``plotEnergyBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
-
-            - ``clearBtn`` (bool): Boolean to enable/disable (True/False) Plot Energy button.
+            - ``clearBtn`` (bool): Boolean to enable/disable (True/False) Clear button.
 
             - ``pdBtn`` (bool): Boolean to enable/disable (True/False) Peak Detection button.
         """
@@ -1853,7 +1920,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         ``addTableData``
         ----------------
-        Concatenates the selected spectras table data to the other plotted spectras adding a toggle drop-down title row.
+        Concatenates the selected spectra table data to the other plotted spectra adding a toggle drop-down title row.
 
         Args:
             - ``reset`` (bool, optional): Whether to default back to the current state of the table. Defaults to False.
@@ -1954,7 +2021,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             peakInfoDir = f"{self.dir}data\\Peak information\\" if filepath is None else None
 
             try:
-                graphData = pd.read_csv(self.plotFilepath, header=None)
+                graphData = pd.read_csv(self.plotFilepath, header=None).iloc[:, :2]
 
             except pd.errors.EmptyDataError:
                 QMessageBox.warning(self, "Warning", "Selection has Empty Graph Data")
@@ -2107,6 +2174,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         label = f"{spectraData.name}-ToF" if spectraData.isToF else f"{spectraData.name}-Energy"
 
         if not spectraData.graphData.empty:
+            # if not spectraData.isGraphUpdating:
 
             self.ax.plot(
                 spectraData.graphData.iloc[:, 0],
@@ -2119,17 +2187,32 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 gid=spectraData.name if self.selectionName is None else self.selectionName,
             )
             spectraData.isGraphDrawn = True
-            self.updateLegend()
+            # else:
+            #     for line in self.ax.lines:
+            #         if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}" == line.get_label():
+            #             line.set_data(spectraData.graphData)
+            #             self.canvas.draw()
+            #             break
+            #     try:
+            #         for line in self.axPD.lines:
+            #             if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}" == line.get_label():
+            #                 line.set_data(spectraData.graphData)
+            #                 self.canvas.draw()
+            #                 break
+            #     except AttributeError:
+            #         pass
+            spectraData.isGraphUpdating = False
+        self.updateLegend()
 
-            # Establishing plot count
-            self.plotCount += 1
+        # Establishing plot count
+        self.plotCount += 1
 
-            self.drawAnnotations(spectraData)
-            self.toggleThreshold()
+        self.drawAnnotations(spectraData)
+        self.toggleThreshold()
 
-            self.ax.autoscale()  # Tidying up
+        self.ax.autoscale()  # Tidying up
 
-            self.figure.tight_layout()
+        self.figure.tight_layout()
 
         self.canvas.draw()
 
@@ -2137,7 +2220,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         ``updateLegend``
         ----------------
-        Will update the legend to contain all currently plotted spectras and connect the 'pick_event'
+        Will update the legend to contain all currently plotted spectra and connect the 'pick_event'
         to each legend line to ``hideGraph``.
         """
         # Creating a legend to toggle on and off plots--------------------------------------------------------------

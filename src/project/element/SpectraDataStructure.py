@@ -418,7 +418,8 @@ class SpectraData:
             # Default tolerance value (us) for finding nearby peaks in pmatch function.
             'max_match': 3.5,
         }
-
+        self.maxPeakLimitsX = {}
+        self.maxPeakLimistY = {}
         derivative = np.array(
             [(self.graphData.iloc[i + 1, 1] - self.graphData.iloc[i, 1]
               ) / (self.graphData.iloc[i + 1, 0] - self.graphData.iloc[i, 0])
@@ -477,8 +478,16 @@ class SpectraData:
                             limsY.append(self.graphData.iloc[i, 1])
                             break
                         if smoothDer[i + sign] * smoothDer[i] <= 0:
-                            limsX.append(self.graphData.iloc[i, 0])
-                            limsY.append(self.graphData.iloc[i, 1])
+                            if i == maxIndex:
+                                limsX.append(self.graphData.iloc[i + sign, 0])
+                                limsY.append(self.graphData.iloc[i + sign, 1])
+                            else:
+                                limsX.append(self.graphData.iloc[i, 0])
+                                limsY.append(self.graphData.iloc[i, 1])
+                            break
+                        if i == maxIndex + sign * (prange):
+                            limsX.append(self.graphData.iloc[maxIndex + sign, 0])
+                            limsY.append(self.graphData.iloc[maxIndex + sign, 1])
                             break
             try:
                 self.maxPeakLimitsX[max] = (limsX[0], limsX[1])
@@ -495,15 +504,30 @@ class SpectraData:
         data.
         """
         if self.maxima.size == 0:
+            self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 9]],
+                                              columns=[
+                                              "Rank by Integral",
+                                              "Energy (eV)",
+                                              "Rank by Energy",
+                                              "TOF (us)",
+                                              "Integral",
+                                              "Peak Width",
+                                              "Rank by Peak Width",
+                                              "Peak Height",
+                                              "Rank by Peak Height",
+                                              "Relevant Isotope"
+                                              ])
             return
         integrals = {max: self.peakIntegral(self.maxPeakLimitsX[max][0], self.maxPeakLimitsX[max][1])
-                     for max in self.maxima[0]}
+                     for max in self.maxPeakLimitsX.keys()}
         integralRanks = {max: i for i, max in enumerate(dict(
             sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
 
-        peakHeightRank = {max: i for i, max in enumerate(sorted(self.maxima[1], key=lambda item: item, reverse=True))}
+        peakHeightRank = {max: i for i, max in enumerate(
+            sorted(self.maxima[1], key=lambda item: item, reverse=True))}
 
-        peakWidth = {max: self.maxPeakLimitsX[max][1] - self.maxPeakLimitsX[max][0] for max in self.maxima[0]}
+        peakWidth = {max: self.maxPeakLimitsX[max][1] - self.maxPeakLimitsX[max][0]
+                     for max in self.maxPeakLimitsX.keys()}
 
         peakWidthRank = {max: i for i, max in enumerate(dict(
             sorted(peakWidth.items(), key=lambda item: item[1], reverse=True)).keys())}
@@ -537,7 +561,6 @@ class SpectraData:
                                               "Rank by Peak Height",
                                               "Relevant Isotope"
                                           ])
-
         self.tableData.loc[-1] = [self.name, *[""] * 9]
         self.tableData.index += 1
         self.tableData.sort_index(inplace=True)

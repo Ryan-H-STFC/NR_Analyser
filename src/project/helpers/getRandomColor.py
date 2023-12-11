@@ -6,11 +6,11 @@ def getRandomColor() -> tuple[float]:
     """
     Returns a random color, with muted extremities.
 
-    ``Red``:\t(0.1 to 0.9)
+    ``Red``:  \t(0.1 to 0.9)
 
     ``Green``:\t(0.2 to 0.7)
 
-    ``Blue``:\t(0.1 to 0.9)
+    ``Blue`` :\t(0.1 to 0.9)
 
     Returns:
         tuple[float]: (R,G,B) color.

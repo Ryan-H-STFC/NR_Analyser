@@ -1023,6 +1023,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         updating the graph data of any relevant plots.
         """
 
+        # ! Fix with ToF
+
         optionsWindow = InputElementsDialog(self, self.styleSheet())
         optionsWindow.elements.addItems(
             [el for el in self.combobox.getAllItemText() if 'element' in el])
@@ -1933,6 +1935,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         try:
             self.table_model.beginResetModel()
             self.table_model.endResetModel()
+            for row in self.table_model.titleRows[:-1]:
+
+                self.table.setItemDelegateForRow(row, None)
         except AttributeError:
             pass
         self.table.setModel(None)
@@ -1942,10 +1947,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         # ! ---------------------------------------------------------------------------------
         # ? Maybe sort the order in which they are plotted and added to the table.
         for spectra in self.spectraData.values():
-            if spectra.name not in self.elementDataNames:
-                table_data = pd.concat([table_data, spectra.tableData], ignore_index=True)
-                self.titleRows.append(self.titleRows[-1] + spectra.tableData.shape[0])
-                self.elementDataNames.append(spectra.name)
+            table_data = pd.concat([table_data, spectra.tableData], ignore_index=True)
+            self.titleRows.append(self.titleRows[-1] + spectra.tableData.shape[0])
+            self.elementDataNames.append(spectra.name)
 
         self.table_model = ExtendedQTableModel(table_data)
 
@@ -2123,6 +2127,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             - ``name`` (str, optional): The name of the imported spectra. Defaults to None.
         """
+
+        # ! Change notation of minor ticks
         if spectraData is None:
             return
 

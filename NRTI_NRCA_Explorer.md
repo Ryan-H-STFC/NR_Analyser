@@ -3,7 +3,6 @@ Module NRTI_NRCA_Explorer
 
 Functions
 ---------
-
     
 `main() ‑> None`
 :   

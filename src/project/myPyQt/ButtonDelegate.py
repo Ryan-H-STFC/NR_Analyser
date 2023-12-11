@@ -65,13 +65,13 @@ class ButtonDelegate(QItemDelegate):
                              """)
         if "No Peak" not in index.data():
             button.setIcon(QIcon("./src/img/expand-down-component.svg"))
-            button.toggled.connect(lambda: self.CollapseTableRows(button.isChecked(), index.row(), button))
+            button.toggled.connect(lambda: self.collapseTableRows(button.isChecked(), index.row(), button))
         return button
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
 
-    def CollapseTableRows(self, collapse: bool, row: int, button):
+    def collapseTableRows(self, collapse: bool, row: int, button):
         rowCount = self.tableModel.rowCount(0)
         titleRowIndex = self.tableModel.titleRows.index(row)
         endRow = rowCount if titleRowIndex == -1 else self.tableModel.titleRows[titleRowIndex + 1]

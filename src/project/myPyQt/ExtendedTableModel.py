@@ -7,7 +7,7 @@ from PyQt6.QtCore import QAbstractTableModel, Qt
 class ExtendedQTableModel(QAbstractTableModel):
     """
     Custom Data Model which allows PyQt5 QTableView to be filled with data
-    using panda dataframes. Useful for much larger files with > 100 rows.
+    using panda dataframes. Useful for much larger files.
     """
 
     def __init__(self, data):

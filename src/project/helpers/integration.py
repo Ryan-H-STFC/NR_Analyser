@@ -8,7 +8,7 @@ from helpers.nearestNumber import nearestnumber
 
 def integrate_trapz(graphData: DataFrame, leftLimit: float, rightLimit: float) -> float:
     """
-    integrate_trapz Integrates the graphdata about the given limits, using the trapizoid rule.
+    integrate_trapz Integrates the graphdata about the given limits, using the trapezoid rule.
 
     Args:
         graphData (DataFrame): graphs xy data.

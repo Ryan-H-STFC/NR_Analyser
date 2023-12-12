@@ -2135,7 +2135,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             - ``name`` (str, optional): The name of the imported spectra. Defaults to None.
         """
 
-        # ! Change notation of minor ticks
         if spectraData is None:
             return
 

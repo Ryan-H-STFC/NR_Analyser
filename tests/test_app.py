@@ -4,6 +4,8 @@ from unittest import TestCase, main
 from PyQt6 import QtWidgets
 
 sys.path.append(os.path.dirname(__file__))
+
+print(f"\n\n\n{os.path.dirname(__file__)}\n\n\n")
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))

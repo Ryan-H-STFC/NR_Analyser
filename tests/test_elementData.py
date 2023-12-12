@@ -1,14 +1,14 @@
 import sys
 import os
 import pandas as pd
-from pandas.testing import assert_frame_equal
 from unittest import TestCase, main
 
 
+sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
-from SpectraDataStructure import SpectraData
+from src.project.element.SpectraDataStructure import SpectraData
 
 
 filepath = f"{os.path.dirname(__file__)}"

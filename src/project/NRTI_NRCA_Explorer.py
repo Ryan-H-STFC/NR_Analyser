@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.rcsetup
 import matplotlib.pyplot as plt
-from matplotlib.ticker import LogLocator, LogFormatter
+from matplotlib.ticker import LogLocator, LogFormatterSciNotation
 
 matplotlib.use('QtAgg')
 
@@ -804,7 +804,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         for url in event.mimeData().urls():
             filepath = url.toLocalFile()
             name = filepath.split('/')[-1].split('.')[0]
-            self.updateGuiData(False, filepath, True, name)
+            if name[-1].lower() == 'f':
+                self.updateGuiData(True, filepath, True, name)
+            else:
+                self.updateGuiData(False, filepath, True, name)
 
     def editPeakLimits(self) -> None:
         """
@@ -2026,7 +2029,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             try:
                 graphData = pd.read_csv(self.plotFilepath, header=None).iloc[:, :2]
-
             except pd.errors.EmptyDataError:
                 QMessageBox.warning(self, "Warning", "Selection has Empty Graph Data")
                 self.plottedSpectra.remove((self.selectionName, tof))
@@ -2037,7 +2039,12 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             except FileNotFoundError:
                 if self.spectraData.get(element, False):
                     self.spectraData[element].graphData.to_csv(self.plotFilepath, index=False, header=False)
+
                     graphData = self.compoundData[element].graphData
+            try:
+                graphData = graphData[~graphData[0].str.contains('#')].astype(float)
+            except AttributeError:
+                pass
 
             try:
                 elementTableData = pd.read_csv(f"{peakInfoDir}{element}.csv")
@@ -2142,7 +2149,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.ax.minorticks_on()
             plt.minorticks_on()
             self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
-            self.ax.xaxis.set_minor_formatter(LogFormatter(10, False, (np.inf, np.inf)))
+            self.ax.xaxis.set_minor_formatter(LogFormatterSciNotation(10, False, (np.inf, np.inf)))
             self.ax.xaxis.set_tick_params('minor',
                                           size=2,
                                           color="#888",
@@ -2744,7 +2751,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         name = getName[-1].split('.')[0]
 
-        if name[-1] == "f":
+        if name[-1].lower() == "f":
             self.updateGuiData(True, filepath, True, name)
         else:
             self.updateGuiData(False, filepath, True, name)

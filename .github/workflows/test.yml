@@ -11,7 +11,11 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
-
+    env:
+      # Display must be available globally for linux to know where xvfb is
+      DISPLAY: ":99.0"
+      QT_SELECT: "qt6"
+    
 
     steps:
       - uses: actions/checkout@v3
@@ -30,14 +34,13 @@ jobs:
           pip install tox
           pip install tox tox-gh-actions
 
-      - name: Installing Dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Setup xvfb (Linux)
+        if: runner.os == 'Linux'
         shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install xvfb
-          sudo apt-get install libxcb-xinerama0
-          export QT_QPA_PLATFORM=wayland
+        run:
+          sudo apt-get install -y xvfb libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xinput0 libxcb-xfixes0 libxcb-shape0 libglib2.0-0 libgl1-mesa-dev
+          sudo apt-get install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
+          sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 
       - name: Installing PyQt5
         run: |
@@ -47,7 +50,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          xvfb-run --auto-servernum tox -e py${{matrix.python-version}}
+          coverage run --source=src/project -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting
         run: tox -e flake8

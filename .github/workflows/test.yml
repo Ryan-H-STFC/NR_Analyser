@@ -26,7 +26,7 @@ jobs:
           cache: "pip"
 
       - name: Display Python Version
-        run: python -c "import sys; print(sys.version)"
+        run: python -c "import sys;"
 
       - name: Installing Dependencies
         run: |
@@ -44,9 +44,10 @@ jobs:
       - name: Test with tox (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
+        working-directory: 
         run: |
-          
-          coverage run --source=NRTI-NRCA_Explorer -m tox -e py${{matrix.python-version}}
+          python -c "import os, sys; print(f"\n\n\n{os.path.dirname(__file__)}\n\n\n")"
+          coverage run -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting
         run: tox -e flake8

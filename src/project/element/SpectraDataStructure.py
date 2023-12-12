@@ -16,6 +16,12 @@ from helpers.smooth import smooth
 dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
 peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
 
+# Hot Fix for tests
+if dataFilepath.count("/NRTI-NRCA_Explorer") > 1:
+    dataFilepath.replace("/NRTI-NRCA_Explorer", "", 1)
+if peakLimitFilepath.count("/NRTI-NRCA_Explorer") > 1:
+    peakLimitFilepath.replace("/NRTI-NRCA_Explorer", "", 1)
+
 
 class SpectraData:
     """

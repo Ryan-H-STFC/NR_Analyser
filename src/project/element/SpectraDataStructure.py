@@ -1,7 +1,7 @@
 from __future__ import annotations
 import numpy as np
 from numpy import ndarray
-from os import path
+# from os import path
 import pandas
 from pandas import DataFrame
 
@@ -13,8 +13,10 @@ from helpers.integration import integrate_simps
 from helpers.nearestNumber import nearestnumber
 from helpers.smooth import smooth
 
-dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
-peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
+dataFilepath = "src\\data\\Graph Data\\"
+# dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
+peakLimitFilepath = "src\\data\\Peak Limit Information\\"
+# peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
 
 # Hot Fix for tests
 if dataFilepath.count("/NRTI-NRCA_Explorer") > 1:

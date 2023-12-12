@@ -358,7 +358,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.thresholds = dict()
         self.length = {"n-g": 22.804, "n-tot": 23.404}
 
-        self.dir = f"{os.path.dirname(__file__)}\\"
+        self.dir = "src\\project\\"
         if self.dir.count("/NTRI-NRCA_Explorer") > 1:
             self.dir.replace("/NRTI-NRCA_Explorer", "", 1)
         self.graphDataDir = f"{self.dir}data\\Graph Data\\"

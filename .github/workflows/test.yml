@@ -46,7 +46,7 @@ jobs:
         shell: bash
         working-directory: 
         run: |
-          python -c "import os, sys; print(f"\n\n\n{os.path.dirname(__file__)}\n\n\n")"
+          python -c "import os, sys; print(os.path.dirname(__file__))"
           coverage run -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting

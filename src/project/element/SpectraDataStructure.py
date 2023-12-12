@@ -153,11 +153,11 @@ class SpectraData:
 
     def __eq__(self, other) -> bool:
         """
-        Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data. 
+        Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data.
 
         Args:
-            - other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of type
-                         SpectraData.
+            - other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of
+            type SpectraData.
 
         Returns:
             bool: Whether or not the two SpectraData Objects are equal.

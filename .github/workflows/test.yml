@@ -45,9 +45,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          ls
-          cd ..
-          coverage run --source=src/project -m tox -e py${{matrix.python-version}}
+          
+          coverage run -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting
         run: tox -e flake8

@@ -7,7 +7,7 @@ def getSpacedElements(array: np.ndarray, numElements: int) -> np.ndarray:
     ``getSpacedElements``
     ---------------------
 
-    Returns an evenly spaced subset of ``numElements`` from the given ``array``. 
+    Returns an evenly spaced subset of ``numElements`` from the given ``array``.
 
     Args:
         array (np.ndarray): Input array

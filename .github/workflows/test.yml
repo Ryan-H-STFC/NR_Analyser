@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           
-          coverage run -m tox -e py${{matrix.python-version}}
+          coverage run --source=NRTI-NRCA_Explorer -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting
         run: tox -e flake8

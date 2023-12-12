@@ -45,7 +45,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          cd ./NRTI-NRCA_Explorer/
+          ls
+          cd NRTI-NRCA_Explorer/
           coverage run --source=src/project -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting

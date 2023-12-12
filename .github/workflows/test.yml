@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           ls
-          cd NRTI-NRCA_Explorer/
+          cd ..
           coverage run --source=src/project -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting

@@ -2,6 +2,8 @@ from __future__ import annotations
 from pandas import DataFrame
 import scipy as sp
 
+from settings import params
+
 
 class PeakDetector:
     """
@@ -84,7 +86,11 @@ class PeakDetector:
         """
         x = data.iloc[:, 0]
         y = (lambda data: -1 * data.iloc[:, 1])(data)
-        minima, _ = sp.signal.find_peaks(y, height=-0.90, prominence=0.0035)
+        # height = -0.9, prominence = 0.003 / 0.1
+        minima, _ = sp.signal.find_peaks(y,
+                                         height=params['min_required_height'],
+                                         prominence=params['min_prominence']
+                                         )
         width = sp.signal.peak_widths(y, minima, rel_height=1, wlen=300)
         # Extracting peak center coordinates
         minima_list_x = []

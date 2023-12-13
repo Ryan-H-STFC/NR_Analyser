@@ -66,15 +66,14 @@ from helpers.nearestNumber import nearestnumber
 from helpers.getRandomColor import getRandomColor
 from helpers.getWidgets import getLayoutWidgets
 
+from settings import params
 
 # todo -------------------- Issues/Feature TODO list --------------------
 # todo - Add periodic table GUI for selection.
-# todo - Maximas after changing threshold wont have correct annotations due to integral and peak widths not calculated
-# todo   correctly yet.
+
 # todo - Matplotlib icons
-# todo - PyQt5 Unit Testing
+
 # todo - Incorporate multiprocessing and multithreading?
-# todo - Fix issues with Maxima not displaying after zoom
 
 
 # ? Should this ask for the filepath or just be require to be in the format as seen in the repository,
@@ -358,23 +357,16 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.thresholds = dict()
         self.length = {"n-g": 22.804, "n-tot": 23.404}
 
-        self.dir = "src\\project\\"
-        if self.dir.count("/NTRI-NRCA_Explorer") > 1:
-            self.dir.replace("/NRTI-NRCA_Explorer", "", 1)
-        self.graphDataDir = f"{self.dir}data\\Graph Data\\"
-        self.distributionDir = self.dir + "data\\Distribution Information\\"
-        thresholdFilepath = self.dir + "data\\threshold_exceptions.txt"
+        self.dir = params['dir_project']
+        # self.dir = f"{os.path.dirname(__file__)}\\"
+        self.graphDataDir = params['dir_graphData']
+        self.distributionDir = params['dir_distribution']
         self.plotFilepath = None
 
         self.defaultDistributions = dict()
         self.elementDistributions = dict()
 
-        file = pd.read_csv(thresholdFilepath, header=None)
-
-        # Initialise spectra thresholds dict
-        for line in file.values:
-            symbol = line[0].split(' ')[0]
-            self.thresholds[symbol] = (line[0].split(' ')[1].replace('(', ''), line[1].replace(')', ''))
+        self.thresholds = params['threshold_exceptions']
 
         # Initialise spectra natural abundance / distributions dict
         dist_filePaths = [f for f in os.listdir(self.distributionDir) if f.endswith(".csv")]
@@ -683,7 +675,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             comboboxName=self.compoundCombobox.objectName()
         ))
         self.compoundNames = [None]
-        for file in os.listdir(f"{self.dir}data/Graph Data/Compound Data/"):
+        for file in os.listdir(params['dir_compoundGraphData']):
             filename = os.fsdecode(file)
             if ".csv" not in filename[-4:]:
                 continue
@@ -999,7 +991,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         def connectLimitSelect(btn):
             optionsWindow.which = btn.objectName()
-            optionsWindow.blittedCursor = BlittedCursor(ax=ax, axisType='x', which=optionsWindow.which)
+            optionsWindow.blittedCursor = BlittedCursor(ax=ax, axisType='both', which=optionsWindow.which)
 
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
@@ -1888,12 +1880,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Read and display the selected substances data within the table.
         """
         # Finding relevant file for peak information
-        peakInfoDir = self.dir + "data/Peak information/"
-
         filepath = None
-        for file in os.listdir(peakInfoDir):
+        for file in os.listdir(params['dir_peakInfo']):
             if self.selectionName == file.split(".")[0]:
-                filepath = peakInfoDir + file
+                filepath = params['dir_peakInfo'] + file
                 break
         try:
             for row in self.table_model.titleRows:
@@ -2885,7 +2875,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.axPD = self.figure.add_subplot(111)
 
         self.toggleGridlines(self.gridCheck.isChecked(), **self.gridSettings)
-
+        self.toggleThreshold()
         self.axPD.set_visible(True)
 
         label = f"{spectraData.name}-ToF" if spectraData.isToF else f"{spectraData.name}-Energy"

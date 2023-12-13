@@ -1,17 +1,15 @@
 import sys
 import os
 from unittest import TestCase, main
-from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QApplication
 
 sys.path.append(os.path.dirname(__file__))
-
-print(f"\n\n\n{os.path.dirname(__file__)}\n\n\n")
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from src.project.NRTI_NRCA_Explorer import ExplorerGUI
 
-app = QtWidgets.QApplication(sys.argv)
+app = QApplication(sys.argv)
 
 
 class TestApp(TestCase):

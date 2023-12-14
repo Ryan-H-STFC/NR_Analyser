@@ -36,16 +36,17 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 * Be accessible and straightforward in installation and use
 * Simple search for element selection
 
-**Note** : You cannot alter limits or any data within this program.
-
-## **Bugs to be fixed soon**
-
-
-## **Improvements Coming Soon**
 Peak Integration Limit Algorithm:
 - More accurate data collection
 - Allowing for experiemental data to be analysed throughtout the program.
 - Changing threshold, natural abundance of elements, creating compounds, etc, will all be able to be analysed and data updated accordingly.
+  
+**Note** : You cannot alter limits or any data within this program.
+
+## **Bugs to be fixed soon**
+- Opening mulitple focused windows on peaks causes conflicting variables (Use Class)
+
+## **Improvements Coming Soon**
 
 ## **Accessibility**
 

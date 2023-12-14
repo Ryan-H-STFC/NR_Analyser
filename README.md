@@ -6,10 +6,10 @@
 
 Download the repository. The following python packages are required for the script to run:
 * matplotlib
-* numppy
-* os
-* shutil
-* PyQt5
+* numpy
+* pandas
+* scipy
+* PyQt6
 
 Download the repository and save it in a suitable filepath on your computer. Please keep the directory paths the same else the program will not run. You will be asked for the filepath upon running the application.
 You will also be asked for the filepath to the data folder from the most recent version of the NRCA code. This can be found on the ndw1901 computer at 'NRCA/Rehana/Latest_NRCA_Code/data'.

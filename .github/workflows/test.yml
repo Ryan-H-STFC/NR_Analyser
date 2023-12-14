@@ -36,7 +36,7 @@ jobs:
       - name: Setup xvfb (Linux)
         if: runner.os == 'Linux'
         shell: bash
-        run:
+        run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1-mesa-dev libgl1-mesa-glx libegl1 python3-pyqt6
           sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &

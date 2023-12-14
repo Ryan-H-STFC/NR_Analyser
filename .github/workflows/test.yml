@@ -25,22 +25,20 @@ jobs:
           python-version: ${{matrix.python-version}}
           cache: "pip"
 
-      - name: Display Python Version
-        run: python -c "import sys;"
-
       - name: Installing Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install tox tox tox-gh-actions coverage
           pip install pyqt6==6.6.0
-          pip install --upgrade PyQt6-Qt6==6.6.0
-          
+          pip install PyQt6-Qt6==6.6.0
+
       - name: Setup xvfb (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1-mesa-dev libgl1-mesa-glx libegl1
+          sudo apt-get install -y python3-pyqt6
 
           sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 

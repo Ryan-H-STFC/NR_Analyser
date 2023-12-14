@@ -39,7 +39,6 @@ jobs:
           sudo apt install python3-pip
           pip3 install pyqt6==6.6.0
           pip3 install --upgrade PyQt6-Qt6==6.6.0
-          sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 
 
       - name: Test with tox (Linux)
@@ -47,7 +46,7 @@ jobs:
         shell: bash
         working-directory: 
         run: |
-          coverage run -m tox -e py${{matrix.python-version}}
+          xvfb-run -a --server-args="$DISPLAY -screen 0 1280x1024x24" coverage run -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting
         run: tox -e flake8

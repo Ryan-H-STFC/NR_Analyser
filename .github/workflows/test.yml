@@ -38,6 +38,7 @@ jobs:
           sudo apt-get install -y xvfb libgl1-mesa-dev libgl1-mesa-glx libegl1 
           sudo apt install python3-pip
           pip3 install pyqt6==6.6.0
+          pip3 install --upgrade PyQt6-Qt6==6.6.0
           sudo /usr/bin/Xvfb $DISPLAY -screen 0 1280x1024x24 &
 
 

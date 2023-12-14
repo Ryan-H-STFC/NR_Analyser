@@ -2985,6 +2985,7 @@ def main() -> None:
     if platform.system() == 'Linux':
         sys.argv.append('-platform')
         sys.argv.append('offscreen')
+
     app = QtWidgets.QApplication(sys.argv)
     app.setObjectName('MainWindow')
 

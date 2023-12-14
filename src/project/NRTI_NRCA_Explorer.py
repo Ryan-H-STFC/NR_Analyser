@@ -2981,7 +2981,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
 
 def main() -> None:
-
+    import platform
+    if platform.system() == 'Linux':
+        sys.argv.append('-platform')
+        sys.argv.append('offscreen')
     app = QtWidgets.QApplication(sys.argv)
     app.setObjectName('MainWindow')
 

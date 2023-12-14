@@ -40,8 +40,6 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          set -eo pipefail
-          sudo apt install python3-pip
           coverage run -m tox -e py${{matrix.python-version}}
       
   

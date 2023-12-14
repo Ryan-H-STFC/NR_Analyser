@@ -36,6 +36,7 @@ jobs:
           qt: true
 
       - name: Test with tox (Linux)
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           set -eo pipefail

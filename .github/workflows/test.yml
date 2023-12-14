@@ -31,23 +31,20 @@ jobs:
           pip install tox tox tox-gh-actions coverage
 
       - name: Setup xvfb (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb libgl1-mesa-dev libgl1-mesa-glx libegl1 
-          sudo apt install python3-pip
-          pip3 install pyqt6==6.6.0
-          pip3 install --upgrade PyQt6-Qt6==6.6.0
-
+        uses: pyvista/setup-headless-display-action@v2
+        with:
+          qt: true
 
       - name: Test with tox (Linux)
-        if: runner.os == 'Linux'
-        uses: coactions/setup-xvfb@v1.0.1
-        with:
-          run: |
-            coverage run -m tox -e py${{matrix.python-version}}
-        
+        shell: bash
+        run: |
+          set -eo pipefail
+          sudo apt install python3-pip
+          pip3 install pyqt6==6.6.0 matplotlib
+          pip3 install --upgrade PyQt6-Qt6==6.6.0
+          QT_DEBUG_PLUGINS=1 LIBGL_DEBUG=verbose
+          coverage run -m tox -e py${{matrix.python-version}}
+      
   
       - name: Test Linting
         run: tox -e flake8

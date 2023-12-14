@@ -47,7 +47,7 @@ jobs:
         shell: bash
         working-directory: 
         run: |
-          xvfb-run --auto-servernum coverage run -m tox -e py${{matrix.python-version}}
+          coverage run -m tox -e py${{matrix.python-version}}
   
       - name: Test Linting
         run: tox -e flake8

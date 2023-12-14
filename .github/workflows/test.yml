@@ -40,6 +40,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          python -c "import platform; print(platform.system());"
           coverage run -m tox -e py${{matrix.python-version}}
       
   

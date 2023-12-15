@@ -13,8 +13,11 @@ from helpers.integration import integrate_simps
 from helpers.nearestNumber import nearestnumber
 from helpers.smooth import smooth
 
-dataFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Graph Data\\"
-peakLimitFilepath = f"{path.dirname(path.dirname(__file__))}\\data\\Peak Limit Information\\"
+from settings import params
+# dataFilepath = ".\\src\\data\\Graph Data\\"
+dataFilepath = params['dir_graphData']
+# peakLimitFilepath = ".\\src\\data\\Peak Limit Information\\"
+peakLimitFilepath = params['dir_peakLimitInfo']
 
 
 class SpectraData:
@@ -97,10 +100,6 @@ class SpectraData:
             self.tableData = DataFrame()
 
         self.graphData = graphData
-        if self.defaultDist != self.distributions:
-            self.isDistAltered = True
-            self.onDistChange()
-            self.updatePeaks()
 
         if self.graphData is None:
             self.graphData = DataFrame()
@@ -113,6 +112,10 @@ class SpectraData:
         if self.isToF and not self.graphData.empty:
             graphData[0] = self.energyToTOF(graphData[0], length=self.length)
             graphData.sort_values(0, ignore_index=True, inplace=True)
+        if self.defaultDist != self.distributions:
+            self.isDistAltered = True
+            self.onDistChange()
+            self.updatePeaks()
         try:
             if not self.graphData.empty and not self.isDistAltered:
                 self.maxima = np.array(pd.maxima(graphData, threshold))
@@ -122,22 +125,23 @@ class SpectraData:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
         try:
-            name = self.name[8:] if 'element' in self.name else self.name
-            limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'])
-            if self.isToF:
-                limits['left'] = self.energyToTOF(limits['left'], self.length)
-                limits['right'] = self.energyToTOF(limits['right'], self.length)
-                limits['left'], limits['right'] = limits['right'], limits['left']
+            if not self.isDistAltered:
+                name = self.name[8:] if 'element' in self.name else self.name
+                limits = pandas.read_csv(f"{peakLimitFilepath}{name}.csv", names=['left', 'right'])
+                if self.isToF:
+                    limits['left'] = self.energyToTOF(limits['left'], self.length)
+                    limits['right'] = self.energyToTOF(limits['right'], self.length)
+                    limits['left'], limits['right'] = limits['right'], limits['left']
 
-            for max in self.maxima[0]:
-                lim = limits[(limits['left'] < max) & (limits['right'] > max)]
-                if lim.empty:
-                    continue
-                self.maxPeakLimitsX[max] = (lim['left'].iloc[0], lim['right'].iloc[0])
-                leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
-                rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
-                self.maxPeakLimitsY[max] = (graphData[graphData[0] == leftLimit].iloc[0, 1],
-                                            graphData[graphData[0] == rightLimit].iloc[0, 1])
+                for max in self.maxima[0]:
+                    lim = limits[(limits['left'] < max) & (limits['right'] > max)]
+                    if lim.empty:
+                        continue
+                    self.maxPeakLimitsX[max] = (lim['left'].iloc[0], lim['right'].iloc[0])
+                    leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
+                    rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
+                    self.maxPeakLimitsY[max] = (graphData[graphData[0] == leftLimit].iloc[0, 1],
+                                                graphData[graphData[0] == rightLimit].iloc[0, 1])
 
         except ValueError:
             # Catches invalid maximas produced by scipy.signal.find_peaks
@@ -153,11 +157,11 @@ class SpectraData:
 
     def __eq__(self, other) -> bool:
         """
-        Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data. 
+        Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data.
 
         Args:
-            - other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of type
-                         SpectraData.
+            - other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of
+            type SpectraData.
 
         Returns:
             bool: Whether or not the two SpectraData Objects are equal.
@@ -277,6 +281,8 @@ class SpectraData:
         # p.close()
         # p.join()
         self.graphData = pandas.DataFrame(sorted(zip(self.graphDataX, np.sum(isoY, axis=0))))
+        if self.isToF:
+            self.graphData[0] = self.energyToTOF(self.graphData[0], self.length)
 
     def updatePeaks(self) -> None:
         """
@@ -303,7 +309,7 @@ class SpectraData:
         otherwise it will show the annotation.
 
         Args:
-            globalHide (bool, optional): Whether or not the 'Hide Peak Label' is checked or not. Defaults to False.
+            ``globalHide`` (bool, optional): Whether or not the 'Hide Peak Label' is checked or not. Defaults to False.
         """
         if self.annotations == []:
             return
@@ -362,8 +368,9 @@ class SpectraData:
         a trapezium created between the axis and the coordinates of the limits.
 
         Args:
-            leftLimit (float): X-Coord of the left limit of integration
-            rightLimit (float): X-Coord of the right limit of integration
+            ``leftLimit`` (float): X-Coord of the left limit of integration
+
+            ``rightLimit`` (float): X-Coord of the right limit of integration
 
         Returns:
             float: Integral Value
@@ -373,7 +380,10 @@ class SpectraData:
                                                   names=['x', 'y'],
                                                   header=None)
                             for name, dist in self.distributions.items() if dist != 0}
-
+            if self.isToF:
+                for name, graphData in isoGraphData.items():
+                    graphData['x'] = self.energyToTOF(graphData['x'], self.length)
+                    isoGraphData[name] = graphData
             integrals = []
             for name, graphData in isoGraphData.items():
                 # regionGraphData = graphData[(graphData['x'] >= leftLimit) & (graphData['x'] <= rightLimit)]
@@ -395,31 +405,9 @@ class SpectraData:
 
         Peak Limit Algorithm used with all pre-existing datasets, now reimplemented for use in the GUI.
         """
-        params = {
-            # Maximum value prange can get.
-            'prangemax': 500,
-            # Maximum allowed slope (abolute value) at outermost left side of spectra.
-            # i.e. starting from left, everything will be set to 0 until the (unsigned) slope reaches this value.
-            'maxleftslope': 3000,
-            # Maximum allowed slope outside the peaks, as in, far away from them.
-            'maxouterslope': 10,
-            # Peak edges is set when its slope has fallen down to this fraction of the one nearby the peak summit.
-            'slopedrop': .1,
-            # Density of boxes (box/b) for slope computation.
-            'dboxes': 100,
-            # Smoothing iterations on slope derivative for computations.
-            'itersmooth': 1,
-            # Smoothing iterations on sample peak detection.
-            'itersmoothsamp': 0,
-            # Strip-peaks iterations for background fitting in sample imports.
-            'iterspeaks': 4,
-            # Number of coefficients in smaple background fitting, i.e., polynomial order + 1s
-            'fitting_coeff': 8,
-            # Default tolerance value (us) for finding nearby peaks in pmatch function.
-            'max_match': 3.5,
-        }
+
         self.maxPeakLimitsX = {}
-        self.maxPeakLimistY = {}
+        self.maxPeakLimitsY = {}
         derivative = np.array(
             [(self.graphData.iloc[i + 1, 1] - self.graphData.iloc[i, 1]
               ) / (self.graphData.iloc[i + 1, 0] - self.graphData.iloc[i, 0])
@@ -464,6 +452,8 @@ class SpectraData:
                 decreasing, increasing, lock = False, False, False
                 derMax = None
                 for i in range(maxIndex, maxIndex + sign * (prange + 1), sign):
+                    if i + sign == smoothDer.shape[0]:
+                        break
                     decreasing = smoothDer[i + sign] < smoothDer[i]
                     increasing = smoothDer[i + sign] > smoothDer[i]
                     if not lock:
@@ -471,8 +461,13 @@ class SpectraData:
                             lock = True
                             derMax = smoothDer[i]
                             if derMax == outerslope:
-                                raise Exception('Non-standing slope', prange)
+                                # raise Exception('Non-standing slope', prange)
+                                continue
                     if lock:
+                        if (smoothDer[maxIndex] == np.inf) or (smoothDer[maxIndex + sign] == np.nan):
+                            limsX.append(self.graphData.iloc[maxIndex + sign, 0])
+                            limsY.append(self.graphData.iloc[maxIndex + sign, 1])
+                            break
                         if abs((derivative[i] - outerslope) / (derMax - outerslope)) <= params['slopedrop']:
                             limsX.append(self.graphData.iloc[i, 0])
                             limsY.append(self.graphData.iloc[i, 1])
@@ -489,10 +484,16 @@ class SpectraData:
                             limsX.append(self.graphData.iloc[maxIndex + sign, 0])
                             limsY.append(self.graphData.iloc[maxIndex + sign, 1])
                             break
+
             try:
-                self.maxPeakLimitsX[max] = (limsX[0], limsX[1])
-                self.maxPeakLimitsY[max] = (limsY[0], limsY[1])
+
+                lims = sorted(list(zip(limsX, limsY)), key=lambda item: item[0])
+                self.maxPeakLimitsX[max] = (lims[0][0], lims[1][0])
+                self.maxPeakLimitsY[max] = (lims[0][1], lims[1][1])
             except IndexError:
+                print(self.graphData.iloc[i, 0])
+                print(smoothDer[i])
+                print(smoothDer[i + sign])
                 pass
 
     def recalculatePeakData(self) -> None:
@@ -534,18 +535,18 @@ class SpectraData:
 
         tableDataTemp = [
             [
-                integralRanks[maxCoords[0]],
-                float(f"{maxCoords[0]:.5g}"),
-                f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",
-                float(f"{self.e2TOF(maxCoords[0]):.5g}"),
-                float(f"{integrals[maxCoords[0]]:.5g}"),
-                float(f"{peakWidth[maxCoords[0]]:.5g}"),
-                f"({peakWidthRank[maxCoords[0]]})",
-                float(f"{maxCoords[1]:.5g}"),
-                f"({peakHeightRank[maxCoords[1]]:.5g})",
-                None
+                integralRanks[maxCoords[0]],                            # Rank by Integral
+                float(f"{maxCoords[0]:.5g}"),                           # Energy (eV)
+                f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",  # Rank by Energy
+                float(f"{self.e2TOF(maxCoords[0]):.5g}"),               # TOF (us)
+                float(f"{integrals[maxCoords[0]]:.5g}"),                # Integral
+                float(f"{peakWidth[maxCoords[0]]:.5g}"),                # Peak Width
+                f"({peakWidthRank[maxCoords[0]]})",                     # Rank by Peak Width
+                float(f"{maxCoords[1]:.5g}"),                           # Peak Height
+                f"({peakHeightRank[maxCoords[1]]:.5g})",                # Rank by Peak Height
+                None                                                    # Relevant Isotope
             ]
-            for maxCoords in self.maxima.T]
+            for maxCoords in [max for max in self.maxima.T if max[0] in integralRanks.keys()]]
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
         self.tableData = pandas.DataFrame(tableDataTemp,

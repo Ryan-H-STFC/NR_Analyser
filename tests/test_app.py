@@ -1,14 +1,18 @@
 import sys
 import os
+import platform
 from unittest import TestCase, main
-from PyQt5 import QtWidgets
+from PyQt6.QtWidgets import QApplication
 
+sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
-from NRTI_NRCA_Explorer import ExplorerGUI
+from src.project.NRTI_NRCA_Explorer import ExplorerGUI
 
-app = QtWidgets.QApplication(sys.argv)
+sys.argv.append('-platform')
+sys.argv.append('offscreen')
+app = QApplication(sys.argv)
 
 
 class TestApp(TestCase):

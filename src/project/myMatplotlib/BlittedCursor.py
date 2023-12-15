@@ -65,6 +65,9 @@ class BlittedCursor:
             self.x, self.y = event.xdata, event.ydata
             if self.axisType in ['y', 'both']:
                 self.horizontal_line.set_ydata([self.y])
+                if maxima is not None:
+                    self.horizontal_line.set_color(
+                        "#0F0") if self.valid else self.horizontal_line.set_color("#F00")
             if self.axisType in ['x', 'both']:
                 self.vertical_line.set_xdata([self.x])
                 if maxima is not None:

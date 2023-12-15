@@ -43,3 +43,6 @@ class FigureCanvas(FigureCanvasQTAgg):
             self.widgetParent.updateLegend()
             axis.figure.canvas.draw()
             self.widgetParent.addTableData()
+            if len(self.widgetParent.plottedSpectra) == 0:
+                self.widgetParent.clear()
+                return

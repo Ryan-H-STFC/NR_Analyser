@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
     QCompleter,
     QDialog,
     QDialogButtonBox,
-    QDockWidget,
     QFileDialog,
     QFormLayout,
     QGridLayout,
@@ -36,7 +35,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLayout,
     QLineEdit,
-    QMainWindow,
     QMenuBar,
     QMessageBox,
     QPushButton,
@@ -58,11 +56,11 @@ from myPyQt.CustomSortingProxy import CustomSortingProxy
 from myPyQt.ExtendedComboBox import ExtendedComboBox
 from myPyQt.ExtendedTableModel import ExtendedQTableModel
 from myPyQt.InputElementsDialog import InputElementsDialog
+from myPyQt.PeakWindow import PeakWindow
 
 from myMatplotlib.CustomFigureCanvas import FigureCanvas
 from myMatplotlib.BlittedCursor import BlittedCursor
 
-from helpers.nearestNumber import nearestnumber
 from helpers.getRandomColor import getRandomColor
 from helpers.getWidgets import getLayoutWidgets
 
@@ -1939,11 +1937,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.table_model = None
         self.table.setSortingEnabled(False)
         self.titleRows = [0]
+        dataInTable = []
         # ! ---------------------------------------------------------------------------------
         # ? Maybe sort the order in which they are plotted and added to the table.
         for spectra in self.spectraData.values():
+            if spectra.name in dataInTable:
+                continue
             table_data = pd.concat([table_data, spectra.tableData], ignore_index=True)
             self.titleRows.append(self.titleRows[-1] + spectra.tableData.shape[0])
+            dataInTable.append(spectra.name)
             self.elementDataNames.append(spectra.name)
 
         self.table_model = ExtendedQTableModel(table_data)
@@ -2107,6 +2109,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.plottingPD(newSpectra, True)
         if redrawMin:
             self.plottingPD(newSpectra, False)
+
         self.addTableData()
 
         self.canvas.draw()
@@ -2141,11 +2144,16 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             plt.minorticks_on()
             self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
             self.ax.xaxis.set_minor_formatter(LogFormatterSciNotation(10, False, (np.inf, np.inf)))
+            self.ax.xaxis.set_tick_params('major',
+                                          size=12,
+                                          color="#888",
+                                          labelsize=9
+                                          )
             self.ax.xaxis.set_tick_params('minor',
-                                          size=2,
+                                          size=4,
                                           color="#888",
                                           labelsize=6,
-                                          labelrotation=30,
+                                          labelrotation=45,
                                           )
 
         # Allows user to plot in ToF if chosen # -----------------------------------------------------------------------
@@ -2541,192 +2549,196 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Args:
             index (QModelIndex): Index object for the selected cell.
         """
-        peakWindow = QMainWindow(self)
-        # Setting title and geometry
-        peakWindow.setWindowTitle("Peak Plotting")
-        peakWindow.setGeometry(350, 50, 850, 700)
-        peakWindow.setObjectName("mainWindow")
-        peakWindow.setStyleSheet(self.styleSheet())
-        # Creating a second canvas for singular peak plotting
-        peakFigure = plt.figure()
-        peakCanvas = FigureCanvas(peakFigure, contextConnect=False)
-        toolbar = NavigationToolbar(peakCanvas, self)
-        canvasLayout = QVBoxLayout()
 
-        canvasProxyWidget = QWidget()
-        canvasProxyWidget.setObjectName("peakCanvasContainer")
-        canvasLayout.addWidget(toolbar)
-        canvasLayout.addWidget(peakCanvas)
-
-        canvasProxyWidget.setLayout(canvasLayout)
-
-        # Setting up dock for widgets to be used around canvas
-        dock = QDockWidget(parent=peakWindow)
-        # Creating a widget to contain peak info in dock
-        peakInfoWidget = QWidget()
-
-        # Creating layout to display peak info in the widget
-        bottomLayout = QVBoxLayout()
-        toggleLayout = QHBoxLayout()
-
-        # Adding checkbox to toggle the peak limits on and off
-        threshold_check2 = QCheckBox("Integration Limits", peakWindow)
-        threshold_check2.resize(threshold_check2.sizeHint())
-        threshold_check2.setObjectName("peakCheck")
-        threshold_check2.setChecked(True)
-        toggleLayout.addWidget(threshold_check2)
-
-        # Adding checkbox to toggle the peak detection limits on and off
-        threshold_check3 = QCheckBox("Peak Detection Limits", peakWindow)
-        threshold_check3.setObjectName("peakCheck")
-        threshold_check3.resize(threshold_check3.sizeHint())
-        toggleLayout.addWidget(threshold_check3)
-        # Adding to overall layout
-        bottomLayout.addLayout(toggleLayout)
-
-        peakTable = QTableView()
-
-        bottomLayout.addWidget(peakTable)
-
-        # Adding label which shows what scale the user picks
-        scale_label = QLabel()
-        scale_label.setObjectName("peakLabel")
-        bottomLayout.addWidget(scale_label)
-
-        # Setting layout within peak info widget
-        peakInfoWidget.setLayout(bottomLayout)
-        dock.setWidget(peakInfoWidget)  # Adding peak info widget to dock
-
-        peakWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
-        # Setting canvas as central widget
-        peakWindow.setCentralWidget(canvasProxyWidget)
-
-        self.peakAxis = None
-        self.peakAxis = peakFigure.add_subplot(111)
-
-        try:
-            titleIndex = sorted([rowIndex for rowIndex in self.titleRows if index.row() > rowIndex])[-1]
-            elementName = self.table_model.data(self.table_model.index(titleIndex, 0), 0)
-            plottedSpectra = [name for name in self.plottedSpectra if elementName in name]
-            optionsDialog = InputElementsDialog()
-            if len(plottedSpectra) > 1:
-                spectraNames = [f"{name}-{'ToF' if tof else 'Energy'}" for name, tof in plottedSpectra]
-                optionsDialog.elements.addItems(spectraNames)
-                optionsDialog.mainLayout.addWidget(optionsDialog.elements)
-
-                acceptBtn = optionsDialog.buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
-
-                def onAccept():
-                    self.tof = 'ToF' in optionsDialog.elements.currentText()
-                    optionsDialog.close()
-                acceptBtn.clicked.connect(onAccept)
-
-                optionsDialog.mainLayout.addWidget(optionsDialog.buttonBox)
-                optionsDialog.setLayout(optionsDialog.mainLayout)
-                optionsDialog.setModal(False)
-                optionsDialog.exec_()
-            else:
-                self.tof = plottedSpectra[0][1]
-
-            elementTitle = f"{elementName}-{'ToF' if self.tof else 'Energy'}"
-            element = self.spectraData[elementTitle]
-            if element.maxima.size == 0:
-                return
-            # if element.maxPeakLimitsX == dict():
-            maximaX = nearestnumber(element.maxima[0], float(self.table_model.data(
-                self.table_model.index(index.row(), 3 if self.tof else 1), 0)))
-            maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
-
-            leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
-
-            # else:
-            #     leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
-
-        except FileNotFoundError:
-            QMessageBox.warning(self, "Error", "No peak limits for this Selection")
-        except AttributeError:
-            QMessageBox.warning(self, "Warning", "Plot the Graph First")
-
-        rank = [str([ann[0] for ann in element.annotationsOrder.items() if ann[1][0] == maxima[0]][0])]
-        limits = [str(element.maxPeakLimitsX[maxima[0]])]
-        peakCoords = [f"({maxima[0]}, {maxima[1]})"]
-        isoOrigin = [self.table_model.data(self.table_model.index(index.row(), 9), 0)]
-        data = {"Peak Number (Rank)": rank,
-                "Integration Limits (eV)": limits,
-                "Peak Co-ordinates (eV)": peakCoords,
-                "Isotopic Origin": isoOrigin}
-
-        tableData = pd.DataFrame(data, index=None)
-
-        peakTable.setModel(ExtendedQTableModel(tableData))
-
-        peakTable.setObjectName('dataTable')
-        peakTable.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        peakTable.setAlternatingRowColors(True)
-        peakTable.verticalHeader().setVisible(False)
-        peakTable.setMinimumHeight(200)
-
-        graphData = element.graphData[(element.graphData[0] >= leftLimit) & (element.graphData[0] <= rightLimit)]
-
-        def togglePeakLimits() -> None:
-            for line in self.peakAxis.get_lines():
-                if "PeakWindow-lim" in line.get_gid():
-                    line.set_visible(threshold_check2.isChecked())
-            self.peakAxis.figure.canvas.draw()
-        threshold_check2.clicked.connect(togglePeakLimits)
-
-        def togglePeakThreshold(checked, element) -> None:
-            if not threshold_check3.isChecked():
-                for line in self.peakAxis.get_lines():
-                    if line.get_gid() == f"PeakWindow-Threshold-{element.name}":
-                        line.remove()
-
-            else:
-                self.peakAxis.axhline(y=element.threshold,
-                                      linestyle="--",
-                                      color=element.graphColour,
-                                      linewidth=0.5,
-                                      gid=f"PeakWindow-Threshold-{element.name}")
-            self.peakAxis.figure.canvas.draw()
-        threshold_check3.clicked.connect(lambda: togglePeakThreshold(threshold_check3.isChecked(), element))
-
+        peakWindow = PeakWindow(self, self.windowType(), index)
         peakWindow.show()
 
-        self.peakAxis.set_xscale('log')
-        self.peakAxis.set_yscale('log')
+        # peakWindow = QMainWindow(self)
+        # # Setting title and geometry
+        # peakWindow.setWindowTitle("Peak Plotting")
+        # peakWindow.setGeometry(350, 50, 850, 700)
+        # peakWindow.setObjectName("mainWindow")
+        # peakWindow.setStyleSheet(self.styleSheet())
+        # # Creating a second canvas for singular peak plotting
+        # peakFigure = plt.figure()
+        # peakCanvas = FigureCanvas(peakFigure, contextConnect=False)
+        # toolbar = NavigationToolbar(peakCanvas, self)
+        # canvasLayout = QVBoxLayout()
 
-        self.peakAxis.set(
-            xlabel="Energy (eV)", ylabel="Cross section (b)", title=elementTitle
-        )
+        # canvasProxyWidget = QWidget()
+        # canvasProxyWidget.setObjectName("peakCanvasContainer")
+        # canvasLayout.addWidget(toolbar)
+        # canvasLayout.addWidget(peakCanvas)
 
-        self.peakAxis.plot(graphData[0],
-                           graphData[1],
-                           color=element.graphColour,
-                           linewidth=0.8,
-                           label=elementTitle,
-                           gid=f"{elementTitle}-PeakWindow"
-                           )
+        # canvasProxyWidget.setLayout(canvasLayout)
 
-        self.peakAxis.plot(maxima[0],
-                           maxima[1],
-                           "x",
-                           color="black",
-                           markersize=3,
-                           alpha=0.6,
-                           gid=f"{elementTitle}-PeakWindow-max"
-                           )
+        # # Setting up dock for widgets to be used around canvas
+        # dock = QDockWidget(parent=peakWindow)
+        # # Creating a widget to contain peak info in dock
+        # peakInfoWidget = QWidget()
 
-        for i, (peakX, peakY) in enumerate(zip(element.maxPeakLimitsX[maxima[0]], element.maxPeakLimitsY[maxima[0]])):
-            self.peakAxis.plot(peakX,
-                               peakY,
-                               marker=2,
-                               color="r",
-                               markersize=8,
-                               gid=f"{elementTitle}-PeakWindow-lim-{i}")
+        # # Creating layout to display peak info in the widget
+        # bottomLayout = QVBoxLayout()
+        # toggleLayout = QHBoxLayout()
 
-        self.peakAxis.autoscale()
-        peakFigure.tight_layout()
-        self.peakAxis.legend(fancybox=True, shadow=True)
+        # # Adding checkbox to toggle the peak limits on and off
+        # threshold_check2 = QCheckBox("Integration Limits", peakWindow)
+        # threshold_check2.resize(threshold_check2.sizeHint())
+        # threshold_check2.setObjectName("peakCheck")
+        # threshold_check2.setChecked(True)
+        # toggleLayout.addWidget(threshold_check2)
+
+        # # Adding checkbox to toggle the peak detection limits on and off
+        # threshold_check3 = QCheckBox("Peak Detection Limits", peakWindow)
+        # threshold_check3.setObjectName("peakCheck")
+        # threshold_check3.resize(threshold_check3.sizeHint())
+        # toggleLayout.addWidget(threshold_check3)
+        # # Adding to overall layout
+        # bottomLayout.addLayout(toggleLayout)
+
+        # peakTable = QTableView()
+
+        # bottomLayout.addWidget(peakTable)
+
+        # # Adding label which shows what scale the user picks
+        # scale_label = QLabel()
+        # scale_label.setObjectName("peakLabel")
+        # bottomLayout.addWidget(scale_label)
+
+        # # Setting layout within peak info widget
+        # peakInfoWidget.setLayout(bottomLayout)
+        # dock.setWidget(peakInfoWidget)  # Adding peak info widget to dock
+
+        # peakWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, dock)
+        # # Setting canvas as central widget
+        # peakWindow.setCentralWidget(canvasProxyWidget)
+
+        # self.peakAxis = None
+        # self.peakAxis = peakFigure.add_subplot(111)
+
+        # try:
+        #     titleIndex = sorted([rowIndex for rowIndex in self.titleRows if index.row() > rowIndex])[-1]
+        #     elementName = self.table_model.data(self.table_model.index(titleIndex, 0), 0)
+        #     plottedSpectra = [name for name in self.plottedSpectra if elementName in name]
+        #     optionsDialog = InputElementsDialog()
+        #     if len(plottedSpectra) > 1:
+        #         spectraNames = [f"{name}-{'ToF' if tof else 'Energy'}" for name, tof in plottedSpectra]
+        #         optionsDialog.elements.addItems(spectraNames)
+        #         optionsDialog.mainLayout.addWidget(optionsDialog.elements)
+
+        #         acceptBtn = optionsDialog.buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
+
+        #         def onAccept():
+        #             self.tof = 'ToF' in optionsDialog.elements.currentText()
+        #             optionsDialog.close()
+        #         acceptBtn.clicked.connect(onAccept)
+
+        #         optionsDialog.mainLayout.addWidget(optionsDialog.buttonBox)
+        #         optionsDialog.setLayout(optionsDialog.mainLayout)
+        #         optionsDialog.setModal(False)
+        #         optionsDialog.exec_()
+        #     else:
+        #         self.tof = plottedSpectra[0][1]
+
+        #     elementTitle = f"{elementName}-{'ToF' if self.tof else 'Energy'}"
+        #     element = self.spectraData[elementTitle]
+        #     if element.maxima.size == 0:
+        #         return
+        #     # if element.maxPeakLimitsX == dict():
+        #     maximaX = nearestnumber(element.maxima[0], float(self.table_model.data(
+        #         self.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+        #     maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
+
+        #     leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
+
+        #     # else:
+        #     #     leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
+
+        # except FileNotFoundError:
+        #     QMessageBox.warning(self, "Error", "No peak limits for this Selection")
+        # except AttributeError:
+        #     QMessageBox.warning(self, "Warning", "Plot the Graph First")
+
+        # rank = [str([ann[0] for ann in element.annotationsOrder.items() if ann[1][0] == maxima[0]][0])]
+        # limits = [str(element.maxPeakLimitsX[maxima[0]])]
+        # peakCoords = [f"({maxima[0]}, {maxima[1]})"]
+        # isoOrigin = [self.table_model.data(self.table_model.index(index.row(), 9), 0)]
+        # data = {"Peak Number (Rank)": rank,
+        #         "Integration Limits (eV)": limits,
+        #         "Peak Co-ordinates (eV)": peakCoords,
+        #         "Isotopic Origin": isoOrigin}
+
+        # tableData = pd.DataFrame(data, index=None)
+
+        # peakTable.setModel(ExtendedQTableModel(tableData))
+
+        # peakTable.setObjectName('dataTable')
+        # peakTable.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
+        # peakTable.setAlternatingRowColors(True)
+        # peakTable.verticalHeader().setVisible(False)
+        # peakTable.setMinimumHeight(200)
+
+        # graphData = element.graphData[(element.graphData[0] >= leftLimit) & (element.graphData[0] <= rightLimit)]
+
+        # def togglePeakLimits() -> None:
+        #     for line in self.peakAxis.get_lines():
+        #         if "PeakWindow-lim" in line.get_gid():
+        #             line.set_visible(threshold_check2.isChecked())
+        #     self.peakAxis.figure.canvas.draw()
+        # threshold_check2.clicked.connect(togglePeakLimits)
+
+        # def togglePeakThreshold(checked, element) -> None:
+        #     if not threshold_check3.isChecked():
+        #         for line in self.peakAxis.get_lines():
+        #             if line.get_gid() == f"PeakWindow-Threshold-{element.name}":
+        #                 line.remove()
+
+        #     else:
+        #         self.peakAxis.axhline(y=element.threshold,
+        #                               linestyle="--",
+        #                               color=element.graphColour,
+        #                               linewidth=0.5,
+        #                               gid=f"PeakWindow-Threshold-{element.name}")
+        #     self.peakAxis.figure.canvas.draw()
+        # threshold_check3.clicked.connect(lambda: togglePeakThreshold(threshold_check3.isChecked(), element))
+
+        # peakWindow.show()
+
+        # self.peakAxis.set_xscale('log')
+        # self.peakAxis.set_yscale('log')
+
+        # self.peakAxis.set(
+        #     xlabel="Energy (eV)", ylabel="Cross section (b)", title=elementTitle
+        # )
+
+        # self.peakAxis.plot(graphData[0],
+        #                    graphData[1],
+        #                    color=element.graphColour,
+        #                    linewidth=0.8,
+        #                    label=elementTitle,
+        #                    gid=f"{elementTitle}-PeakWindow"
+        #                    )
+
+        # self.peakAxis.plot(maxima[0],
+        #                    maxima[1],
+        #                    "x",
+        #                    color="black",
+        #                    markersize=3,
+        #                    alpha=0.6,
+        #                    gid=f"{elementTitle}-PeakWindow-max"
+        #                    )
+
+        # for i, (peakX, peakY) in enumerate(zip(element.maxPeakLimitsX[maxima[0]], element.maxPeakLimitsY[maxima[0]])):
+        #     self.peakAxis.plot(peakX,
+        #                        peakY,
+        #                        marker=2,
+        #                        color="r",
+        #                        markersize=8,
+        #                        gid=f"{elementTitle}-PeakWindow-lim-{i}")
+
+        # self.peakAxis.autoscale()
+        # peakFigure.tight_layout()
+        # self.peakAxis.legend(fancybox=True, shadow=True)
 
     def importData(self) -> None:
         """
@@ -2981,10 +2993,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
 
 def main() -> None:
-    import platform
-    if platform.system() == 'Linux':
-        sys.argv.append('-platform')
-        sys.argv.append('offscreen')
 
     app = QtWidgets.QApplication(sys.argv)
     app.setObjectName('MainWindow')

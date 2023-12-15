@@ -10,9 +10,8 @@ sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from src.project.NRTI_NRCA_Explorer import ExplorerGUI
 
-if platform.system() == 'Linux':
-    sys.argv.append('-platform')
-    sys.argv.append('offscreen')
+sys.argv.append('-platform')
+sys.argv.append('offscreen')
 app = QApplication(sys.argv)
 
 

@@ -6,10 +6,10 @@
 
 Download the repository. The following python packages are required for the script to run:
 * matplotlib
-* numppy
-* os
-* shutil
-* PyQt5
+* numpy
+* pandas
+* scipy
+* PyQt6
 
 Download the repository and save it in a suitable filepath on your computer. Please keep the directory paths the same else the program will not run. You will be asked for the filepath upon running the application.
 You will also be asked for the filepath to the data folder from the most recent version of the NRCA code. This can be found on the ndw1901 computer at 'NRCA/Rehana/Latest_NRCA_Code/data'.
@@ -36,16 +36,17 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 * Be accessible and straightforward in installation and use
 * Simple search for element selection
 
-**Note** : You cannot alter limits or any data within this program.
-
-## **Bugs to be fixed soon**
-
-
-## **Improvements Coming Soon**
 Peak Integration Limit Algorithm:
 - More accurate data collection
 - Allowing for experiemental data to be analysed throughtout the program.
 - Changing threshold, natural abundance of elements, creating compounds, etc, will all be able to be analysed and data updated accordingly.
+  
+**Note** : You cannot alter limits or any data within this program.
+
+## **Bugs to be fixed soon**
+- Opening mulitple focused windows on peaks causes conflicting variables (Use Class)
+
+## **Improvements Coming Soon**
 
 ## **Accessibility**
 

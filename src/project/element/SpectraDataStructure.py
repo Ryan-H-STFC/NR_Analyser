@@ -73,7 +73,7 @@ class SpectraData:
                  isCompound: bool = False,
                  isAnnotationsHidden: bool = False,
                  threshold: float = 100,
-                 length: dict[float] = {"n-g": 22.804, "n-tot": 23.404},
+                 length: dict[float] = params['length'],
                  isImported: bool = False) -> None:
 
         self.name = name
@@ -160,7 +160,7 @@ class SpectraData:
         Returns whether or not a SpectraData instance is equal to another, based on its name TOF state and graph data.
 
         Args:
-            - other (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of
+            - ``other`` (Any): Object on the right-hand side of the equal to comparison. Although returns False if not of
             type SpectraData.
 
         Returns:
@@ -176,7 +176,7 @@ class SpectraData:
         Returns whether or not two SpectraData objects are not equal, based on the names, TOF state and graph data.
 
         Args:
-            - other (Any): Object on the right-hand side of the equal to comparison.
+            - ``other`` (Any): Object on the right-hand side of the equal to comparison.
 
         Returns:
             bool: Whether or not two instances are not equal to one another.
@@ -189,6 +189,9 @@ class SpectraData:
                     xData: float | list[float],
                     length: dict[float] = {"n-g": 22.804, "n-tot": 23.404}) -> list[float]:
         """
+        ``energyToTOF``
+        ---------------
+
         Maps all X Values from energy to TOF
 
         Args:
@@ -210,25 +213,67 @@ class SpectraData:
         )
         return tofX
 
-    def e2TOF(self, xData: float, length: dict[float] = {"n-g": 22.804, "n-tot": 23.404}) -> float:
+    def e2TOF(self, xData: float, length: dict[float] = params['length']) -> float:
         """
+        ``e2TOF``
+        -------
+
         Converts a single X Value from energy to TOF
 
         Args:
-            - ``xData`` (float): x-Value.
+            - ``xData`` (float): Energy-Value.
 
-            - ``length`` (float, optional): Constant value associated to whether the element data is with repsect to
-                                            n-g or n-tot.
+            - ``length`` (dict[float], optional): Constant value associated with the plotType.
+                                                Defaults to params['length'].
 
         Returns:
             float: Mapped x-coord
         """
         if self.length is not None:
-            length = self.length
+            length = self.length[self.plotType]
         neutronMass = float(1.68e-27)
         electronCharge = float(1.60e-19)
 
-        return length[self.plotType] * 1e6 * (0.5 * neutronMass / (xData * electronCharge)) ** 0.5
+        return length * 1e6 * (0.5 * neutronMass / (xData * electronCharge)) ** 0.5
+
+    def tof2e(self, xData: float, length: dict[float] = params['length']) -> float:
+        """
+        ``tof2e``
+        ---------
+
+        Converts a single X Value from TOF to energy
+
+        Args:
+            - ``xData`` (float): TOF-Value
+
+            - ``length`` (dict[float], optional): Constant value associated with the plotType.
+                                                Defaults to params['length'].
+
+        Returns:
+            float: Mapped x-coord
+        """
+        if self.length is not None:
+            length = self.length[self.plotType]
+        neutronMass = float(1.68e-27)
+        electronCharge = float(1.68e-19)
+
+        return (length ** 2 * 1e12 * neutronMass) / (2 * electronCharge * xData ** 2)
+
+    def updatePeaks(self) -> None:
+        """
+        ``updatePeaks``
+        ---------------
+
+        Recalculates maxima coordinates and updates associated variables.
+        Used when threshold values have been altered.
+        """
+        peakD = PeakDetector()
+        self.maxima = np.array(peakD.maxima(self.graphData, self.threshold))
+        self.numPeaks = len(self.maxima[0])
+        self.definePeaks()
+        self.recalculatePeakData()
+
+        self.minima = np.array(peakD.minima(self.graphData))
 
     def onDistChange(self) -> None:
         """
@@ -240,9 +285,9 @@ class SpectraData:
         """
         if not self.isDistAltered and not ('element' in self.name or 'compound' in self.name):
             return
-        plotType = "n-tot" if 't' in self.name else "n-g"
+        plotType = "n-tot" if 'n-tot' in self.name else "n-g"
         self.weightedIsoGraphData = {name: pandas.read_csv(
-            f"""{dataFilepath}{name}_{plotType}.csv""",
+            f"{params['dir_graphData']}{name}{'' if self.isCompound else '_'+plotType}.csv",
             names=['x', 'y'],
             header=None) * [1, dist]
             for name, dist in self.distributions.items() if dist != 0}
@@ -284,22 +329,6 @@ class SpectraData:
         if self.isToF:
             self.graphData[0] = self.energyToTOF(self.graphData[0], self.length)
 
-    def updatePeaks(self) -> None:
-        """
-        ``updatePeaks``
-        ---------------
-
-        Recalculates maxima coordinates and updates associated variables.
-        Used when threshold values have been altered.
-        """
-        peakD = PeakDetector()
-        self.maxima = np.array(peakD.maxima(self.graphData, self.threshold))
-        self.numPeaks = len(self.maxima[0])
-        self.definePeaks()
-        self.recalculatePeakData()
-
-        self.minima = np.array(peakD.minima(self.graphData))
-
     def hideAnnotations(self, globalHide: bool = False) -> None:
         """
         ``hideAnnotations``
@@ -309,7 +338,7 @@ class SpectraData:
         otherwise it will show the annotation.
 
         Args:
-            ``globalHide`` (bool, optional): Whether or not the 'Hide Peak Label' is checked or not. Defaults to False.
+            - ``globalHide`` (bool, optional): Whether or not the 'Hide Peak Label' is checked or not. Defaults to False.
         """
         if self.annotations == []:
             return
@@ -328,7 +357,7 @@ class SpectraData:
         either ranked by integral or by peak width
 
         Args:
-            ``byIntegral`` (bool, optional): Sorted by Integral (True) else by Peak Width (False). Defaults to True.
+            - ``byIntegral`` (bool, optional): Sorted by Integral (True) else by Peak Width (False). Defaults to True.
         """
         self.annotationsOrder.clear()
         if self.numPeaks == 0:
@@ -368,9 +397,9 @@ class SpectraData:
         a trapezium created between the axis and the coordinates of the limits.
 
         Args:
-            ``leftLimit`` (float): X-Coord of the left limit of integration
+            - ``leftLimit`` (float): X-Coord of the left limit of integration
 
-            ``rightLimit`` (float): X-Coord of the right limit of integration
+            - ``rightLimit`` (float): X-Coord of the right limit of integration
 
         Returns:
             float: Integral Value
@@ -383,6 +412,7 @@ class SpectraData:
             if self.isToF:
                 for name, graphData in isoGraphData.items():
                     graphData['x'] = self.energyToTOF(graphData['x'], self.length)
+                    graphData.sort_values('x', ignore_index=True, inplace=True)
                     isoGraphData[name] = graphData
             integrals = []
             for name, graphData in isoGraphData.items():
@@ -533,20 +563,36 @@ class SpectraData:
         peakWidthRank = {max: i for i, max in enumerate(dict(
             sorted(peakWidth.items(), key=lambda item: item[1], reverse=True)).keys())}
 
-        tableDataTemp = [
-            [
-                integralRanks[maxCoords[0]],                            # Rank by Integral
-                float(f"{maxCoords[0]:.5g}"),                           # Energy (eV)
-                f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",  # Rank by Energy
-                float(f"{self.e2TOF(maxCoords[0]):.5g}"),               # TOF (us)
-                float(f"{integrals[maxCoords[0]]:.5g}"),                # Integral
-                float(f"{peakWidth[maxCoords[0]]:.5g}"),                # Peak Width
-                f"({peakWidthRank[maxCoords[0]]})",                     # Rank by Peak Width
-                float(f"{maxCoords[1]:.5g}"),                           # Peak Height
-                f"({peakHeightRank[maxCoords[1]]:.5g})",                # Rank by Peak Height
-                None                                                    # Relevant Isotope
-            ]
-            for maxCoords in [max for max in self.maxima.T if max[0] in integralRanks.keys()]]
+        if self.isToF:
+            tableDataTemp = [
+                [
+                    integralRanks[maxCoords[0]],                            # Rank by Integral
+                    float(f"{self.e2TOF(maxCoords[0]):.5g}"),               # Energy (eV)
+                    f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",  # Rank by Energy
+                    float(f"{maxCoords[0]:.5g}"),                           # TOF (us)
+                    float(f"{integrals[maxCoords[0]]:.5g}"),                # Integral
+                    float(f"{peakWidth[maxCoords[0]]:.5g}"),                # Peak Width
+                    f"({peakWidthRank[maxCoords[0]]})",                     # Rank by Peak Width
+                    float(f"{maxCoords[1]:.5g}"),                           # Peak Height
+                    f"({peakHeightRank[maxCoords[1]]:.5g})",                # Rank by Peak Height
+                    None                                                    # Relevant Isotope
+                ]
+                for maxCoords in [max for max in self.maxima.T if max[0] in integralRanks.keys()]]
+        else:
+            tableDataTemp = [
+                [
+                    integralRanks[maxCoords[0]],                            # Rank by Integral
+                    float(f"{maxCoords[0]:.5g}"),                           # Energy (eV)
+                    f"({np.where(self.maxima[0] == maxCoords[0])[0][0]})",  # Rank by Energy
+                    float(f"{self.e2TOF(maxCoords[0]):.5g}"),               # TOF (us)
+                    float(f"{integrals[maxCoords[0]]:.5g}"),                # Integral
+                    float(f"{peakWidth[maxCoords[0]]:.5g}"),                # Peak Width
+                    f"({peakWidthRank[maxCoords[0]]})",                     # Rank by Peak Width
+                    float(f"{maxCoords[1]:.5g}"),                           # Peak Height
+                    f"({peakHeightRank[maxCoords[1]]:.5g})",                # Rank by Peak Height
+                    None                                                    # Relevant Isotope
+                ]
+                for maxCoords in [max for max in self.maxima.T if max[0] in integralRanks.keys()]]
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
         self.tableData = pandas.DataFrame(tableDataTemp,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QMenu, QWidget
 from PyQt6.QtGui import QAction, QIcon
 
 

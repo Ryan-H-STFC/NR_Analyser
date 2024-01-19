@@ -51,7 +51,7 @@ from copy import deepcopy
 
 from pyparsing import Literal
 
-from element.SpectraDataStructure import SpectraData
+from spectra.SpectraDataStructure import SpectraData
 from myPyQt.ButtonDelegate import ButtonDelegate
 from myPyQt.CustomSortingProxy import CustomSortingProxy
 from myPyQt.ExtendedComboBox import ExtendedComboBox
@@ -85,17 +85,8 @@ from settings import params
 # Asking for filepath where the user has saved script
 # filepath is where the data and the code has been saved. The sourceFilepath is the path to the latest data folder
 # ! Maybe Change back to inputs if required
-
 #  input('Enter the filepath where the latest NRCA code data folder is \n For Example:'
 #                         'C://Users/ccj88542/NRCA/Rehana/Latest/main/data: \n')
-
-# print(filepath)
-# print(sourceFilepath)
-
-# ! fonts = font_manager.findSystemFonts(
-#     fontpaths="C:\\Users\\gzi47552\\Documents\\NRTI-NRCA-Viewing-Database\\src\\fonts")
-# ! for font in fonts:
-# !    font_manager.fontManager.addfont(font)
 
 matplotlib.rcParamsDefault["path.simplify"] = True
 matplotlib.rcParamsDefault["agg.path.chunksize"] = 1000
@@ -190,18 +181,31 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                    #plotTOFBtn:enabled,
                    #clearBtn:enabled,
                    #pdBtn:enabled,
-                   #compoundBtn:enabled {{
-            color: #000;
-        }}
+                   #compoundBtn:enabled
+                   {{
+                       color: #000;
+                    }}
 
-        QCheckBox#gridCheck, #thresholdCheck, #label_check, #orderByIntegral, #orderByPeakW, #peakCheck {{
-            font-weight: 500;
-        }}
+        QCheckBox#gridCheck,
+                 #thresholdCheck,
+                 #label_check,
+                 #orderByIntegral,
+                 #orderByPeakW,
+                 #peakCheck,
+                 #limitCheck,
+                 #tableCheck,
+                 #graphCheck
+                 {{
+                    font-weight: 500;
+                 }}
 
         QCheckBox#grid_check::indicator:unchecked,
                  #thresholdCheck::indicator:unchecked,
                  #label_check::indicator:unchecked,
-                 #peakCheck::indicator:unchecked
+                 #peakCheck::indicator:unchecked,
+                 #limitCheck::indicator:unchecked,
+                 #tableCheck::indicator:unchecked,
+                 #graphCheck::indicator:unchecked
                  {{
                    image: url(./src/img/checkbox-component-unchecked.svg);
                    color: {text_color};
@@ -210,7 +214,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         QCheckBox#grid_check::indicator:checked,
                  #thresholdCheck::indicator:checked,
                  #label_check::indicator:checked,
-                 #peakCheck::indicator:checked
+                 #peakCheck::indicator:checked,
+                 #limitCheck::indicator:checked,
+                 #tableCheck::indicator:checked,
+                 #graphCheck::indicator:checked
                  {{
                      image: url(./src/img/checkbox-component-checked.svg);
                      color: {text_color};
@@ -218,16 +225,22 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         QCheckBox#grid_check:disabled,
                  #thresholdCheck:disabled,
-                 #label_check:disabled
+                 #label_check:disabled,
+                 #limitCheck:disabled,
+                 #tableCheck:disabled,
+                 #graphCheck:disbaled
                  {{
                      color: #AAA;
                  }}
         QCheckBox#grid_check:enabled,
                  #thresholdCheck:enabled,
-                 #label_check:enabled
-        {{
-            color: {text_color};
-        }}
+                 #label_check:enabled,
+                 #limitCheck:enabled,
+                 #tableCheck:enabled,
+                 #graphCheck:enabled
+                 {{
+                     color: {text_color};
+                 }}
 
         QDialog {{
             color: {text_color};
@@ -380,7 +393,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.setStyleSheet(self.styleMain.format(bg_color="#202020", text_color="#FFF"))
         self.initUI()
-        self.setAcceptDrops(True)
 
     def initUI(self) -> None:
         """
@@ -389,8 +401,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Creates the UI.
         """
         self.setObjectName('mainWindow')
-        self.setGeometry(350, 50, 1600, 900)
-        self.setWindowTitle("NRTI/NRCA Viewing Database")
+        self.setGeometry(50, 50, 1600, 900)
+        self.setWindowTitle("NRTI/NRCA Explorer")
         self.resized.connect(self.adjustCanvas)
 
         mainLayout = QGridLayout()
@@ -417,11 +429,16 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         importAction = QAction(QIcon("./src/img/upload-component.svg"), "&Import Data", self)
         importAction.setShortcut("Ctrl+I")
+        importAction.triggered.connect(self.importData)
+
+        exportAction = QAction(QIcon("./src/img/export-component.svg"), "&Export Data", self)
+        exportAction.setShortcut("Ctrl+S")
+        exportAction.triggered.connect(self.exportData)
 
         fileMenu = menubar.addMenu("&File")
         fileMenu.addAction(newAction)
         fileMenu.addAction(importAction)
-        importAction.triggered.connect(self.importData)
+        fileMenu.addAction(exportAction)
 
         # * ----------------------------------------------
 
@@ -667,6 +684,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         compoundLabel.setObjectName("compoundLabel")
         compoundCreaterBtn = QPushButton("Create Compound", self)
         compoundCreaterBtn.setObjectName("compoundBtn")
+        compoundCreaterBtn.setCursor(pointingCursor)
         compoundCreaterBtn.clicked.connect(self.createCompound)
         self.compoundCombobox = ExtendedComboBox()
         self.compoundCombobox.lineEdit().setPlaceholderText("Select a Compound")
@@ -719,6 +737,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         container.setObjectName('mainContainer')
         container.setLayout(canvasLayout)
         container.setMinimumHeight(300)
+        #! container.setAcceptDrops(True)
 
         splitter = QSplitter()
         splitter.setOrientation(Qt.Orientation.Vertical)
@@ -760,14 +779,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.resized.emit()
         return super(ExplorerGUI, self).resizeEvent(event)
 
-    def adjustCanvas(self) -> None:
-        """
-        ``adjustCanvas``
-        ----------------
-        Apply tight layout to figure.
-        """
-        self.figure.tight_layout()
-
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         """
         ``dragEnterEvent``
@@ -777,14 +788,17 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Args:
             ``event`` (QDragEnterEvent): Event triggered on mouse dragging into the window.
         """
-        if event.mimeData().hasUrls():
-            for file in event.mimeData().urls():
-                filepath = file.toLocalFile()
-                if any([ext for ext in ['.csv', '.txt', '.dat'] if ext in filepath]):
-                    event.acceptProposedAction()
-                else:
-                    event.ignore()
-        else:
+        try:
+            if event.mimeData().hasUrls():
+                for file in event.mimeData().urls():
+                    filepath = file.toLocalFile()
+                    if any([ext for ext in ['.csv', '.txt', '.dat'] if ext in filepath]):
+                        event.acceptProposedAction()
+                    else:
+                        event.ignore()
+            else:
+                event.ignore()
+        except AttributeError:
             event.ignore()
 
     def dropEvent(self, event: QtGui.QDropEvent) -> None:
@@ -799,10 +813,18 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         for url in event.mimeData().urls():
             filepath = url.toLocalFile()
             name = filepath.split('/')[-1].split('.')[0]
-            if name[-1].lower() == 'f':
+            if 'tof' in name:
                 self.updateGuiData(True, filepath, True, name)
             else:
                 self.updateGuiData(False, filepath, True, name)
+
+    def adjustCanvas(self) -> None:
+        """
+        ``adjustCanvas``
+        ----------------
+        Apply tight layout to figure.
+        """
+        self.figure.tight_layout()
 
     def editPeakLimits(self) -> None:
         """
@@ -2019,7 +2041,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if self.spectraData[title].isGraphDrawn:
                     continue
             if 'compound' in spectraName:
-                self.plotFilepath = f"{self.graphDataDir}Compound Data\\{spectraName}.csv"
+                self.plotFilepath = f"{params['dir_compoundGraphData']}{spectraName}.csv"
             else:
                 self.plotFilepath = f"{self.graphDataDir}{spectraName}.csv" if filepath is None else filepath
             peakInfoDir = f"{self.dir}data\\Peak information\\" if filepath is None else None
@@ -2571,17 +2593,107 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         name = getName[-1].split('.')[0]
 
-        if name[-1].lower() == "f":
+        if 'tof' in name:
             self.updateGuiData(True, filepath, True, name)
         else:
             self.updateGuiData(False, filepath, True, name)
+
+    def exportData(self):
+
+        optionsWindow = QDialog(self)
+        optionsWindow.setObjectName("inputWindow")
+        mainLayout = QVBoxLayout()
+        inputForm = QFormLayout()
+
+        buttonBox = QDialogButtonBox(optionsWindow)
+        saveBtn = buttonBox.addButton(QDialogButtonBox.StandardButton.Save)
+
+        mainLayout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+        optionsWindow.setWindowTitle("Export")
+        optionsWindow.setLayout(mainLayout)
+
+        for spectra in self.spectraData.keys():
+            row = QHBoxLayout()
+            row.setSpacing(8)
+            name = QLabel(spectra)
+            name.setObjectName('spectraName')
+
+            graphDataBox = QHBoxLayout()
+            graphDataBox.setSpacing(5)
+            graphDataLabel = QLabel("Graph Data")
+            graphDataCheck = QCheckBox()
+            graphDataCheck.setObjectName('graphCheck')
+
+            graphDataBox.addWidget(graphDataLabel)
+            graphDataBox.addWidget(graphDataCheck)
+
+            tableDataBox = QHBoxLayout()
+            tableDataBox.setSpacing(5)
+            tableDataLabel = QLabel("Table Data")
+            tableDataCheck = QCheckBox()
+            tableDataCheck.setObjectName('tableCheck')
+
+            tableDataBox.addWidget(tableDataLabel)
+            tableDataBox.addWidget(tableDataCheck)
+
+            limitDataBox = QHBoxLayout()
+            limitDataBox.setSpacing(5)
+            limitDataLabel = QLabel("Peak Limits Data")
+            limitDataCheck = QCheckBox()
+            limitDataCheck.setObjectName('limitCheck')
+
+            limitDataBox.addWidget(limitDataLabel)
+            limitDataBox.addWidget(limitDataCheck)
+
+            row.addItem(graphDataBox)
+            row.addItem(tableDataBox)
+            row.addItem(limitDataBox)
+
+            rowWidget = QWidget()
+            rowWidget.setObjectName('row')
+            rowWidget.setLayout(row)
+            inputForm.addRow(name, rowWidget)
+
+        mainLayout.addLayout(inputForm)
+        mainLayout.addWidget(buttonBox)
+
+        def onAccept():
+
+            exportDir = QFileDialog.getExistingDirectory(self, 'Select Folder')
+            print(exportDir)
+
+            for label, row in list(zip(*(getLayoutWidgets(inputForm, QLabel), getLayoutWidgets(inputForm, QWidget)))):
+                name = label.text()
+
+                saveGraph = row.findChild(QCheckBox, 'graphCheck').isChecked()
+                saveTable = row.findChild(QCheckBox, 'tableCheck').isChecked()
+                saveLimit = row.findChild(QCheckBox, 'limitCheck').isChecked()
+
+                if saveGraph:
+                    self.spectraData[name].graphData[1:].to_csv(f'{exportDir}/{name}_graphData.csv',
+                                                                index=False,
+                                                                header=False)
+                if saveTable:
+                    self.spectraData[name].tableData[1:].to_csv(f'{exportDir}/{name}_tableData.csv',
+                                                                index=False)
+
+                if saveLimit:
+                    pd.DataFrame(self.spectraData[name].maxPeakLimitsX.values()
+                                 ).to_csv(f'{exportDir}/{name}_peakLimits.csv',
+                                          header=False,
+                                          index=False)
+
+        saveBtn.clicked.connect(onAccept)
+
+        optionsWindow.setModal(False)
+        optionsWindow.show()
 
     def getPeaks(self) -> None:
         """
         ``getPeaks``
         ------------
-        Ask the user for which function to plot the maxima or minima of which element
-        then calls the respective function on that element
+        Ask the user for which function to plot the maxima or minima of which element then calls the respective function
+        on that element
         """
 
         mainLayout = QVBoxLayout()

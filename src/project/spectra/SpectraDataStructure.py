@@ -1,11 +1,10 @@
 from __future__ import annotations
 import numpy as np
 from numpy import ndarray
-from os import path
 import pandas
 from pandas import DataFrame
 
-from element.PeakDetection import PeakDetector
+from spectra.PeakDetection import PeakDetector
 from helpers.getSpacedElements import getSpacedElements
 from helpers.fitBoxes import fitBoxes
 from helpers.getIndex import getIndex
@@ -14,9 +13,8 @@ from helpers.nearestNumber import nearestnumber
 from helpers.smooth import smooth
 
 from settings import params
-# dataFilepath = ".\\src\\data\\Graph Data\\"
+
 dataFilepath = params['dir_graphData']
-# peakLimitFilepath = ".\\src\\data\\Peak Limit Information\\"
 peakLimitFilepath = params['dir_peakLimitInfo']
 
 
@@ -534,7 +532,7 @@ class SpectraData:
         Loops over the existing peaks of the instance and calculates the data associated with each. Updating the table
         data.
         """
-        if self.maxima.size == 0:
+        if self.maxima.size == 0 or self.isImported:
             self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 9]],
                                               columns=[
                                               "Rank by Integral",
@@ -575,7 +573,7 @@ class SpectraData:
                     f"({peakWidthRank[maxCoords[0]]})",                     # Rank by Peak Width
                     float(f"{maxCoords[1]:.5g}"),                           # Peak Height
                     f"({peakHeightRank[maxCoords[1]]:.5g})",                # Rank by Peak Height
-                    None                                                    # Relevant Isotope
+                    '[]' if 'element' in self.name else 'none'              # Relevant Isotope
                 ]
                 for maxCoords in [max for max in self.maxima.T if max[0] in integralRanks.keys()]]
         else:
@@ -590,7 +588,7 @@ class SpectraData:
                     f"({peakWidthRank[maxCoords[0]]})",                     # Rank by Peak Width
                     float(f"{maxCoords[1]:.5g}"),                           # Peak Height
                     f"({peakHeightRank[maxCoords[1]]:.5g})",                # Rank by Peak Height
-                    None                                                    # Relevant Isotope
+                    '[]' if 'element' in self.name else 'none'              # Relevant Isotope
                 ]
                 for maxCoords in [max for max in self.maxima.T if max[0] in integralRanks.keys()]]
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])

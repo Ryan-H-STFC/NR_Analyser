@@ -34,7 +34,7 @@ class PeakDetector:
             (maxima_list_x, maxima_list_y): Tuple of lists, list of x-coords, list of y-coords.
         """
         x, y = data.iloc[:, 0], data.iloc[:, 1]
-        maxima, _ = sp.signal.find_peaks(y, height=threshold)
+        maxima, _ = sp.signal.find_peaks(y, height=threshold, prominence=params['max_prominence'])
 
         width = sp.signal.peak_widths(y, maxima, rel_height=1, wlen=110)
         # Extracting maxima coordinates

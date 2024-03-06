@@ -111,6 +111,7 @@ class SpectraData:
 
         self.tableData = tableData
         self.maxTableData = tableData.copy()
+        self.minTableData = DataFrame()
 
         if self.tableData is None:
             self.tableData = DataFrame()
@@ -206,7 +207,7 @@ class SpectraData:
                 leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
                 rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
 
-                self.maxPeakLimitsY[max] = (graphData[graphData[0] == leftLimit].iloc[0, 1],
+                self.minPeakLimitsY[max] = (graphData[graphData[0] == leftLimit].iloc[0, 1],
                                             graphData[graphData[0] == rightLimit].iloc[0, 1])
         except ValueError:
             pass
@@ -217,7 +218,7 @@ class SpectraData:
                 if self.minima.size != 0:
 
                     self.definePeaks(which='min')
-                    self.recalculatePeakData()
+                    self.recalculatePeakData(which='min')
             # else:
             #     if self.minima is not None and not self.minima.size == 0:
             #         self.peakList = self.minima.copy()

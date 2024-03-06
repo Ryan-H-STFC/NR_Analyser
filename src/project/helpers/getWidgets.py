@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pyparsing import Generator
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QWidget, QLayout
 
 
-def getLayoutWidgets(layout, widgetType: type = None) -> Generator[QWidget, None, None]:
+def getLayoutWidgets(layout: QLayout, widgetType: type = None) -> Generator[QWidget, None, None]:
     """
     ``getLayoutWidgets`` returns a list of widgets from an inputted layout. Will return specific widgets of a specified
     type using ``widgetType``
@@ -18,7 +18,7 @@ def getLayoutWidgets(layout, widgetType: type = None) -> Generator[QWidget, None
     if layout is None:
         return
     if widgetType is None:
-        return [layout.itemAt(i).widget() for i in range(layout.count())]
+        return [layout.itemAt(i).widget() or getLayoutWidgets(layout.itemAt(i).layout()) for i in range(layout.count())]
 
     return [layout.itemAt(i).widget() for i in range(layout.count())
             if type(layout.itemAt(i).widget()) == widgetType]

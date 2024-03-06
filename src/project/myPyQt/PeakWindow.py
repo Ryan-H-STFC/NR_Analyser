@@ -177,25 +177,25 @@ class PeakWindow(QMainWindow):
         self.peakAxis.xaxis.set_minor_locator(LogLocator(10, 'all'))
         self.peakAxis.xaxis.set_minor_formatter(LogFormatterSciNotation(10, False, (np.inf, np.inf)))
         self.peakAxis.xaxis.set_tick_params('major',
-                                            size=12,
+                                            size=6,
                                             color="#888",
-                                            labelsize=9
+                                            labelsize=8
                                             )
         self.peakAxis.xaxis.set_tick_params('minor',
                                             size=4,
                                             color="#888",
-                                            labelsize=8,
+                                            labelsize=6,
                                             labelrotation=45,
                                             )
         self.peakAxis.yaxis.set_tick_params('major',
-                                            size=5,
-                                            color="#888",
-                                            labelsize=9
-                                            )
-        self.peakAxis.yaxis.set_tick_params('minor',
                                             size=6,
                                             color="#888",
-                                            labelsize=8,
+                                            labelsize=8
+                                            )
+        self.peakAxis.yaxis.set_tick_params('minor',
+                                            size=4,
+                                            color="#888",
+                                            labelsize=6,
                                             )
 
         self.peakAxis.set_title(elementTitle,
@@ -233,9 +233,8 @@ class PeakWindow(QMainWindow):
                                markersize=8,
                                gid=f"{elementTitle}-PeakWindow-lim-{i}")
 
-        self.peakAxis.autoscale()
-
         self.peakAxis.legend(fancybox=True, shadow=True)
+        self.peakAxis.autoscale()
 
     def togglePeakThreshold(self, element) -> None:
         if not self.thresholdCheck.isChecked():

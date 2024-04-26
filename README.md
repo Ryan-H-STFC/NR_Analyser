@@ -44,10 +44,9 @@ Peak Integration Limit Algorithm:
 **Note** : You cannot alter limits or any data within this program.
 
 ## **Bugs to be fixed soon**
-- Opening mulitple focused windows on peaks causes conflicting variables (Use Class)
 
 ## **Improvements Coming Soon**
 
 ## **Accessibility**
 
-A new colour scheme has been implemented than that seen in the picture above to provide high-contrast for those who are perhaps colour blind.
+A new colour schemes has been implemented than that seen in the picture above to provide high-contrast for those who are perhaps colour blind.

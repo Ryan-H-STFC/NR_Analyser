@@ -21,10 +21,10 @@ import matplotlib.rcsetup
 import numpy as np
 import pandas as pd
 
-from helpers.nearestNumber import nearestnumber
-from myMatplotlib.CustomFigureCanvas import FigureCanvas
-from myPyQt.ExtendedTableModel import ExtendedQTableModel
-from myPyQt.InputElementsDialog import InputElementsDialog
+from project.helpers.nearestNumber import nearestnumber
+from project.myMatplotlib.CustomFigureCanvas import FigureCanvas
+from project.myPyQt.ExtendedTableModel import ExtendedQTableModel
+from project.myPyQt.InputSpectraDialog import InputSpectraDialog
 
 matplotlib.use("QtAgg")
 
@@ -106,7 +106,7 @@ class PeakWindow(QMainWindow):
             titleIndex = sorted([rowIndex for rowIndex in parent.titleRows if index.row() > rowIndex])[-1]
             elementName = parent.table_model.data(parent.table_model.index(titleIndex, 0), 0)
             plottedSpectra = [name for name in parent.plottedSpectra if elementName in name]
-            optionsDialog = InputElementsDialog()
+            optionsDialog = InputSpectraDialog()
             if len(plottedSpectra) > 1:
                 spectraNames = [f"{name}-{'ToF' if tof else 'Energy'}" for name, tof in plottedSpectra]
                 optionsDialog.elements.addItems(spectraNames)
@@ -128,30 +128,42 @@ class PeakWindow(QMainWindow):
 
             elementTitle = f"{elementName}-{'ToF' if self.tof else 'Energy'}"
             element = parent.spectraData[elementTitle]
-            if element.maxima.size == 0:
-                return
-            # if element.maxPeakLimitsX == dict():
-            maximaX = nearestnumber(element.maxima[0], float(parent.table_model.data(
-                parent.table_model.index(index.row(), 3 if self.tof else 1), 0)))
-            maxima = [max for max in element.maxima.T if max[0] == maximaX][0]
+            which = 'max' if parent.maxTableOptionRadio.isChecked() else 'min'
+            if which == 'max':
+                if element.maxima.size == 0:
+                    return
+                # if element.maxPeakLimitsX == dict():
+                peakX = nearestnumber(element.maxima[0], float(parent.table_model.data(
+                    parent.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+                peak = [max for max in element.maxima.T if max[0] == peakX][0]
+                limitsX = element.maxPeakLimitsX[peak[0]]
+                limitsY = element.maxPeakLimitsY[peak[0]]
 
-            leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
+            else:
+                if element.minima.size == 0:
+                    return
+                peakX = nearestnumber(element.minima[0], float(parent.table_model.data(
+                    parent.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+                peak = [min for min in element.minima.T if min[0] == peakX][0]
+                limitsX = element.minPeakLimitsX[peak[0]]
+                limitsY = element.minPeakLimitsY[peak[0]]
 
-            # else:
-            #     leftLimit, rightLimit = element.maxPeakLimitsX[maxima[0]]
-
+            leftLimit, rightLimit = limitsX
         except FileNotFoundError:
             QMessageBox.warning(self, "Error", "No peak limits for this Selection")
         except AttributeError:
             QMessageBox.warning(self, "Warning", "Plot the Graph First")
+        tableData = element.maxTableData if which == 'max' else element.minTableData
+        rank = tableData[
+            tableData["TOF (us)" if element.isToF else "Energy (eV)"] == float(f"{peak[0]:.6g}")
+        ]["Rank by Integral"].iloc[0]
 
-        rank = [str([ann[0] for ann in element.annotationsOrder.items() if ann[1][0] == maxima[0]][0])]
-        limits = [str(element.maxPeakLimitsX[maxima[0]])]
-        peakCoords = [f"({maxima[0]}, {maxima[1]})"]
+        limits = [f"({limitsX[0]:.6g}, {limitsX[1]:.6g})"]
+        peakCoords = [f"({peak[0]:.6g}, {peak[1]:.6g})"]
         isoOrigin = [parent.table_model.data(parent.table_model.index(index.row(), 9), 0)]
-        data = {"Peak Number (Rank)": rank,
-                "Integration Limits (eV)": limits,
-                "Peak Co-ordinates (eV)": peakCoords,
+        data = {"Peak Number (Integral Rank)": rank,
+                f"Integration Limits {'(us)' if element.isToF else '(eV)'}": limits,
+                f"Peak Co-ordinates {'(us)' if element.isToF else '(eV)'}": peakCoords,
                 "Isotopic Origin": isoOrigin}
 
         tableData = pd.DataFrame(data, index=None)
@@ -177,25 +189,25 @@ class PeakWindow(QMainWindow):
         self.peakAxis.xaxis.set_minor_locator(LogLocator(10, 'all'))
         self.peakAxis.xaxis.set_minor_formatter(LogFormatterSciNotation(10, False, (np.inf, np.inf)))
         self.peakAxis.xaxis.set_tick_params('major',
-                                            size=12,
+                                            size=6,
                                             color="#888",
-                                            labelsize=9
+                                            labelsize=8
                                             )
         self.peakAxis.xaxis.set_tick_params('minor',
                                             size=4,
                                             color="#888",
-                                            labelsize=8,
+                                            labelsize=6,
                                             labelrotation=45,
                                             )
         self.peakAxis.yaxis.set_tick_params('major',
-                                            size=5,
-                                            color="#888",
-                                            labelsize=9
-                                            )
-        self.peakAxis.yaxis.set_tick_params('minor',
                                             size=6,
                                             color="#888",
-                                            labelsize=8,
+                                            labelsize=8
+                                            )
+        self.peakAxis.yaxis.set_tick_params('minor',
+                                            size=4,
+                                            color="#888",
+                                            labelsize=6,
                                             )
 
         self.peakAxis.set_title(elementTitle,
@@ -216,8 +228,8 @@ class PeakWindow(QMainWindow):
                            gid=f"{elementTitle}-PeakWindow"
                            )
 
-        self.peakAxis.plot(maxima[0],
-                           maxima[1],
+        self.peakAxis.plot(peak[0],
+                           peak[1],
                            "x",
                            color="black",
                            markersize=3,
@@ -225,7 +237,7 @@ class PeakWindow(QMainWindow):
                            gid=f"{elementTitle}-PeakWindow-max"
                            )
 
-        for i, (peakX, peakY) in enumerate(zip(element.maxPeakLimitsX[maxima[0]], element.maxPeakLimitsY[maxima[0]])):
+        for i, (peakX, peakY) in enumerate(zip(limitsX, limitsY)):
             self.peakAxis.plot(peakX,
                                peakY,
                                marker=2,
@@ -233,9 +245,8 @@ class PeakWindow(QMainWindow):
                                markersize=8,
                                gid=f"{elementTitle}-PeakWindow-lim-{i}")
 
-        self.peakAxis.autoscale()
-
         self.peakAxis.legend(fancybox=True, shadow=True)
+        self.peakAxis.autoscale()
 
     def togglePeakThreshold(self, element) -> None:
         if not self.thresholdCheck.isChecked():

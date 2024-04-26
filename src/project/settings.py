@@ -6,21 +6,21 @@ params = {
     # ?                                               Filepaths
     # ? ------------------------------------------------------------------------------------------------------------
     # Filepath for the src directory
-    'dir_src': f"{path.dirname(path.dirname(__file__))}/",
+    'dir_src': f"{path.dirname(path.dirname(__file__))}\\",
     # Filepath for the project directory
-    'dir_project': f"{path.dirname(__file__)}/",
+    'dir_project': f"{path.dirname(__file__)}\\",
     # Filepath for the data directory
-    'dir_data': f"{path.dirname(__file__)}/data/",
+    'dir_data': f"{path.dirname(__file__)}\\data\\",
     # Filepath for the Graph Data directory
-    'dir_graphData': f"{path.dirname(__file__)}/data/Graph Data/",
+    'dir_graphData': f"{path.dirname(__file__)}\\data\\Graph Data\\",
     # Filepath for the Compound Graph Data
-    'dir_compoundGraphData': f"{path.dirname(__file__)}/data/Graph Data/Compound Data/",
+    'dir_compoundGraphData': f"{path.dirname(__file__)}\\data\\Graph Data\\Compound Data\\",
     # Filepath for the distribution directory
-    'dir_distribution': f"{path.dirname(__file__)}/data/Distribution Information/",
+    'dir_distribution': f"{path.dirname(__file__)}\\data\\Distribution Information\\",
     # Filepath for the Peak Information directory
-    'dir_peakInfo': f"{path.dirname(__file__)}/data/Peak Information/",
+    'dir_peakInfo': f"{path.dirname(__file__)}\\data\\Peak Information\\",
     # Filepath for the Peak Limit Information directory
-    'dir_peakLimitInfo': f"{path.dirname(__file__)}/data/Peak Limit Information/",
+    'dir_peakLimitInfo': f"{path.dirname(__file__)}\\data\\Peak Limit Information\\",
 
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                                Length
@@ -46,13 +46,15 @@ params = {
         'Hg': (100, 130),
         'Pb': (100, 7.4)
     },
+
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                        Peak Detector Parameters
     # ? ------------------------------------------------------------------------------------------------------------
+    'max_prominence': 5,
     # Prominence Factor, threshold for identifying
-    'min_prominence': 0.003,
+    'min_prominence': 0.1,
     # Height Threshold,
-    'min_required_height': -100,
+    'min_required_height': -99999999,
 
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                     Peak Integral Limit Parameters
@@ -78,4 +80,20 @@ params = {
     'fitting_coeff': 8,
     # Default tolerance value (us) for finding nearby peaks in pmatch function.
     'max_match': 3.5,
+
+    # ? ------------------------------------------------------------------------------------------------------------
+    # ?                                             Graph Settings
+    # ? ------------------------------------------------------------------------------------------------------------
+    # Maximum number of peak annotations per spectra.
+    'max_annotations': 50,
+    # Settings Related to the Grid
+    'grid_settings': {
+        "which": "major",
+        "axis": "both",
+        "color": "#444"
+    },
+    # ! ------------------------------------------------------------------------------------------------------------
+    # !                                        Debug Settings (Developers)
+    # ! ------------------------------------------------------------------------------------------------------------
+    'updating_database': False
 }

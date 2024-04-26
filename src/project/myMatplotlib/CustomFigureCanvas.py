@@ -31,7 +31,6 @@ class FigureCanvas(FigureCanvasQTAgg):
             graphLine = graphDict[res.text()][0]
             graphLine.remove()
 
-            # graphDict[res.text()][1].remove()
             self.widgetParent.plottedSpectra.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
 
             for anno in self.widgetParent.spectraData[res.text()].annotations:

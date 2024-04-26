@@ -1,5 +1,5 @@
 # VSCode
-.vscode/settings.json
+.vscode/*
 
 # Distribution / packaging
 *.egg-info
@@ -21,3 +21,7 @@ pip-delete-this-directory.txt
 nosetests.xml
 coverage.xml
 py.typed
+
+/build/*
+/dist/*
+*.spec

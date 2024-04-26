@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/element"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
-from src.project.NRTI_NRCA_Explorer import ExplorerGUI
+from NRTI_NRCA_Explorer import ExplorerGUI
 
 sys.argv.append('-platform')
 sys.argv.append('offscreen')

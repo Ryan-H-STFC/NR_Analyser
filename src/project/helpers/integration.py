@@ -4,7 +4,8 @@ from pandas import DataFrame
 from pyparsing import Literal
 from scipy.integrate import trapezoid, simpson
 
-from helpers.nearestNumber import nearestnumber
+
+from project.helpers.nearestNumber import nearestnumber
 
 
 def integrate_trapz(graphData: DataFrame, leftLimit: float, rightLimit: float) -> float:
@@ -66,15 +67,14 @@ def integrate_simps(graphData: DataFrame,
         return 0
     x, y = graphData.iloc[:, 0], graphData.iloc[:, 1]
 
-    result = simpson(y, x)
+    result = simpson(y, x, dx=0.05)
     excess = (peakR[0] - peakL[0]) * (peakL[1] + peakR[1]) / 2
-    if which == 'max':
-        if excess >= result:
-            mid = nearestnumber(graphData.iloc[:, 0], (rightLimit + leftLimit) / 2)
-            mid = (graphData[graphData.iloc[:, 0] == mid].iloc[0, 0], graphData[graphData.iloc[:, 0] == mid].iloc[0, 1])
 
-            return result - ((mid[0] - peakL[0]) * (peakL[1] + mid[1]) + (peakR[0] - mid[0]) * (mid[1] + peakR[1])) / 2
-        else:
-            return result - excess if which == 'max' else excess - result
+    if which == 'max':
+        if result - excess <= 0 or abs((result - excess) / result) < 0.1:  # Catches non peak contibution for isotopes.
+            return 0
+        return result - excess
     else:
+        if excess - result <= 0 or abs((excess - result) / excess) < 0.1:
+            return 0
         return excess - result

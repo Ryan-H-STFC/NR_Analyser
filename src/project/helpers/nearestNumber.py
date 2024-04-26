@@ -13,9 +13,10 @@ def nearestnumber(x: list[float], target: float) -> float:
     Returns:
         float: Nearest value in x from target
     """
-    if target in x:
-        return target
     array = np.asarray(x)
+    if target in array:
+        return target
+
     value_index = (
         np.abs(array - target)
     ).argmin()  # Finds the absolute difference between the value and the target

@@ -7,6 +7,10 @@ params = {
     # ? ------------------------------------------------------------------------------------------------------------
     # Filepath for the src directory
     'dir_src': f"{path.dirname(path.dirname(__file__))}\\",
+    # Filpath for the img directory
+    'dir_img': f"{path.dirname(path.dirname(__file__))}\\img\\",
+    # Filpath for the fonts directory
+    'dir_fonts': f"{path.dirname(path.dirname(__file__))}\\fonts\\",
     # Filepath for the project directory
     'dir_project': f"{path.dirname(__file__)}\\",
     # Filepath for the data directory
@@ -45,14 +49,14 @@ params = {
         'In': (100, 18.5),
         'Hg': (100, 130),
         'Pb': (100, 7.4)
-    },
+    },  # 'X' : (n-tot, n-g)
 
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                        Peak Detector Parameters
     # ? ------------------------------------------------------------------------------------------------------------
     'max_prominence': 5,
     # Prominence Factor, threshold for identifying
-    'min_prominence': 0.1,
+    'min_prominence': 1,
     # Height Threshold,
     'min_required_height': -99999999,
 
@@ -95,5 +99,12 @@ params = {
     # ! ------------------------------------------------------------------------------------------------------------
     # !                                        Debug Settings (Developers)
     # ! ------------------------------------------------------------------------------------------------------------
-    'updating_database': False
+    # Forces SpectraData init to recalculate limits and peak table data
+    'updating_database': False,
+    # Plots the smoothed graph data which the derivatives are calculated from, useful for debugging zero integrals.
+    'show_smoothed': False,
+    # Draws vertical lines where the graph has a zero derivative, green for peaks, red for dips
+    'show_first_der': False,
+    # Draws vertical lines where the graph has a point of inflection, zero second derivative, in blue
+    'show_second_der': False,
 }

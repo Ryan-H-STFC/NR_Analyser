@@ -5,12 +5,14 @@ from pyparsing import Literal
 from scipy.interpolate import interp1d
 import pandas
 from pandas import DataFrame
+import concurrent.futures
 
 from project.spectra.PeakDetection import PeakDetector
 from project.helpers.getSpacedElements import getSpacedElements
 from project.helpers.integration import integrate_simps
 from project.helpers.nearestNumber import nearestnumber
 from project.helpers.resourcePath import resource_path
+from project.spectra.Integrator import IsotopeIntegrator
 from time import perf_counter
 from project.settings import params
 
@@ -134,7 +136,8 @@ class SpectraData:
             self.graphData[0] = self.energyToTOF(graphData[0], length=self.length)
             self.graphData.sort_values(0, ignore_index=True, inplace=True)
 
-        self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData)
+        self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
+                                                       smoothCoeff=2 if self.isImported else 12)
 
         try:
             if not self.graphData.empty:
@@ -179,7 +182,8 @@ class SpectraData:
             if self.maxima is not None:
                 if self.maxima.size != 0:
 
-                    self.peakDetector.definePeaks(which='max')
+                    # self.peakDetector.definePeaks(which='max')
+                    self.peakDetector.definePeakLimits(which='max')
                     self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX.copy()
                     self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='max')
@@ -230,7 +234,7 @@ class SpectraData:
             if self.minima is not None:
                 if self.minima.size != 0:
 
-                    self.peakDetector.definePeaks(which='min')
+                    self.peakDetector.definePeakLimits(which='min')
                     self.minPeakLimitsX = self.peakDetector.minPeakLimitsX.copy()
                     self.minPeakLimitsY = self.peakDetector.minPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='min')
@@ -367,22 +371,24 @@ class SpectraData:
         Args:
             which (Literal[&#39;max&#39;, &#39;min&#39;, &#39;both&#39;]): Update maximas or minimas or both.
         """
-
+        t1 = perf_counter()
         self.maxima = np.array(self.peakDetector.maxima(self.threshold))
         self.minima = np.array(self.peakDetector.minima())
 
         self.numPeaks = len(self.maxima[0])
         if which in ['max', 'both']:
-            self.peakDetector.definePeaks(which='max')
+            self.peakDetector.definePeakLimits(which='max')
             self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX
             self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY
             self.recalculateAllPeakData(which='max')
 
         if which in ['min', 'both']:
-            self.peakDetector.definePeaks(which='min')
+            self.peakDetector.definePeakLimits(which='min')
             self.minPeakLimitsX = self.peakDetector.minPeakLimitsX
             self.minPeakLimitsY = self.peakDetector.minPeakLimitsY
             self.recalculateAllPeakData(which='min')
+        t2 = perf_counter()
+        print(f"{self.name} - updatePeaks {which} - Elapsed Time: {t2-t1}")
 
     def onDistChange(self) -> None:
         """
@@ -529,29 +535,8 @@ class SpectraData:
             tuple[float, str]: (Integral Value, Relevant Isotope)
         """
         if "element" in self.name:
-            isoGraphData = {name: pandas.read_csv(resource_path(f"{dataFilepath}{name}_{self.name.split('_')[-1]}.csv"),
-                                                  names=['x', 'y'],
-                                                  header=None)
-                            for name, dist in self.distributions.items() if dist != 0}
-
-            if self.isToF:
-                for name, graphData in isoGraphData.items():
-                    graphData['x'] = self.energyToTOF(graphData['x'], self.length)
-                    graphData.sort_values('x', ignore_index=True, inplace=True)
-                    isoGraphData[name] = graphData
-            integrals = dict()
-            for name, graphData in isoGraphData.items():
-                if leftLimit == rightLimit:
-                    return (0, '[]')
-                graphDataInterp = interp1d(graphData.iloc[:, 0], graphData.iloc[:, 1])
-                xRange = np.arange(leftLimit, rightLimit, (rightLimit - leftLimit) / 100)
-                integrals[name] = integrate_simps(DataFrame(list(zip(xRange, graphDataInterp(xRange))),
-                                                            columns=['x', 'y']),
-                                                  leftLimit,
-                                                  rightLimit,
-                                                  which=which) * self.distributions[name]
-
-            return (sum(integrals.values()), f"['{max(integrals, key=integrals.get)}_{self.plotType}']")
+            integrator = IsotopeIntegrator(self)
+            return integrator.peak_integral(leftLimit, rightLimit, which)
         else:
             if leftLimit == rightLimit:
                 return (0, 'none')
@@ -614,33 +599,33 @@ class SpectraData:
         if self.isToF:
             tableDataTemp = [
                 [
-                    integralRanks[peakCoords[0]],                            # Rank by Integral
-                    float(f"{self.e2TOF(peakCoords[0]):.6g}"),               # Energy (eV)
-                    f"({np.where(peakList[0] == peakCoords[0])[0][0]})",     # Rank by Energy
-                    float(f"{peakCoords[0]:.6g}"),                           # TOF (us)
-                    float(f"{integrals[peakCoords[0]][0]:.6g}"),             # Integral
-                    float(f"{peakWidth[peakCoords[0]]:.6g}"),                # Peak Width
-                    f"({peakWidthRank[peakCoords[0]]})",                     # Rank by Peak Width
-                    float(f"{peakCoords[1]:.6g}"),                           # Peak Height
-                    f"({peakHeightRank[peakCoords[1]]:.6g})",                # Rank by Peak Height
-                    integrals[peakCoords[0]][1]                              # Relevant Isotope
+                    integralRanks[x],                                                   # Rank by Integral
+                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # Energy  (eV)
+                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
+                    float(np.format_float_positional(x, 6, fractional=False)),                 # TOF (us)
+                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
+                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
+                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
+                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
+                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
+                    integrals[x][1]                                                     # Relevant Isotope
                 ]
-                for peakCoords in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
         else:
             tableDataTemp = [
                 [
-                    integralRanks[peakCoords[0]],                            # Rank by Integral
-                    float(f"{peakCoords[0]:.6g}"),                           # Energy (eV)
-                    f"({np.where(peakList[0] == peakCoords[0])[0][0]})",     # Rank by Energy
-                    float(f"{self.e2TOF(peakCoords[0]):.6g}"),               # TOF (us)
-                    float(f"{integrals[peakCoords[0]][0]:.6g}"),             # Integral
-                    float(f"{peakWidth[peakCoords[0]]:.6g}"),                # Peak Width
-                    f"({peakWidthRank[peakCoords[0]]})",                     # Rank by Peak Width
-                    float(f"{peakCoords[1]:.6g}"),                           # Peak Height
-                    f"({peakHeightRank[peakCoords[1]]:.6g})",                # Rank by Peak Height
-                    integrals[peakCoords[0]][1]                              # Relevant Isotope
+                    integralRanks[x],                                                   # Rank by Integral
+                    float(np.format_float_positional(x, 6, fractional=False)),                 # Energy (eV)
+                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
+                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # TOF (us)
+                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
+                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
+                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
+                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
+                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
+                    integrals[x][1]                                                     # Relevant Isotope
                 ]
-                for peakCoords in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
 
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
@@ -689,8 +674,7 @@ class SpectraData:
         Loops over the existing peaks of the instance and calculates the data associated with each. Updating the table
         data.
         """
-        t1 = perf_counter()
-        if (which == 'max' and self.maxima.size == 0) or (which == 'min' and self.minima.size == 0):
+        if (which == 'max' and self.maxPeakLimitsX == {}) or (which == 'min' and self.minPeakLimitsX == {}):
             self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 9]],
                                               columns=[
                                               "Rank by Integral",
@@ -717,51 +701,70 @@ class SpectraData:
         else:
             peakList = self.minima
             peakLimitsX = self.minPeakLimitsX
-
-        integrals = {peak: self.peakIntegral(peakLimitsX[peak][0], peakLimitsX[peak][1], which=which)
-                     for peak in peakLimitsX.keys()}
+        t1 = perf_counter()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = {executor.submit(
+                self.peakIntegral,
+                peakLimitsX[peak][0],
+                peakLimitsX[peak][1],
+                which=which): peak for peak in peakLimitsX.keys()}
+            integrals = {peak: future.result() for future, peak in futures.items()}
+        t2 = perf_counter()
+        print(f"Integral Calc - {t2-t1}")
+        t1 = perf_counter()
         integralRanks = {peak: i for i, peak in enumerate(dict(
             sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
-
+        t2 = perf_counter()
+        print(f"Integral Ranks Calc - {t2-t1}")
+        t1 = perf_counter()
         peakHeightRank = {peak: i for i, peak in enumerate(
             sorted(peakList[1], key=lambda item: item, reverse=True))}
-
+        t2 = perf_counter()
+        print(f"Peak Height Rank Calc - {t2-t1}")
+        t1 = perf_counter()
         peakWidth = {peak: peakLimitsX[peak][1] - peakLimitsX[peak][0]
                      for peak in peakLimitsX.keys()}
-
+        t2 = perf_counter()
+        print(f"Peak Width Calc - {t2-t1}")
+        t1 = perf_counter()
         peakWidthRank = {peak: i for i, peak in enumerate(dict(
             sorted(peakWidth.items(), key=lambda item: item[1], reverse=True)).keys())}
+        t2 = perf_counter()
+        print(f"Peak Width Rank Calc - {t2-t1}")
 
+        t1 = perf_counter()
         if self.isToF:
             tableDataTemp = [
                 [
-                    integralRanks[peakCoords[0]],                            # Rank by Integral
-                    float(f"{self.e2TOF(peakCoords[0]):.6g}"),               # Energy (eV)
-                    f"({np.where(peakList[0] == peakCoords[0])[0][0]})",     # Rank by Energy
-                    float(f"{peakCoords[0]:.6g}"),                           # TOF (us)
-                    float(f"{integrals[peakCoords[0]][0]:.6g}"),             # Integral
-                    float(f"{peakWidth[peakCoords[0]]:.6g}"),                # Peak Width
-                    f"({peakWidthRank[peakCoords[0]]})",                     # Rank by Peak Width
-                    float(f"{peakCoords[1]:.6g}"),                           # Peak Height
-                    f"({peakHeightRank[peakCoords[1]]:.6g})",                # Rank by Peak Height
-                    integrals[peakCoords[0]][1]                              # Relevant Isotope
+                    integralRanks[x],                                                   # Rank by Integral
+                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # Energy  (eV)
+                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
+                    float(np.format_float_positional(x, 6, fractional=False)),                 # TOF (us)
+                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
+                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
+                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
+                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
+                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
+                    integrals[x][1]                                                     # Relevant Isotope
                 ]
-                for peakCoords in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
         else:
             tableDataTemp = [
                 [
-                    integralRanks[peakCoords[0]],                            # Rank by Integral
-                    float(f"{peakCoords[0]:.6g}"),                           # Energy (eV)
-                    f"({np.where(peakList[0] == peakCoords[0])[0][0]})",     # Rank by Energy
-                    float(f"{self.e2TOF(peakCoords[0]):.6g}"),               # TOF (us)
-                    float(f"{integrals[peakCoords[0]][0]:.6g}"),             # Integral
-                    float(f"{peakWidth[peakCoords[0]]:.6g}"),                # Peak Width
-                    f"({peakWidthRank[peakCoords[0]]})",                     # Rank by Peak Width
-                    float(f"{peakCoords[1]:.6g}"),                           # Peak Height
-                    f"({peakHeightRank[peakCoords[1]]:.6g})",                # Rank by Peak Height
-                    integrals[peakCoords[0]][1]                              # Relevant Isotope
+                    integralRanks[x],                                                   # Rank by Integral
+                    float(np.format_float_positional(x, 6, fractional=False)),                 # Energy (eV)
+                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
+                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # TOF (us)
+                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
+                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
+                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
+                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
+                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
+                    integrals[x][1]                                                     # Relevant Isotope
                 ]
-                for peakCoords in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
+        t2 = perf_counter()
+        print(f"Table Data Creation - {t2-t1}")
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
         if which == 'max':

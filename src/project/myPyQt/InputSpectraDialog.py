@@ -13,19 +13,19 @@ class InputSpectraDialog(QDialog):
         super(InputSpectraDialog, self).__init__(parent)
         self.setObjectName('inputWindow')
         if styleSheet is None:
-            self.setStyleSheet("""
-            *{
+            self.setStyleSheet(f"""
+            *{{
                 font-family: 'Roboto Mono';
                 font-size: 10pt;
                 font-weight: 400;
-            }
-            #inputWindow{
-                color: #FFF;
-                background-color: #393939;
-            }
-            #inputWindow QLabel{
-                color: #FFF;
-            }
+            }}
+            #inputWindow{{
+                color: {parent.text_color};
+                background-color:{parent.bg_color};
+            }}
+            #inputWindow QLabel{{
+                color: {parent.text_color};
+            }}
             """)
 
         self.mainLayout = QVBoxLayout()

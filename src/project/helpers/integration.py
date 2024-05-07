@@ -71,10 +71,10 @@ def integrate_simps(graphData: DataFrame,
     excess = (peakR[0] - peakL[0]) * (peakL[1] + peakR[1]) / 2
 
     if which == 'max':
-        if result - excess <= 0 or abs((result - excess) / result) < 0.1:  # Catches non peak contibution for isotopes.
+        if result - excess <= 0:  # Catches non peak contibution for isotopes.
             return 0
         return result - excess
     else:
-        if excess - result <= 0 or abs((excess - result) / excess) < 0.1:
+        if excess - result <= 0:
             return 0
         return excess - result

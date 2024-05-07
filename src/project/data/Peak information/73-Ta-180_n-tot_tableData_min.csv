@@ -1,4 +1,2 @@
 Rank by Integral,Energy (eV),Rank by Energy,TOF (us),Integral,Peak Width,Rank by Peak Width,Peak Height,Rank by Peak Height,Relevant Isotope
-0,1200000.0,(1),1.54803,61684900.0,2598750.0,(1),6.1954,(1),none
-1,9400000.0,(2),0.553103,13375400.0,16000000.0,(0),4.7071,(2),none
-2,0.2375,(0),3479.67,23296.8,1.21249,(2),276.194,(0),none
+0,0.2375,(0),3479.67,111.891,0.4097,(0),276.194,(0),none

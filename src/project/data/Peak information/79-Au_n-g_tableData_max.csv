@@ -1,3 +1,3 @@
 Rank by Integral,Energy (eV),Rank by Energy,TOF (us),Integral,Peak Width,Rank by Peak Width,Peak Height,Rank by Peak Height,Relevant Isotope
-0,4.8997,(0),746.459,5465.1,31.4308,(0),27218.4,(0),['79-Au-197_n-g']
-1,60.2914,(1),212.796,1659.24,13.3636,(1),3596.58,(1),['79-Au-197_n-g']
+0,4.8997,(0),746.459,1604.34,0.19107,(1),27218.4,(0),['79-Au-197_n-g']
+1,60.2914,(1),212.796,532.542,0.4519,(0),3596.58,(1),['79-Au-197_n-g']

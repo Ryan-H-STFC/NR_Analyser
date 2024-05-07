@@ -1,3 +1,3 @@
 Rank by Integral,Energy (eV),Rank by Energy,TOF (us),Integral,Peak Width,Rank by Peak Width,Peak Height,Rank by Peak Height,Relevant Isotope
-0,100000.0,(0),5.36253,380689000.0,240000.0,(1),1.01904,(1),['03-Li-6_n-tot']
-1,600000.0,(1),2.18924,5196480.0,1040000.0,(0),1.06969,(0),['03-Li-7_n-tot']
+0,100000.0,(0),5.36253,81390900.0,240000.0,(1),1.01904,(1),['03-Li-6_n-tot']
+1,600000.0,(1),2.18924,1316000.0,760000.0,(0),1.06969,(0),['03-Li-7_n-tot']

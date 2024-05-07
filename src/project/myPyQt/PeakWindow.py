@@ -106,7 +106,7 @@ class PeakWindow(QMainWindow):
             titleIndex = sorted([rowIndex for rowIndex in parent.titleRows if index.row() > rowIndex])[-1]
             elementName = parent.table_model.data(parent.table_model.index(titleIndex, 0), 0)
             plottedSpectra = [name for name in parent.plottedSpectra if elementName in name]
-            optionsDialog = InputSpectraDialog()
+            optionsDialog = InputSpectraDialog(parent=parent, styleSheet=parent.styleSheet())
             if len(plottedSpectra) > 1:
                 spectraNames = [f"{name}-{'ToF' if tof else 'Energy'}" for name, tof in plottedSpectra]
                 optionsDialog.elements.addItems(spectraNames)

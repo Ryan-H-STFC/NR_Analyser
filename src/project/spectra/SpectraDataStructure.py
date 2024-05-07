@@ -135,12 +135,14 @@ class SpectraData:
         if self.isToF and not self.graphData.empty and not distChanging:
             self.graphData[0] = self.energyToTOF(graphData[0], length=self.length)
             self.graphData.sort_values(0, ignore_index=True, inplace=True)
-
-        self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
-                                                       smoothCoeff=2 if self.isImported else 12)
+        if self.graphData.empty:
+            self.peakDetector = None
+        else:
+            self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
+                                                           smoothCoeff=2 if self.isImported else 12)
 
         try:
-            if not self.graphData.empty:
+            if self.peakDetector is not None:
                 self.maxima = np.array(self.peakDetector.maxima(threshold))
 
                 self.minima = np.array(self.peakDetector.minima())
@@ -178,31 +180,13 @@ class SpectraData:
             # Catches invalid maximas produced by scipy.signal.find_peaks
             pass
         except FileNotFoundError:
-            # if self.maxima.shape[1] < 100:
             if self.maxima is not None:
                 if self.maxima.size != 0:
 
-                    # self.peakDetector.definePeaks(which='max')
                     self.peakDetector.definePeakLimits(which='max')
                     self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX.copy()
                     self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='max')
-            # else:
-            #     if self.maxima is not None and not self.maxima.size == 0:
-            #         self.peakList = self.maxima.copy()
-            #         self.graphDataProxy = self.graphData.copy()
-            #         # results = splitProcess(self.definePeak, [(peak[0], peak[1]) for peak in self.maxima.T],
-            # chunks=8)
-            #         # for result in results.get():
-            #         #     print(result)
-            #         executor = ProcessPoolExecutor()
-            #         future = [executor.submit(self.definePeak, group)
-            #                   for group in grouper([(peak[0], peak[1]) for peak in self.maxima.T], 8)]
-            #         results = futures.wait(future)
-            #         for result in results:
-            #             print(result)
-            #         self.recalculateAllPeakData()
-        # Grab Peak Limits for Min, otherwise calculate
 
         try:
             if updatingDatabase:
@@ -230,7 +214,6 @@ class SpectraData:
             pass
         except FileNotFoundError:
 
-            # if self.minima.shape[1] < 100:
             if self.minima is not None:
                 if self.minima.size != 0:
 
@@ -238,15 +221,6 @@ class SpectraData:
                     self.minPeakLimitsX = self.peakDetector.minPeakLimitsX.copy()
                     self.minPeakLimitsY = self.peakDetector.minPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='min')
-            # else:
-            #     if self.minima is not None and not self.minima.size == 0:
-            #         self.peakList = self.minima.copy()
-            #         self.graphDataProxy = self.graphData.copy()
-            #         self.graphDataProxy.iloc[:, 1] = self.graphDataProxy.iloc[:, 1] * -1
-            #         results = splitProcess(self.definePeak, [(peak[0], peak[1]) for peak in self.minima.T], 'min', 8)
-            #         for result in results:
-            #             print(result)
-            #         self.recalculateAllPeakData(which='min')
 
         if self.numPeaks is None:
             self.numPeaks = None if self.maxima is None else len(self.maxima[0])

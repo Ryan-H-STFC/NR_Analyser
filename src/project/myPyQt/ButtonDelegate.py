@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QStyleOptionButton,
     QApplication
 )
+from project.settings import params
 
 
 class ButtonDelegate(QItemDelegate):
@@ -64,7 +65,7 @@ class ButtonDelegate(QItemDelegate):
                              color: #FFF;
                              """)
         if "No Peak" not in index.data():
-            button.setIcon(QIcon("./src/img/expand-down-component.svg"))
+            button.setIcon(QIcon(f"{params['dir_img']}expand-down-component.svg"))
             button.toggled.connect(lambda: self.collapseTableRows(button.isChecked(), index.row(), button))
         return button
 
@@ -77,10 +78,10 @@ class ButtonDelegate(QItemDelegate):
         endRow = rowCount if titleRowIndex == -1 else self.tableModel.titleRows[titleRowIndex + 1]
         interval = range(row + 1, endRow)
         if collapse:
-            button.setIcon(QIcon("./src/img/expand-up-component.svg"))
+            button.setIcon(QIcon(f"{params['dir_img']}expand-up-component.svg"))
             for i in interval:
                 self.tableView.hideRow(i)
         else:
-            button.setIcon(QIcon("./src/img/expand-down-component.svg"))
+            button.setIcon(QIcon(f"{params['dir_img']}expand-down-component.svg"))
             for i in interval:
                 self.tableView.showRow(i)

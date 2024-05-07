@@ -25,3 +25,6 @@ py.typed
 /build/*
 /dist/*
 *.spec
+
+/makespec/*
+.config.json

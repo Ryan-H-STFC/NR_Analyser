@@ -20,7 +20,8 @@ for file in os.listdir(f"{params['dir_graphData']}"):
     if ".csv" not in filename[-4:]:
         continue
     filename = filename[:-4]
-    spectraNames.append(filename)
+    if any([sym in filename for sym in ['Cu', 'As', 'Fe']]):
+        spectraNames.append(filename)
 
 thresholds = params['threshold_exceptions']
 exportDir = 'C:\\Users\\gzi47552\\Desktop\\NRT-NRCA Test Database'
@@ -41,7 +42,7 @@ def exportDatabaseValues(name):
         dataSymbol = split[1]
 
     threshold = thresholds.get(dataSymbol, (100, 100))[
-        0] if 'n_tot' in name else thresholds.get(dataSymbol, (100, 100))[1]
+        0] if 'n-t' in name else thresholds.get(dataSymbol, (100, 100))[1]
 
     tableData = pd.DataFrame(
         columns=[
@@ -70,18 +71,18 @@ def exportDatabaseValues(name):
                           threshold=threshold,
                           updatingDatabase=True
                           )
-
-    spectra.maxTableData[1:].to_csv(f'{exportDir}/Peak Information/{name.replace("element_", "")}_tableData_max.csv',
-                                    index=False)
-    spectra.minTableData[1:].to_csv(f'{exportDir}/Peak Information/{name.replace("element_", "")}_tableData_min.csv',
-                                    index=False)
+    name = name.replace("element_", "").replace("-Energy", "").replace("-ToF", "")
+    spectra.maxTableData[1:].to_csv(
+        f'{exportDir}/Peak Information/{name}_tableData_max.csv', index=False)
+    spectra.minTableData[1:].to_csv(
+        f'{exportDir}/Peak Information/{name}_tableData_min.csv', index=False)
 
     pd.DataFrame(spectra.maxPeakLimitsX.values()
-                 ).to_csv(f'{exportDir}/Peak Limit Information/{name.replace("element_", "")}_max.csv',
+                 ).to_csv(f'{exportDir}/Peak Limit Information/{name}_max.csv',
                           header=False,
                           index=False)
     pd.DataFrame(spectra.minPeakLimitsX.values()
-                 ).to_csv(f'{exportDir}/Peak Limit Information/{name.replace("element_", "")}_min.csv',
+                 ).to_csv(f'{exportDir}/Peak Limit Information/{name}_min.csv',
                           header=False,
                           index=False)
     print(f"Finished - {name}\n")

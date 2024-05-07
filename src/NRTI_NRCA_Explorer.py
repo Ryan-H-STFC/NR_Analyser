@@ -122,256 +122,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         # Allows for adding more things to the QWidget template
         super(ExplorerGUI, self).__init__()
         self.defaultParams = params.copy()
-        self.styleMain = """
-        #mainWindow{{
-            background-color: {bg_color};
-        }}
-        #settingsMenu{{
-            background-color: {bg_color};
-            text-color: {text_color};
-        }}
-
-        *{{
-            font-family: 'Roboto Mono';
-            font-size: 10pt;
-            font-weight: 400;
-        }}
-
-        QMenuBar {{
-            color: {text_color};
-        }}
-        QMenuBar::item:selected {{
-            color: #000;
-        }}
-
-        QCheckBox{{
-            color: {text_color};
-        }}
-
-        QCheckbox::indicator:checked{{
-            image: url(./src/img/checkbox-component-checked.svg);
-        }}
-
-        QCheckbox::indicator:unchecked{{
-            image: url(./src/img/checkbox-component-unchecked.svg);
-        }}
-
-        QComboBox, #settingsMenu QComboBox{{
-            background-color: #EEE;
-            border-radius: 3px;
-            font-family: 'Roboto Mono';
-            font-size: 10pt;
-            font-weight: 400;
-        }}
-
-        QMenuBar{{
-            background-color: {bg_color};
-            color: {text_color};
-        }}
-
-        QSplitter::handle:vertical{{
-            image: url(./src/img/drag-component.svg);
-            height: 11px;
-        }}
-
-        QLabel#numPeakLabel,
-              #thresholdLabel,
-              #orderlabel,
-              #compoundLabel,
-              #peakLabel,
-              #tableTypeLabel,
-              #gridOptionLabel{{
-            font: 12pt 'Roboto Mono Medium';
-            color: {text_color};
-        }}
-
-        QPushButton#plotEnergyBtn, #plotTOFBtn, #clearBtn, #pdBtn, #compoundBtn{{
-            font: 10pt 'Roboto Mono Medium';
-            font-weight: 500;
-            background-color: #EEE;
-            border-radius: 3px;
-        }}
-
-        QPushButton#plotEnergyBtn:disabled,
-                   #plotTOFBtn:disabled,
-                   #clearBtn:disabled,
-                   #pdBtn:disabled,
-                   #compoundBtn:disabled{{
-            color: #AAA;
-        }}
-
-        QPushButton#plotEnergyBtn:enabled,
-                   #plotTOFBtn:enabled,
-                   #clearBtn:enabled,
-                   #pdBtn:enabled,
-                   #compoundBtn:enabled
-                   {{
-                       color: #000;
-                    }}
-
-        QCheckBox#gridCheck,
-                 #thresholdCheck,
-                 #label_check,
-                 #orderByIntegral,
-                 #orderByPeakW,
-                 #peakCheck,
-                 #limitCheck,
-                 #tableCheck,
-                 #graphCheck
-                 {{
-                    font-weight: 500;
-                 }}
-
-        QCheckBox#grid_check::indicator:unchecked,
-                 #thresholdCheck::indicator:unchecked,
-                 #label_check::indicator:unchecked,
-                 #peakCheck::indicator:unchecked,
-                 #limitCheck::indicator:unchecked,
-                 #tableCheck::indicator:unchecked,
-                 #graphCheck::indicator:unchecked
-                 {{
-                   image: url(./src/img/checkbox-component-unchecked.svg);
-                   color: {text_color};
-                 }}
-
-        QCheckBox#grid_check::indicator:checked,
-                 #thresholdCheck::indicator:checked,
-                 #label_check::indicator:checked,
-                 #peakCheck::indicator:checked,
-                 #limitCheck::indicator:checked,
-                 #tableCheck::indicator:checked,
-                 #graphCheck::indicator:checked
-                 {{
-                     image: url(./src/img/checkbox-component-checked.svg);
-                     color: {text_color};
-                 }}
-
-        QCheckBox#grid_check:disabled,
-                 #thresholdCheck:disabled,
-                 #label_check:disabled,
-                 #limitCheck:disabled,
-                 #tableCheck:disabled,
-                 #graphCheck:disbaled
-                 {{
-                     color: #AAA;
-                 }}
-        QCheckBox#grid_check:enabled,
-                 #thresholdCheck:enabled,
-                 #label_check:enabled,
-                 #limitCheck:enabled,
-                 #tableCheck:enabled,
-                 #graphCheck:enabled
-                 {{
-                     color: {text_color};
-                 }}
-
-        QDialog {{
-            color: {text_color};
-            background-color: {bg_color};
-        }}
-
-        QDialog#inputWindow, QDialog#optionsWindow
-        {{
-            color: {text_color};
-            background-color: {bg_color};
-        }}
-
-        QDialog#inputWindow QLabel, QDialog#optionsWindow QLabel{{
-            color: {text_color};
-        }}
-
-        QDialog#optionsDialog QCombobox, QDialog#optionsWindow QComboBox{{
-            background-color: {text_color};
-        }}
-
-        QDockWidget{{
-            background-color: {bg_color};
-            color: {text_color};
-        }}
-
-        QDockWidget::title{{
-            color: {text_color};
-        }}
-
-        QGridLayout#inputForm{{
-            color: {text_color};
-            border: 1px solid #AAA;
-            background-color: {bg_color};
-        }}
-        QRadioButton:enabled{{
-            color: {text_color};
-            font-size: 9pt;
-            font-weight: 400;
-        }}
-
-        QRadioButton::indicator:unchecked{{
-            image: url(./src/img/radio-component-unchecked.svg);
-            color: #AAA;
-        }}
-        QRadioButton::indicator:checked{{
-            image: url(./src/img/radio-component-checked.svg);
-            color: {text_color};
-        }}
-
-        QRadioButton#orderByIntegral:enabled,
-                    #orderByPeakW:enabled
-                    {{
-                        color: {text_color};
-                    }}
-        QRadioButton#orderByIntegral::indicator:unchecked,
-                    #orderByPeakW::indicator:unchecked
-                    {{
-                        image: url(./src/img/radio-component-unchecked.svg);
-                        color: #AAA;
-                    }}
-
-        QRadioButton#orderByIntegral::indicator:checked,
-                    #orderByPeakW::indicator:checked
-                    {{
-                        image: url(./src/img/radio-component-checked.svg);
-                        color: {text_color};
-                    }}
-
-        QWidget#peakCanvasContainer{{
-            margin: 9px;
-            background-color: #FFF;
-        }}
-
-        QWidget#mainContainer {{
-            background-color: {text_color};
-        }}
-
-        QHeaderView {{
-            font-size: 7.5pt;
-        }}
-
-        QHeaderView::section:horizontal{{
-            border-top: 1px solid #000;
-            border-bottom: 1px solid #000;
-        }}
-
-        QHeaderView::section:horizontal:!last{{
-            border-right: 1px solid #000;
-        }}
-
-        QHeaderView::down-arrow{{
-            image: url(./src/img/expand-down-component.svg);
-        }}
-
-        QHeaderView::up-arrow{{
-            image: url(./src/img/expand-up-component.svg);
-        }}
-
-        QTableView#dataTable {{
-            font-size: 8pt;
-            border-style: none;
-        }}
-
-        QMessageBox QLabel{{
-            color: {text_color};
-        }}
-
-        """
+        self.checkBoxChecked = resource_path(f"{params['dir_img']}checkbox-component-checked.svg")
+        self.checkBoxUnchecked = resource_path(f"{params['dir_img']}checkbox-component-unchecked.svg")
+        self.drag = resource_path(f"{params['dir_img']}drag-component.svg")
+        self.radioUnchecked = resource_path(f"{params['dir_img']}radio-component-unchecked.svg")
+        self.radioChecked = resource_path(f"{params['dir_img']}radio-component-checked.svg")
+        self.expandDown = resource_path(f"{params['dir_img']}expand-down-component.svg")
+        self.expandUp = resource_path(f"{params['dir_img']}expand-up-component.svg")
+        self.bg_color = '#202020'
+        self.text_color = '#FFF'
 
         # Setting glo bal variables
         self.selectionName: str = None
@@ -416,7 +175,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.elementDistributions = deepcopy(self.defaultDistributions)
 
-        self.setStyleSheet(self.styleMain.format(bg_color="#202020", text_color="#FFF"))
+        self.setStyleSheet(self.setStyleTo('dark'))
         self.initUI()
 
     def initUI(self) -> None:
@@ -448,15 +207,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         menubar = QMenuBar(self)
         menubar.setObjectName("menubar")
 
-        newAction = QAction(QIcon(resource_path("./src/img/add-component.svg")), "&New", self)
+        newAction = QAction(QIcon(resource_path(f"{params['dir_img']}add-component.svg")), "&New", self)
         newAction.setShortcut("Ctrl+N")
         newAction.triggered.connect(self.clear)
 
-        importAction = QAction(QIcon(resource_path("./src/img/upload-component.svg")), "&Import Data", self)
+        importAction = QAction(QIcon(resource_path(f"{params['dir_img']}upload-component.svg")), "&Import Data", self)
         importAction.setShortcut("Ctrl+I")
         importAction.triggered.connect(self.importData)
 
-        exportAction = QAction(QIcon(resource_path("./src/img/export-component.svg")), "&Export Data", self)
+        exportAction = QAction(QIcon(resource_path(f"{params['dir_img']}export-component.svg")), "&Export Data", self)
         exportAction.setShortcut("Ctrl+S")
         exportAction.triggered.connect(self.exportData)
 
@@ -469,19 +228,22 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # ¦ --------------- MENU BAR - EDIT --------------
         # Creates menu bar and add actions
-        editpeakAction = QAction(QIcon(resource_path("./src/img/edit-component.svg")), "&Edit Peak Limits", self)
+        editpeakAction = QAction(
+            QIcon(resource_path(f"{params['dir_img']}edit-component.svg")), "&Edit Peak Limits", self)
         editpeakAction.setShortcut("Ctrl+E")
         editpeakAction.triggered.connect(self.editPeakLimits)
 
-        editThresholdAction = QAction(QIcon(resource_path("./src/img/edit-component.svg")), "&Edit Threshold", self)
+        editThresholdAction = QAction(
+            QIcon(resource_path(f"{params['dir_img']}edit-component.svg")), "&Edit Threshold", self)
         editThresholdAction.setShortcut("Ctrl+Shift+T")
         editThresholdAction.triggered.connect(self.editThresholdLimit)
 
-        editDistribution = QAction(QIcon(resource_path("./src/img/edit-component.svg")), "&Edit Distribution", self)
+        editDistribution = QAction(
+            QIcon(resource_path(f"{params['dir_img']}edit-component.svg")), "&Edit Distribution", self)
         editDistribution.setShortcut("Ctrl+Shift+D")
         editDistribution.triggered.connect(self.editDistribution)
 
-        editLength = QAction(QIcon(resource_path("./src/img/edit-component.svg")), "&Edit Length", self)
+        editLength = QAction(QIcon(resource_path(f"{params['dir_img']}edit-component.svg")), "&Edit Length", self)
         editLength.setShortcut("Ctrl+Shift+L")
         editLength.triggered.connect(self.editLength)
         # fileMenu.addAction(saveAction)
@@ -518,17 +280,17 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         appearenceMenu = viewMenu.addMenu("Appearence")
 
         defaultAppearence = QAction(
-            QIcon(resource_path("./src/img/changeAppearence-component.svg")), "&Dark Theme", self)
+            QIcon(resource_path(f"{params['dir_img']}changeAppearence-component.svg")), "&Dark Theme", self)
         defaultAppearence.setShortcut("Ctrl+Shift+1")
         defaultAppearence.triggered.connect(self.viewDarkStyle)
 
         windowsAppearence = QAction(
-            QIcon(resource_path("./src/img/changeAppearence-component.svg")), "&Light Theme", self)
+            QIcon(resource_path(f"{params['dir_img']}changeAppearence-component.svg")), "&Light Theme", self)
         windowsAppearence.setShortcut("Ctrl+Shift+2")
         windowsAppearence.triggered.connect(self.viewLightStyle)
 
         highContrastAppearence = QAction(
-            QIcon(resource_path("./src/img/changeAppearence-component.svg")), "&High Contrast", self)
+            QIcon(resource_path(f"{params['dir_img']}changeAppearence-component.svg")), "&High Contrast", self)
         highContrastAppearence.setShortcut("Ctrl+Shift+3")
         highContrastAppearence.triggered.connect(self.viewHighContrastStyle)
 
@@ -542,11 +304,13 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         optionsMenu = menubar.addMenu("&Options")
 
-        gridlineOptions = QAction(QIcon(resource_path("./src/img/grid-component.svg")), "&Grid Line Settings", self)
+        gridlineOptions = QAction(
+            QIcon(resource_path(f"{params['dir_img']}grid-component.svg")), "&Grid Line Settings", self)
         gridlineOptions.setShortcut("Ctrl+Shift+G")
         gridlineOptions.triggered.connect(self.gridLineOptions)
 
-        maxPeaksOption = QAction(QIcon(resource_path("./src/img/edit-component.svg")), "&Max Peak Quantity", self)
+        maxPeaksOption = QAction(
+            QIcon(resource_path(f"{params['dir_img']}edit-component.svg")), "&Max Peak Quantity", self)
         maxPeaksOption.setShortcut("Ctrl+Shift+Q")
         maxPeaksOption.triggered.connect(self.editMaxPeaks)
 
@@ -578,7 +342,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.combobox.setObjectName("combobox")
 
         self.combobox.addItems(self.spectraNames)
-        # self.combobox.setEditable(True)
         self.combobox.lineEdit().setPlaceholderText("Select an Isotope / Element")
 
         sidebarLayout.addWidget(self.combobox)
@@ -924,7 +687,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         firstLimitX.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
         firstLimitBtn = QPushButton()
         firstLimitBtn.setObjectName("first")
-        firstLimitBtn.setIcon(QIcon(resource_path(".\\src\\img\\add-component.svg")))
+        firstLimitBtn.setIcon(QIcon(resource_path(f"{params['dir_img']}add-component.svg")))
         firstLimitLayout.addWidget(firstLimitX)
         firstLimitLayout.addWidget(firstLimitBtn)
 
@@ -933,7 +696,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         secondLimitX.setValidator(QRegExpValidator(QRegExp("[+-]?([0-9]*[.])?[0-9]+")))
         secondLimitBtn = QPushButton()
         secondLimitBtn.setObjectName("second")
-        secondLimitBtn.setIcon(QIcon(resource_path(".\\src\\img\\add-component.svg")))
+        secondLimitBtn.setIcon(QIcon(resource_path(f"{params['dir_img']}add-component.svg")))
         secondLimitLayout.addWidget(secondLimitX)
         secondLimitLayout.addWidget(secondLimitBtn)
 
@@ -961,13 +724,14 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                          left: tuple[float] = None,
                          right: tuple[float] = None,
                          removeAll: bool = False):
-
-            for line in [line for line in self.ax.lines if 'peakEdit' in line.get_gid()]:
+            ax: matplotlib.axes.Axes = self.axPD if self.axPD is not None else self.ax
+            for line in [line for line in ax.lines if 'peakEdit' in line.get_gid()]:
                 if removeAll:
                     line.remove()
                 elif str(peak[0]) in line.get_gid():
                     line.remove()
             if removeAll:
+                self.figure.canvas.draw()
                 return
             spectraName: str = spectras.itemText(spectras.currentIndex() or 0)
             spectra: SpectraData = self.spectraData[spectraName]
@@ -989,6 +753,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                       linewidth=0.5,
                       gid=f"peakEdit-{peak[0]}"
                       )
+
             ax.axvline(x=left[0],
                        linestyle="--",
                        color='r',
@@ -1391,7 +1156,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             if spectraName == '':
                 spectras.setCurrentIndex(0)
                 return
-            totalLabel.setStyleSheet("color: {text_color};")
+            totalLabel.setStyleSheet(f"color: {self.text_color};")
             for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget):
                 if widget.objectName() == "isotopeDistribution":
                     optionsWindow.mainLayout.removeWidget(widget)
@@ -1517,6 +1282,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectra.updatePeaks(which='max')
             self.addTableData()
             self.toggleThreshold()
+            self.plotDerivatives(spectra)
             self.drawAnnotations(spectra,
                                  which='max' if self.maxTableOptionRadio.isChecked() else 'min')
             for spectra in self.spectraData.values():
@@ -1618,7 +1384,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         scrollArea = QScrollArea()
 
         scrollArea.setWidgetResizable(True)
-        # scrollArea.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         scrollArea.setVerticalScrollBar(QScrollBar())
         scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         scrollArea.setMinimumHeight(100)
@@ -1933,8 +1698,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         spectras.lineEdit().setPlaceholderText("Select an Isotope / Element")
         spectras.addItems([self.combobox.itemText(i)
                            for i in range(self.combobox.count()) if 'element' in self.combobox.itemText(i)])
-        # spectras.addItems([self.combobox.itemText(i)
-        #                    for i in range(self.combobox.count()) if 'element' in self.combobox.itemText(i)])
 
         totalLabel = QLabel("Total: 0")
 
@@ -2034,7 +1797,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             newQLineEdit.setPlaceholderText("0")
             title = QLabel(f"{spectraName}:")
             removeBtn = QPushButton()
-            removeBtn.setIcon(QIcon(resource_path(".\\src\\img\\delete-component.svg")))
+            removeBtn.setIcon(QIcon(resource_path(f"{params['dir_img']}delete-component.svg")))
             removeBtn.setObjectName("compoundDelBtn")
             removeBtn.clicked.connect(lambda: onRemove(spectraName))
             index = len(optionsWindow.children())
@@ -2116,13 +1879,275 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.setModal(False)
         optionsWindow.show()
 
+    def setStyleTo(self, style: Literal['dark', 'light', 'contrast']) -> str:
+        if style == 'dark':
+            self.bg_color = "#202020"
+            self.text_color = "#FFF"
+        elif style == 'light':
+            self.bg_color = "#968C80"
+            self.text_color = "#FFF"
+        elif style == 'contrast':
+            self.bg_color = "#000"
+            self.text_color = "#FFF"
+        return f"""
+        #mainWindow{{
+            background-color: {self.bg_color};
+        }}
+
+        #settingsMenu{{
+            background-color: {self.bg_color};
+            text-color: {self.text_color};
+        }}
+
+        *{{
+            font-family: 'Roboto Mono';
+            font-size: 10pt;
+            font-weight: 400;
+        }}
+
+        QMenuBar {{
+            color: {self.text_color};
+        }}
+        QMenuBar::item:selected {{
+            color: #000;
+        }}
+
+        QCheckBox{{
+            color: {self.text_color};
+        }}
+
+        QCheckbox::indicator:checked{{
+            image: url({self.checkBoxChecked});
+        }}
+
+        QCheckbox::indicator:unchecked{{
+            image: url({self.checkBoxChecked});
+        }}
+
+        QComboBox, #settingsMenu QComboBox{{
+            background-color: #EEE;
+            border-radius: 3px;
+            font-family: 'Roboto Mono';
+            font-size: 10pt;
+            font-weight: 400;
+        }}
+
+        QMenuBar{{
+            background-color: {self.bg_color};
+            color: {self.text_color};
+        }}
+
+        QSplitter::handle:vertical{{
+            image: url({self.drag});
+            height: 11px;
+        }}
+
+        QLabel#numPeakLabel,
+              #thresholdLabel,
+              #orderlabel,
+              #compoundLabel,
+              #peakLabel,
+              #tableTypeLabel,
+              #gridOptionLabel{{
+            font: 12pt 'Roboto Mono Medium';
+            color: {self.text_color};
+        }}
+
+        QPushButton#plotEnergyBtn, #plotTOFBtn, #clearBtn, #pdBtn, #compoundBtn{{
+            font: 10pt 'Roboto Mono Medium';
+            font-weight: 500;
+            background-color: #EEE;
+            border-radius: 3px;
+        }}
+
+        QPushButton#plotEnergyBtn:disabled,
+                   #plotTOFBtn:disabled,
+                   #clearBtn:disabled,
+                   #pdBtn:disabled,
+                   #compoundBtn:disabled{{
+            color: #AAA;
+        }}
+
+        QPushButton#plotEnergyBtn:enabled,
+                   #plotTOFBtn:enabled,
+                   #clearBtn:enabled,
+                   #pdBtn:enabled,
+                   #compoundBtn:enabled
+                   {{
+                       color: #000;
+                    }}
+
+        QCheckBox#gridCheck,
+                 #thresholdCheck,
+                 #label_check,
+                 #orderByIntegral,
+                 #orderByPeakW,
+                 #peakCheck,
+                 #limitCheck,
+                 #tableCheck,
+                 #graphCheck
+                 {{
+                    font-weight: 500;
+                 }}
+
+        QCheckBox#grid_check::indicator:unchecked,
+                 #thresholdCheck::indicator:unchecked,
+                 #label_check::indicator:unchecked,
+                 #peakCheck::indicator:unchecked,
+                 #limitCheck::indicator:unchecked,
+                 #tableCheck::indicator:unchecked,
+                 #graphCheck::indicator:unchecked
+                 {{
+                   image: url({self.checkBoxUnchecked});
+                   color: {self.text_color};
+                 }}
+
+        QCheckBox#grid_check::indicator:checked,
+                 #thresholdCheck::indicator:checked,
+                 #label_check::indicator:checked,
+                 #peakCheck::indicator:checked,
+                 #limitCheck::indicator:checked,
+                 #tableCheck::indicator:checked,
+                 #graphCheck::indicator:checked
+                 {{
+                     image: url({self.checkBoxChecked});
+                     color: {self.text_color};
+                 }}
+
+        QCheckBox#grid_check:disabled,
+                 #thresholdCheck:disabled,
+                 #label_check:disabled,
+                 #limitCheck:disabled,
+                 #tableCheck:disabled,
+                 #graphCheck:disbaled
+                 {{
+                     color: #AAA;
+                 }}
+        QCheckBox#grid_check:enabled,
+                 #thresholdCheck:enabled,
+                 #label_check:enabled,
+                 #limitCheck:enabled,
+                 #tableCheck:enabled,
+                 #graphCheck:enabled
+                 {{
+                     color: {self.text_color};
+                 }}
+
+        QDialog {{
+            color: {self.text_color};
+            background-color: {self.bg_color};
+        }}
+
+        QDialog#inputWindow, QDialog#optionsWindow
+        {{
+            color: {self.text_color};
+            background-color: {self.bg_color};
+        }}
+
+        QDialog#inputWindow QLabel, QDialog#optionsWindow QLabel{{
+            color: {self.text_color};
+        }}
+
+        QDialog#optionsDialog QCombobox, QDialog#optionsWindow QComboBox{{
+            background-color: {self.text_color};
+        }}
+
+        QDockWidget{{
+            background-color: {self.bg_color};
+            color: {self.text_color};
+        }}
+
+        QDockWidget::title{{
+            color: {self.text_color};
+        }}
+
+        QGridLayout#inputForm{{
+            color: {self.text_color};
+            border: 1px solid #AAA;
+            background-color: {self.bg_color};
+        }}
+        QRadioButton:enabled{{
+            color: {self.text_color};
+            font-size: 9pt;
+            font-weight: 400;
+        }}
+
+        QRadioButton::indicator:unchecked{{
+            image: url({self.radioUnchecked});
+            color: #AAA;
+        }}
+        QRadioButton::indicator:checked{{
+            image: url({self.radioChecked});
+            color: {self.text_color};
+        }}
+
+        QRadioButton#orderByIntegral:enabled,
+                    #orderByPeakW:enabled
+                    {{
+                        color: {self.text_color};
+                    }}
+        QRadioButton#orderByIntegral::indicator:unchecked,
+                    #orderByPeakW::indicator:unchecked
+                    {{
+                        image: url({self.radioUnchecked});
+                        color: #AAA;
+                    }}
+
+        QRadioButton#orderByIntegral::indicator:checked,
+                    #orderByPeakW::indicator:checked
+                    {{
+                        image: url({self.radioChecked});
+                        color: {self.text_color};
+                    }}
+
+        QWidget#peakCanvasContainer{{
+            margin: 9px;
+            background-color: #FFF;
+        }}
+
+        QWidget#mainContainer {{
+            background-color: {self.text_color};
+        }}
+
+        QHeaderView {{
+            font-size: 7.5pt;
+        }}
+
+        QHeaderView::section:horizontal{{
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }}
+
+        QHeaderView::section:horizontal:!last{{
+            border-right: 1px solid #000;
+        }}
+
+        QHeaderView::down-arrow{{
+            image: url({self.expandDown});
+        }}
+
+        QHeaderView::up-arrow{{
+            image: url({self.expandUp});
+        }}
+
+        QTableView#dataTable {{
+            font-size: 8pt;
+            border-style: none;
+        }}
+
+        QMessageBox QLabel{{
+            color: {self.text_color};
+        }}
+        """
+
     def viewDarkStyle(self) -> None:
         """
         ``viewDarkStyle``
         -----------------
         Applies the dark theme to the GUI.
         """
-        self.setStyleSheet(self.styleMain.format(bg_color="#202020", text_color="#FFF"))
+
+        self.setStyleSheet(self.setStyleTo('dark'))
 
     def viewLightStyle(self) -> None:
         """
@@ -2130,7 +2155,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         ------------------
         Applies the light theme to the GUI.
         """
-        self.setStyleSheet(self.styleMain.format(bg_color="#968C80", text_color="#FFF"))
+        self.setStyleSheet(self.setStyleTo('light'))
 
     def viewHighContrastStyle(self) -> None:
         """
@@ -2138,7 +2163,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         -------------------------
         Applies the high contrast theme to the GUI.
         """
-        self.setStyleSheet(self.styleMain.format(bg_color="#000", text_color="#FF0"))
+        self.setStyleSheet(self.setStyleTo('contrast'))
 
     def toggleBtnControls(self, enableAll: bool = False, plotEnergyBtn: bool = False,
                           plotToFBtn: bool = False, clearBtn: bool = False, pdBtn: bool = False) -> None:
@@ -2481,9 +2506,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         if (self.selectionName, tof) not in self.plottedSpectra:
             self.plottedSpectra.append((self.selectionName, tof))
-        # Handles number_totpeaks when plotting energy and tof of the same graph
-
-        # # Finds the mode for L0 (length) parameter
 
         self.titleRows = [0]
 
@@ -2710,31 +2732,57 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectraData.isGraphDrawn = True
 
             spectraData.isUpdating = False
-        self.updateLegend()
 
         # Establishing plot count
         self.plotCount += 1
 
-        # self.drawAnnotations(spectraData, which='max' if self.maxTableOptionRadio.isChecked() else 'min')
+        # Plot derivatives, check settings debug section to customise.
+
+        self.plotDerivatives(spectraData)
+
+        self.updateLegend()
         self.toggleThreshold()
 
         self.ax.autoscale()  # Tidying up
 
         self.figure.tight_layout()
-        # left, right = (list(spectraData.maxPeakLimitsX.values())[0][0],
-        #                list(spectraData.maxPeakLimitsX.values())[-1][1])
-        # left, right = (spectraData.graphData[spectraData.graphData.iloc[:, 0] == left].index.values.astype(int),
-        #                spectraData.graphData[spectraData.graphData.iloc[:, 0] == right].index.values.astype(int))
-        # self.plotDerivatives(spectraData, left, right, first=True, second=True)
         self.canvas.draw()
 
-    def plotDerivatives(self, spectraData: SpectraData, left, right, first: bool = False, second: bool = False):
+    def plotDerivatives(self, spectraData: SpectraData) -> None:
+        """
+        ``plotDerivatives``
+        -------------------
 
+        Use to plot the the x-coord for zeros of the first and second derivatives as well as the smoothed graph data
+        its based on.
+
+        Check settings.py in Debug settings to enable and disable each plot.
+        - params['show_smoothed']
+        - params['show_first_der']
+        - params['show_second_der']
+
+        Args:
+            spectraData (SpectraData): Which spectra to plot for.
+        """
+        if spectraData is None:
+            return
+        if spectraData.maxPeakLimitsX != {}:
+            left, right = (list(spectraData.maxPeakLimitsX.values())[0][0],
+                           list(spectraData.maxPeakLimitsX.values())[-1][1])
+            left, right = (spectraData.graphData[spectraData.graphData.iloc[:, 0] == left].index.values.astype(int),
+                           spectraData.graphData[spectraData.graphData.iloc[:, 0] == right].index.values.astype(int))
+        else:
+            left = 1e-5
+            right = 2e7
         ax: matplotlib.axes.Axes = self.axPD if self.axPD is not None else self.ax
+
+        for line in [line for line in ax.get_lines() if 'Der' in line.get_gid()]:
+            line.remove()
         smoothGraph = spectraData.peakDetector.smoothGraph
-        if second:
-            graphData = spectraData.peakDetector.secDerivative
-            label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-2nd"
+        graphData = spectraData.peakDetector.secDerivative
+        if params['show_smoothed']:
+            label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-Smoothed"
+
             ax.plot(smoothGraph.iloc[:, 0],
                     smoothGraph.iloc[:, 1],
                     "-",
@@ -2742,25 +2790,33 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     color='blue',
                     linewidth=0.8,
                     label=label,
-                    gid=spectraData.name
+                    gid=f"{spectraData.name}-Der"
                     )
-            infls = np.where(np.diff(np.sign(spectraData.peakDetector.npSecDer)))[0]
-
+        if params['show_first_der']:
+            infls = spectraData.peakDetector.infls
             for x in graphData.iloc[infls[np.where((infls > left) & (infls < right))]].iloc[:, 0]:
                 ax.axvline(x,
                            color='blue',
                            linewidth=0.4,
                            alpha=0.4,
-                           gid=f"{label}-{x}-Inflection")
+                           gid=f"{label}-{x}-Inflection-Der")
 
-        self.toggleThreshold()
+        if params['show_second_der']:
+            dips = spectraData.peakDetector.dips
+            flats = spectraData.peakDetector.flats
+            for x in graphData.iloc[flats[np.where(flats < right)]].iloc[:, 0]:
+                ax.axvline(x,
+                           color='green',
+                           linewidth=0.4,
+                           alpha=0.4,
+                           gid=f"{label}-{x}-Flats-Der")
 
-        ax.autoscale()  # Tidying up
-
-        self.figure.tight_layout()
-        self.updateLegend()
-
-        self.canvas.draw()
+            for x in graphData.iloc[dips[np.where(dips < right)]].iloc[:, 0]:
+                ax.axvline(x,
+                           color='red',
+                           linewidth=0.4,
+                           alpha=0.4,
+                           gid=f"{label}-{x}-Dips-Der")
 
     def updateLegend(self):
         """
@@ -2849,7 +2905,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         legline.set_alpha(1.0 if newVisible else 0.2)
         origLine.set_visible(newVisible)
         # Hiding relevant labels
-        spectraData = self.spectraData[orgline_name]
+        spectraData = self.spectraData[orgline_name.replace("-Smoothed", "")]
         spectraData.isGraphHidden = not newVisible
         spectraData.hideAnnotations(self.peakLabelCheck.isChecked())
         for line in axis.lines:
@@ -3209,26 +3265,29 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 saveGraph = row.findChild(QCheckBox, 'graphCheck').isChecked()
                 saveTable = row.findChild(QCheckBox, 'tableCheck').isChecked()
                 saveLimit = row.findChild(QCheckBox, 'limitCheck').isChecked()
-
+                spec = self.spectraData[name]
                 if saveGraph:
-                    self.spectraData[name].graphData[1:].to_csv(f'{exportDir}/{name}_graphData.csv',
-                                                                index=False,
-                                                                header=False)
+                    spec.graphData[1:].to_csv(
+                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_graphData.csv',
+                        index=False,
+                        header=False)
                 if saveTable:
-                    self.spectraData[name].maxTableData[1:].to_csv(f'{exportDir}/{name}_tableData_max.csv',
-                                                                   index=False)
-                    self.spectraData[name].minTableData[1:].to_csv(f'{exportDir}/{name}_tableData_min.csv',
-                                                                   index=False)
+                    spec.maxTableData[1:].to_csv(
+                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_table_max.csv',
+                        index=False,)
+                    spec.minTableData[1:].to_csv(
+                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_table_min.csv',
+                        index=False)
 
                 if saveLimit:
-                    pd.DataFrame(self.spectraData[name].maxPeakLimitsX.values()
-                                 ).to_csv(f'{exportDir}/{name}_peakLimits_max.csv',
-                                          header=False,
-                                          index=False)
-                    pd.DataFrame(self.spectraData[name].minPeakLimitsX.values()
-                                 ).to_csv(f'{exportDir}/{name}_peakLimits_min.csv',
-                                          header=False,
-                                          index=False)
+                    pd.DataFrame(spec.maxPeakLimitsX.values()).to_csv(
+                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_peakLim_max.csv',
+                        header=False,
+                        index=False)
+                    pd.DataFrame(spec.minPeakLimitsX.values()).to_csv(
+                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_peakLim_min.csv',
+                        header=False,
+                        index=False)
 
         saveBtn.clicked.connect(onAccept)
 
@@ -3530,11 +3589,11 @@ def main() -> None:
     app = QtWidgets.QApplication(sys.argv)
     app.setObjectName('MainWindow')
 
-    QtGui.QFontDatabase.addApplicationFont(resource_path('src\\fonts\\RobotoMono-Thin.ttf'))
-    QtGui.QFontDatabase.addApplicationFont(resource_path('src\\fonts\\RobotoMono-Regular.ttf'))
-    QtGui.QFontDatabase.addApplicationFont(resource_path('src\\fonts\\RobotoMono-Medium.ttf'))
+    QtGui.QFontDatabase.addApplicationFont(resource_path(f"{params['dir_fonts']}RobotoMono-Thin.ttf"))
+    QtGui.QFontDatabase.addApplicationFont(resource_path(f"{params['dir_fonts']}RobotoMono-Regular.ttf"))
+    QtGui.QFontDatabase.addApplicationFont(resource_path(f"{params['dir_fonts']}RobotoMono-Medium.ttf"))
 
-    app.setWindowIcon(QIcon(resource_path("./src/img/final_logo.png")))
+    app.setWindowIcon(QIcon(resource_path(f"{params['dir_img']}final_logo.png")))
 
     _ = ExplorerGUI()
     app.exec()

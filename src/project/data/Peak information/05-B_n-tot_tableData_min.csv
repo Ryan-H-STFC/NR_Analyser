@@ -1,0 +1,5 @@
+Rank by Integral,Energy (eV),Rank by Energy,TOF (us),Integral,Peak Width,Rank by Peak Width,Peak Height,Rank by Peak Height,Relevant Isotope
+0,19546.0,(0),12.1294,179043000.0,19968.0,(3),5.1969,(0),['05-B-10_n-tot']
+1,1014000.0,(2),1.68403,533110.0,669950.0,(0),1.35439,(3),['05-B-11_n-tot']
+2,2200000.0,(3),1.1433,112044.0,497780.0,(1),1.81447,(2),['05-B-11_n-tot']
+3,320000.0,(1),2.99775,86046.4,320696.0,(2),3.75177,(1),['05-B-11_n-tot']

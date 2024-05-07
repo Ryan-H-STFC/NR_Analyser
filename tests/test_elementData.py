@@ -5,8 +5,9 @@ from unittest import TestCase, main
 
 
 sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.abspath("./src/"))
 sys.path.append(os.path.abspath("./src/project/"))
-sys.path.append(os.path.abspath("./src/project/element"))
+sys.path.append(os.path.abspath("./src/project/spectra"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
 from src.project.spectra.SpectraDataStructure import SpectraData
 

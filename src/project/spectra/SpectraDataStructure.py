@@ -119,11 +119,11 @@ class SpectraData:
         if self.minTableData is None:
             self.minTableData = DataFrame()
 
-        self.graphData: DataFrame = graphData.drop_duplicates(0)
-        self.graphData.reset_index(drop=True, inplace=True)
-
         if self.graphData is None:
             self.graphData = DataFrame()
+        else:
+            self.graphData: DataFrame = graphData.drop_duplicates(0)
+            self.graphData.reset_index(drop=True, inplace=True)
 
         self.graphColour = graphColour
 

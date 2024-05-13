@@ -119,7 +119,8 @@ class SpectraData:
         if self.minTableData is None:
             self.minTableData = DataFrame()
 
-        self.graphData: DataFrame = graphData
+        self.graphData: DataFrame = graphData.drop_duplicates(0)
+        self.graphData.reset_index(drop=True, inplace=True)
 
         if self.graphData is None:
             self.graphData = DataFrame()
@@ -144,49 +145,51 @@ class SpectraData:
         try:
             if self.peakDetector is not None:
                 self.maxima = np.array(self.peakDetector.maxima(threshold))
+                self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX
+                self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY
 
                 self.minima = np.array(self.peakDetector.minima())
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
 
-        # Grab Peak Limits for max from file, otherwise calculate
-        try:
-            if updatingDatabase:
-                raise FileNotFoundError
-            if not self.distChanging:
-                name = self.name[8:] if 'element' in self.name else self.name
-                maxLimits = pandas.read_csv(resource_path(
-                    f"{peakLimitFilepath}{name}_max.csv"), names=['left', 'right'])
-                if self.isToF:
-                    # Convert Limit coords to TOF
-                    maxLimits['left'] = self.energyToTOF(maxLimits['left'], self.length)
-                    maxLimits['right'] = self.energyToTOF(maxLimits['right'], self.length)
-                    maxLimits['left'], maxLimits['right'] = maxLimits['right'], maxLimits['left']
+        # # Grab Peak Limits for max from file, otherwise calculate
+        # try:
+        #     if updatingDatabase:
+        #         raise FileNotFoundError
+        #     if not self.distChanging:
+        #         name = self.name[8:] if 'element' in self.name else self.name
+        #         maxLimits = pandas.read_csv(resource_path(
+        #             f"{peakLimitFilepath}{name}_max.csv"), names=['left', 'right'])
+        #         if self.isToF:
+        #             # Convert Limit coords to TOF
+        #             maxLimits['left'] = self.energyToTOF(maxLimits['left'], self.length)
+        #             maxLimits['right'] = self.energyToTOF(maxLimits['right'], self.length)
+        #             maxLimits['left'], maxLimits['right'] = maxLimits['right'], maxLimits['left']
 
-                for max in self.maxima[0]:
-                    lim = maxLimits[(maxLimits['left'] < max) & (maxLimits['right'] > max)]
-                    if lim.empty:
-                        continue
-                    self.maxPeakLimitsX[max] = (lim['left'].iloc[0], lim['right'].iloc[0])
-                    leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
-                    rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
-                    interpGraphData = interp1d(graphData[0], graphData[1])
-                    self.maxPeakLimitsY[max] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
-            else:
-                raise FileNotFoundError
+        #         for max in self.maxima[0]:
+        #             lim = maxLimits[(maxLimits['left'] < max) & (maxLimits ['right'] > max)]
+        #             if lim.empty:
+        #                 continue
+        #             self.maxPeakLimitsX[max] = (lim['left'].iloc[0], lim['right'].iloc[0])
+        #             leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
+        #             rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
+        #             interpGraphData = interp1d(graphData[0], graphData[1])
+        #             self.maxPeakLimitsY[max] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
+        #     else:
+        #         raise FileNotFoundError
 
-        except ValueError:
-            # Catches invalid maximas produced by scipy.signal.find_peaks
-            pass
-        except FileNotFoundError:
-            if self.maxima is not None:
-                if self.maxima.size != 0:
+        # except ValueError:
+        #     # Catches invalid maximas produced by scipy.signal.find_peaks
+        #     pass
+        # except FileNotFoundError:
+        #     if self.maxima is not None:
+        #         if self.maxima.size != 0:
 
-                    self.peakDetector.definePeakLimits(which='max')
-                    self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX.copy()
-                    self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY.copy()
-                    self.recalculateAllPeakData(which='max')
+        #             self.peakDetector.definePeakLimits(which='max')
+        #             self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX.copy()
+        #             self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY.copy()
+        #             self.recalculateAllPeakData(which='max')
 
         try:
             if updatingDatabase:

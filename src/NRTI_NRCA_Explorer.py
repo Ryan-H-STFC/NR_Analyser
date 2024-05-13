@@ -1376,11 +1376,12 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         settingsDialog = QDialog()
         settingsDialog.setWindowTitle("Settings")
-        settingsDialog.setObjectName("inputWindow")
+        settingsDialog.setObjectName("settings")
         settingsDialog.setMinimumSize(600, 820)
+        settingsDialog.setStyleSheet(self.setStyleTo(self.currentStyle))
         mainLayout = QVBoxLayout()
         formLayout = QGridLayout()
-        formLayout.setObjectName("inputForm")
+        formLayout.setObjectName("settings")
         scrollArea = QScrollArea()
 
         scrollArea.setWidgetResizable(True)
@@ -1401,7 +1402,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     subRowContentLayout = QHBoxLayout()
                     subRowContentLayout.setObjectName('row')
                     subInputLineEdit = QLineEdit()
-                    subInputLineEdit.setObjectName(f"{key}>{subKey}-sub")
+                    subInputLineEdit.setObjectName(f"{key}>{subKey}")
                     subInputLineEdit.setText(str(subValue))
                     if isinstance(value, float):
                         subInputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*[.])?[0-9]+")))
@@ -1413,7 +1414,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                         comboBox = QComboBox()
                         comboBox.setEditText(subValue)
                         comboBox.setMinimumSize(150, 40)
-                        comboBox.setObjectName(f"{key}>{subKey}-sub")
+                        comboBox.setObjectName(f"{key}>{subKey}")
                         if subKey == 'which':
                             comboBox.addItems(['major', 'minor', 'both'])
                             subRowContentLayout.addWidget(comboBox, alignment=Qt.AlignmentFlag.AlignLeft)
@@ -1425,7 +1426,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                         else:
                             colorDialog = QColorDialog()
                             colorDialog.setCurrentColor(QtGui.QColor(subValue))
-                            colorDialog.setObjectName(f"{key}>{subKey}-sub")
+                            colorDialog.setObjectName(f"{key}>{subKey}")
                             subRowContentLayout.addWidget(colorDialog, alignment=Qt.AlignmentFlag.AlignLeft)
 
                             inputs.append(colorDialog)
@@ -1437,19 +1438,31 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             else:
                 inputLineEdit.setText(str(value))
-                if isinstance(value, float):
+                if type(value) is float:
+                    inputLineEdit.setObjectName(f'{key}-float')
                     inputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*[.])?[0-9]+")))
                     rowLayout.addWidget(inputLineEdit, alignment=Qt.AlignmentFlag.AlignLeft)
                     inputs.append(inputLineEdit)
 
-                if isinstance(value, int):
+                if type(value) is int:
+                    inputLineEdit.setObjectName(f'{key}-int')
                     inputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*)+")))
                     rowLayout.addWidget(inputLineEdit, alignment=Qt.AlignmentFlag.AlignLeft)
                     inputs.append(inputLineEdit)
 
+                if type(value) is bool:
+                    comboBox = QComboBox()
+                    comboBox.addItems(['False', 'True'])
+                    comboBox.setCurrentIndex(value)
+                    comboBox.setMinimumSize(150, 40)
+                    comboBox.setObjectName(f"{key}-bool")
+                    rowLayout.addWidget(comboBox, alignment=Qt.AlignmentFlag.AlignLeft)
+                    inputs.append(comboBox)
+
                 if 'dir' in key:
                     dirLabel = QLabel(value)
-                    dirLabel.setObjectName(key)
+                    dirLabel.setObjectName(f'{key}-str')
+
                     fileDialogButton = QPushButton()
                     fileDialogButton.setFixedWidth(40)
                     fileDialogButton.clicked.connect(lambda: handleFileChange(dirLabel))
@@ -1470,26 +1483,33 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         def onAccept() -> None:
             # ! Work out assignment to nested dictionary
-            settings = {key:
-                        {w.objectName().split('>')[1]: ((float(w.text()[1:-1].split(',')[0]),
-                                                         float(w.text()[1:-1].split(',')[1]))
-                                                        if ',' in w.text()
-                                                        else float(w.text())
-                                                        )
-                         if isinstance(w, QLineEdit)
-                         else w.currentColor().name()
-                         if isinstance(w, QColorDialog)
-                         else w.currentText() for w in inputs if '>' in w.objectName()}
-                        for key in list(set([w.objectName().split('>')[0] for w in inputs if '>' in w.objectName()]))}
+            newLength = {}
+            newThresholds = {}
+            newGridSettings = {}
+            for key in params.keys():
+                newInputs = [input for input in inputs if key in input.objectName()]
+                for input in newInputs:
+                    if '>' in input.objectName():  # Handling dictionary assignment within params
+                        dicKey, dicSubKey = input.objectName().split('>')
+                        if dicKey == 'length':
+                            newLength[dicSubKey] = float(input.text())
+                        elif dicKey == 'threshold_exceptions':
+                            text = input.text()
+                            newThresholds[dicSubKey] = (float(text[1:-1].split(',')[0]),
+                                                        float(text[1:-1].split(',')[1]))
+                        elif dicKey == 'grid_settings':
+                            newGridSettings[dicSubKey] = input.currentText() if isinstance(
+                                input, QComboBox) else input.currentColor().name()
+                    elif isinstance(input, (QLineEdit, QLabel, QComboBox)):
+                        params[key] = float(input.text()
+                                            ) if 'float' in input.objectName(
+                        ) else int(input.text()) if 'int' in input.objectName(
+                        ) else bool(True if 'True' in input.currentText() else False) if 'bool' in input.objectName(
+                        ) else input.text()
 
-            for key, value in [(w.objectName().split('>')[0],
-                                float(w.text()) if isinstance(w, QLineEdit) and '>' not in w.objectName()
-                                else w.text() if isinstance(w, QLabel) and '>' not in w.objectName() else None
-                                ) for w in inputs]:
-                params[key] = value
-
-            for key, value in settings.items():
-                params[key] = value
+            params['length'] = newLength
+            params['threshold_exceptions'] = newThresholds
+            params['grid_settings'] = newGridSettings
         onAcceptBtn.clicked.connect(onAccept)
 
         def onReset() -> None:
@@ -1880,6 +1900,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.show()
 
     def setStyleTo(self, style: Literal['dark', 'light', 'contrast']) -> str:
+        self.currentStyle = style
         if style == 'dark':
             self.bg_color = "#202020"
             self.text_color = "#FFF"
@@ -1894,9 +1915,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             background-color: {self.bg_color};
         }}
 
-        #settingsMenu{{
+        #settings{{
             background-color: {self.bg_color};
-            text-color: {self.text_color};
+            color: {self.text_color};
         }}
 
         *{{
@@ -1924,7 +1945,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             image: url({self.checkBoxChecked});
         }}
 
-        QComboBox, #settingsMenu QComboBox{{
+        QComboBox{{
             background-color: #EEE;
             border-radius: 3px;
             font-family: 'Roboto Mono';
@@ -1951,6 +1972,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
               #gridOptionLabel{{
             font: 12pt 'Roboto Mono Medium';
             color: {self.text_color};
+        }}
+        QLineEdit#dir{{
+            direction: left;
+            text-overflow: ellipsis;
         }}
 
         QPushButton#plotEnergyBtn, #plotTOFBtn, #clearBtn, #pdBtn, #compoundBtn{{
@@ -2037,7 +2062,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             color: {self.text_color};
             background-color: {self.bg_color};
         }}
-
         QDialog#inputWindow, QDialog#optionsWindow
         {{
             color: {self.text_color};
@@ -2060,7 +2084,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         QDockWidget::title{{
             color: {self.text_color};
         }}
-
+        QGridLayout#settings{{
+            color: {self.text_color};
+            background-color: {self.bg_color};
+        }}
         QGridLayout#inputForm{{
             color: {self.text_color};
             border: 1px solid #AAA;
@@ -2780,8 +2807,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             line.remove()
         smoothGraph = spectraData.peakDetector.smoothGraph
         graphData = spectraData.peakDetector.secDerivative
+        label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-Smoothed"
         if params['show_smoothed']:
-            label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-Smoothed"
 
             ax.plot(smoothGraph.iloc[:, 0],
                     smoothGraph.iloc[:, 1],
@@ -2793,15 +2820,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     gid=f"{spectraData.name}-Der"
                     )
         if params['show_first_der']:
-            infls = spectraData.peakDetector.infls
-            for x in graphData.iloc[infls[np.where((infls > left) & (infls < right))]].iloc[:, 0]:
-                ax.axvline(x,
-                           color='blue',
-                           linewidth=0.4,
-                           alpha=0.4,
-                           gid=f"{label}-{x}-Inflection-Der")
-
-        if params['show_second_der']:
             dips = spectraData.peakDetector.dips
             flats = spectraData.peakDetector.flats
             for x in graphData.iloc[flats[np.where(flats < right)]].iloc[:, 0]:
@@ -2817,6 +2835,23 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                            linewidth=0.4,
                            alpha=0.4,
                            gid=f"{label}-{x}-Dips-Der")
+
+        if params['show_second_der']:
+            infls = spectraData.peakDetector.infls
+            for x in graphData.iloc[infls[np.where((infls > left) & (infls < right))]].iloc[:, 0]:
+                ax.axvline(x,
+                           color='blue',
+                           linewidth=0.4,
+                           alpha=0.4,
+                           gid=f"{label}-{x}-Inflection-Der")
+
+        # ax.hlines(*spectraData.peakDetector.widths[1:], color='C2')
+        # ax.plot(spectraData.graphData[0],
+        #         spectraData.peakDetector.baseline,
+        #         color='#c14',
+        #         linewidth=0.4,
+        #         alpha=0.4,
+        #         gid=f"{label}-Baseline")
 
     def updateLegend(self):
         """

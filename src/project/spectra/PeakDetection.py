@@ -4,7 +4,9 @@ from pyparsing import Literal
 from pandas import DataFrame
 from scipy import signal
 from scipy.ndimage import gaussian_filter1d
+from scipy.interpolate import interp1d
 import numpy as np
+from peakutils import baseline
 from project.settings import params
 from project.helpers.fitBoxes import fitBoxes
 from project.helpers.getIndex import getIndex
@@ -19,9 +21,9 @@ class PeakDetector:
     """
 
     def __init__(self, name, graphData, isImported=False, smoothCoeff=12) -> None:
-        self.name = name
-        self.graphData = graphData.copy()
-        self.isImported = isImported
+        self.name: str = name
+        self.graphData: DataFrame = graphData.copy()
+        self.isImported: bool = isImported
 
         self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
         self.npDer = np.gradient(self.npSmoothGraph)
@@ -33,11 +35,16 @@ class PeakDetector:
         self.infls = np.where(np.diff(np.sign(self.npSecDer)))[0]
         self.flats = np.where(np.diff(np.sign(self.npDer)) < 0)[0]
         self.dips = np.where(np.diff(np.sign(self.npDer)) > 0)[0]
+        self.info = None
+        self.widths = None
+        self.baseline = baseline(graphData[1], 3)
 
         self.maximaList: np.ndarray = None
         self.minimaList: np.ndarray = None
         self.maxPeakLimitsX: dict = None
         self.maxPeakLimitsY: dict = None
+        self.maxPeakLimitsX2: dict = None
+        self.maxPeakLimitsY2: dict = None
         self.minPeakLimitsX: dict = None
         self.minPeakLimitsY: dict = None
 
@@ -112,18 +119,30 @@ class PeakDetector:
         """
         x, y = self.graphData.iloc[:, 0], self.graphData.iloc[:, 1]
 
-        maxima = signal.find_peaks(y,
-                                   height=threshold,
-                                   prominence=1 if self.isImported else params['max_prominence'])[0]
+        maxima, self.info = signal.find_peaks(y,
+                                              height=threshold,
+                                              prominence=1 if self.isImported else params['max_prominence'],
+                                              width=10,
+                                              rel_height=0.999)
+        self.widths = signal.peak_widths(y, maxima, 0.999)
 
         maxima_list_x = []
         maxima_list_y = []
         for i in maxima:
-            peakX = nearestnumber(self.graphData.iloc[:, 0], x[i])
-            peakY = self.graphData[self.graphData.iloc[:, 0] == peakX].iloc[0, 1]
+            peakX = nearestnumber(x, x[i])
+            peakY = self.graphData[x == peakX].iloc[0, 1]
             maxima_list_x.append(peakX)
             maxima_list_y.append(peakY)
         self.maximaList = np.array((maxima_list_x, maxima_list_y))
+        left = self.info['left_bases']
+        right = self.info['right_bases']
+        self.interpGraph = interp1d(x, y, kind='cubic')
+        self.maxPeakLimitsX = {}
+        self.maxPeakLimitsY = {}
+        for i, max in enumerate(list(self.maximaList[0])):
+            self.graphData[y == nearestnumber(y, self.info['width_heights'][1])]
+            self.maxPeakLimitsX[max] = (self.graphData.loc[left[i], 0], self.graphData.loc[right[i], 0])
+            self.maxPeakLimitsY[max] = (self.graphData.loc[left[i], 1], self.graphData.loc[right[i], 1])
         return (maxima_list_x, maxima_list_y)
 
     def minima(self) -> tuple[list[float]]:

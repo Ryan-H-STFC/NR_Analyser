@@ -4,9 +4,10 @@ from pyparsing import Literal
 from pandas import DataFrame
 from scipy import signal
 from scipy.ndimage import gaussian_filter1d
-from scipy.interpolate import interp1d
+# from scipy.interpolate import interp1d
+# import peakutils
 import numpy as np
-from peakutils import baseline
+from numpy.matlib import repmat
 from project.settings import params
 from project.helpers.fitBoxes import fitBoxes
 from project.helpers.getIndex import getIndex
@@ -25,6 +26,8 @@ class PeakDetector:
         self.graphData: DataFrame = graphData.copy()
         self.isImported: bool = isImported
 
+        # self.baseline = peakutils.baseline(graphData.iloc[:, 1], 5)
+        # self.normalised = DataFrame([graphData.iloc[:, 0], graphData.iloc[:, 1] + self.baseline]).T
         self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
         self.npDer = np.gradient(self.npSmoothGraph)
         self.npSecDer = np.gradient(self.npDer)
@@ -37,7 +40,6 @@ class PeakDetector:
         self.dips = np.where(np.diff(np.sign(self.npDer)) > 0)[0]
         self.info = None
         self.widths = None
-        self.baseline = baseline(graphData[1], 3)
 
         self.maximaList: np.ndarray = None
         self.minimaList: np.ndarray = None
@@ -76,20 +78,22 @@ class PeakDetector:
             try:
                 peakIndex = graphData[graphData.iloc[:, 0] == peakX].index.values.astype(int)
                 zerosList = self.dips if which == 'max' else self.flats
-                validInfls = self.infls[np.where(self.infls < peakIndex)]
-                leftInfl = graphData.loc[np.max(validInfls)] if validInfls.size != 0 else [0]
                 validFlats = zerosList[np.where(zerosList < peakIndex)]
-
                 leftFlat = graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
 
-                left = leftInfl if leftInfl[0] > leftFlat[0] else leftFlat
+                leftData = graphData[(leftFlat[0] <= graphData[0]) & (graphData[0] <= peakX)]
 
-                validInfls = self.infls[np.where(self.infls > peakIndex)]
-                rightInlf = graphData.loc[np.min(validInfls)] if validInfls.size != 0 else [2e7]
+                leftElbow = self.findElbow(leftData)
+
                 validFlats = zerosList[np.where(zerosList > peakIndex)]
-                rightFlat = graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
 
-                right = rightInlf if rightInlf[0] < rightFlat[0] else rightFlat
+                rightFlat = graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
+                rightData = graphData[(peakX <= graphData[0]) & (graphData[0] <= rightFlat[0])]
+                rightElbow = self.findElbow(rightData)
+
+                left = leftElbow if leftElbow[0] > leftFlat[0] else leftFlat
+                right = rightElbow if rightElbow[0] < rightFlat[0] else rightFlat
+
                 if which == 'max':
                     self.maxPeakLimitsX[peakX] = (left[0], right[0])
                     self.maxPeakLimitsY[peakX] = (left[1], right[1])
@@ -119,30 +123,18 @@ class PeakDetector:
         """
         x, y = self.graphData.iloc[:, 0], self.graphData.iloc[:, 1]
 
-        maxima, self.info = signal.find_peaks(y,
-                                              height=threshold,
-                                              prominence=1 if self.isImported else params['max_prominence'],
-                                              width=10,
-                                              rel_height=0.999)
-        self.widths = signal.peak_widths(y, maxima, 0.999)
+        # Find peaks
+        peaks, _ = signal.find_peaks(y, threshold, rel_height=1, width=10)
 
         maxima_list_x = []
         maxima_list_y = []
-        for i in maxima:
+        for i in peaks:
             peakX = nearestnumber(x, x[i])
             peakY = self.graphData[x == peakX].iloc[0, 1]
             maxima_list_x.append(peakX)
             maxima_list_y.append(peakY)
         self.maximaList = np.array((maxima_list_x, maxima_list_y))
-        left = self.info['left_bases']
-        right = self.info['right_bases']
-        self.interpGraph = interp1d(x, y, kind='cubic')
-        self.maxPeakLimitsX = {}
-        self.maxPeakLimitsY = {}
-        for i, max in enumerate(list(self.maximaList[0])):
-            self.graphData[y == nearestnumber(y, self.info['width_heights'][1])]
-            self.maxPeakLimitsX[max] = (self.graphData.loc[left[i], 0], self.graphData.loc[right[i], 0])
-            self.maxPeakLimitsY[max] = (self.graphData.loc[left[i], 1], self.graphData.loc[right[i], 1])
+
         return (maxima_list_x, maxima_list_y)
 
     def minima(self) -> tuple[list[float]]:
@@ -393,3 +385,33 @@ class PeakDetector:
 
         t2 = perf_counter()
         print(f"{peak}, {peakIndex} - Elapsed Time: {t2-t1}")
+
+    def findElbow(self, data: DataFrame = None) -> tuple[float]:
+        """
+        ``findElbowPoint``
+        ------------------
+
+        Args:
+            data (np.ndarray): y data between the peak and a zero derivative
+
+        Returns:
+            tuple[float]: y data of the point
+        """
+        if data is None:
+            return
+        x, y = data.iloc[:, 0], data.iloc[:, 1]
+
+        nPoints = len(y)
+        allCoord = np.vstack((x, y)).T
+
+        firstPoint = allCoord[0]
+        lineVec = allCoord[-1] - allCoord[0]
+        lineVecNorm = lineVec / np.sqrt(np.sum(lineVec**2))
+        vecFromFirst = allCoord - firstPoint
+        scalarProduct = np.sum(vecFromFirst * repmat(lineVecNorm, nPoints, 1), axis=1)
+        vecFromFirstParallel = np.outer(scalarProduct, lineVecNorm)
+        vecToLine = vecFromFirst - vecFromFirstParallel
+        distToLine = np.sqrt(np.sum(vecToLine ** 2, axis=1))
+        index = np.argmax(distToLine)
+
+        return data.loc[index + data.first_valid_index()]

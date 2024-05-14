@@ -2,6 +2,8 @@ from __future__ import annotations
 import os
 import sys
 import matplotlib.axes
+import matplotlib.figure
+import matplotlib.legend
 import numpy as np
 import pandas as pd
 import matplotlib.rcsetup
@@ -136,8 +138,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.selectionName: str = None
         self.numRows: int = None
 
-        self.ax: plt.axes = None
-        self.axPD: plt.axes = None
+        self.ax: matplotlib.axes.Axes = None
+        self.axPD: matplotlib.axes.Axes = None
 
         self.plotCount: int = -1
         self.annotations: list[matplotlib.text.Annotations] = []
@@ -738,6 +740,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             which = 'max' if maxOptionRadio.isChecked() else 'min'
             if not spectra.whichAnnotationsDrawn == which:
                 self.drawAnnotations(spectra, which)
+            xLims, yLims = (spectra.maxPeakLimitsX, spectra.maxPeakLimitsY) if maxOptionRadio.isChecked(
+            ) else (spectra.minPeakLimitsX, spectra.minPeakLimitsY)
+            leftLim, rightLim = list(zip(xLims[peak[0]], yLims[peak[0]]))
             ax.plot(peak[0],
                     peak[1],
                     "x",
@@ -746,31 +751,32 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     alpha=0.6,
                     gid=f"peakEdit-{peak[0]}"
                     )
-            ax.axline(left,
-                      right,
+            ax.axline(leftLim,
+                      rightLim,
                       linestyle="--",
                       color='r',
-                      linewidth=0.5,
+                      linewidth=0.8,
                       gid=f"peakEdit-{peak[0]}"
                       )
 
-            ax.axvline(x=left[0],
+            ax.axvline(x=leftLim[0],
                        linestyle="--",
                        color='r',
-                       linewidth=0.5,
+                       linewidth=0.8,
                        gid=f"peakEdit-{peak[0]}"
                        )
-            ax.axvline(x=right[0],
+            ax.axvline(x=rightLim[0],
                        linestyle="--",
                        color='r',
-                       linewidth=0.5,
+                       linewidth=0.8,
                        gid=f"peakEdit-{peak[0]}"
                        )
             self.toolbar.push_current()
-            ax.set_xlim([max(left[0] * 0.8, left[0] - (right[0] - left[0]) * 0.8),
-                         min(right[0] * 1.1, right[0] + (right[0] - left[0]) * 0.8)])
+
+            ax.set_xlim(0.5 * left[0] + 0.5 * leftLim[0],
+                        0.5 * right[0] + 0.5 * rightLim[0])
             ax.set_ylim([(min(left[1], right[1]) if maxOptionRadio.isChecked() else peak[1]) * 0.8,
-                        (peak[1] if maxOptionRadio.isChecked() else max(left[1], right[1])) * 1.2])
+                        (peak[1] if maxOptionRadio.isChecked() else max(leftLim[1], rightLim[1])) * 1.2])
             self.figure.canvas.draw()
 
         def onAccept():
@@ -860,8 +866,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                    if peakLimits[0].get(peak, False)])
             peakX = float(spectraPeaks.currentText())
             peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
-            left = (peakLimits[0][peakX][0], peakLimits[1][peakX][0])
-            right = (peakLimits[0][peakX][1], peakLimits[1][peakX][1])
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
 
             firstLimitX.setPlaceholderText(str(left[0]))
             secondLimitX.setPlaceholderText(str(right[0]))
@@ -970,20 +983,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             peakX = float(spectraPeaks.currentText())
             peakList = spectra.maxima if maxOptionRadio.isChecked() else spectra.minima
-            peakLimits = (spectra.maxPeakLimitsX,
-                          spectra.maxPeakLimitsY) if maxOptionRadio.isChecked() else (spectra.minPeakLimitsX,
-                                                                                      spectra.minPeakLimitsY)
 
             if maxOptionRadio.isChecked():
                 firstLimitX.setPlaceholderText(str(spectra.maxPeakLimitsX[peakX][0]))
                 secondLimitX.setPlaceholderText(str(spectra.maxPeakLimitsX[peakX][1]))
-                left = spectra.maxPeakLimitsX[peakX][0]
-                right = spectra.maxPeakLimitsX[peakX][1]
+
             else:
                 firstLimitX.setPlaceholderText(str(spectra.minPeakLimitsX[peakX][0]))
                 secondLimitX.setPlaceholderText(str(spectra.minPeakLimitsX[peakX][1]))
-                left = spectra.minPeakLimitsX[peakX][0]
-                right = spectra.minPeakLimitsX[peakX][1]
+
             try:
                 optionsWindow.blittedCursor.on_remove()
                 del optionsWindow.blitterCursor
@@ -992,8 +1000,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 pass
 
             peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
-            left = (peakLimits[0][peakX][0], peakLimits[1][peakX][0])
-            right = (peakLimits[0][peakX][1], peakLimits[1][peakX][1])
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
             drawPeakData(removeAll=True)
             drawPeakData((peakX, peakY), left, right)
 
@@ -1011,9 +1026,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             ) == '' else secondLimitX.text()
             peakX: float = float(spectraPeaks.currentText())
             peakList = spectra.maxima if maxOptionRadio.isChecked() else spectra.minima
-            peakLimits = (spectra.maxPeakLimitsX,
-                          spectra.maxPeakLimitsY) if maxOptionRadio.isChecked() else (spectra.minPeakLimitsX,
-                                                                                      spectra.minPeakLimitsY)
             peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
             if leftlimit == 'Null' or rightLimit == 'Null':
                 applyBtn.setEnabled(False)
@@ -1038,14 +1050,25 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     line.remove()
             applyBtn.setEnabled(True)
             applyBtn.setToolTip(None)
-            left = (peakLimits[0][peakX][0], peakLimits[1][peakX][0])
-            right = (peakLimits[0][peakX][1], peakLimits[1][peakX][1])
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
             drawPeakData(removeAll=True)
             drawPeakData((peakX, peakY), left, right)
         firstLimitX.textChanged.connect(onLimitChange)
         secondLimitX.textChanged.connect(onLimitChange)
 
         def onLimitSelect(event):
+            spectra: SpectraData = self.spectraData.get(spectras.currentText(), False)
+            peakX: float = float(spectraPeaks.currentText())
+            peakList = spectra.maxima if maxOptionRadio.isChecked() else spectra.minima
+            peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
             if not optionsWindow.blittedCursor.valid:
                 return
             else:
@@ -1060,6 +1083,18 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             except AttributeError:
                 pass
+
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
+            drawPeakData(removeAll=True)
+            drawPeakData((peakX, peakY), left, right)
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
 
@@ -2697,20 +2732,20 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.ax = self.figure.add_subplot(111)
             # Setting scale to be logarithmic
 
-            self.ax.set_yscale("log")
-            self.ax.set_xscale("log")
+            self.ax.set_xscale('log')
+            self.ax.set_yscale('log')
             self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
             self.ax.xaxis.set_minor_formatter(LogFormatterSciNotation(10, False, (np.inf, np.inf)))
             self.ax.minorticks_on()
             plt.minorticks_on()
             self.ax.xaxis.set_tick_params('major',
                                           size=12,
-                                          color="#888",
+                                          color='#888',
                                           labelsize=9
                                           )
             self.ax.xaxis.set_tick_params('minor',
                                           size=4,
-                                          color="#888",
+                                          color='#888',
                                           labelsize=6,
                                           labelrotation=45,
                                           )
@@ -2814,7 +2849,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     smoothGraph.iloc[:, 1],
                     "-",
                     alpha=0.6,
-                    color='blue',
+                    color='#00F',
                     linewidth=0.8,
                     label=label,
                     gid=f"{spectraData.name}-Der"
@@ -2824,34 +2859,38 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             flats = spectraData.peakDetector.flats
             for x in graphData.iloc[flats[np.where(flats < right)]].iloc[:, 0]:
                 ax.axvline(x,
-                           color='green',
-                           linewidth=0.4,
-                           alpha=0.4,
+                           color='#00ff00aa',
+                           linewidth=0.7,
+                           alpha=0.8,
                            gid=f"{label}-{x}-Flats-Der")
 
             for x in graphData.iloc[dips[np.where(dips < right)]].iloc[:, 0]:
                 ax.axvline(x,
-                           color='red',
-                           linewidth=0.4,
-                           alpha=0.4,
+                           color='#F0F',
+                           linewidth=0.7,
+                           alpha=0.8,
                            gid=f"{label}-{x}-Dips-Der")
 
         if params['show_second_der']:
             infls = spectraData.peakDetector.infls
             for x in graphData.iloc[infls[np.where((infls > left) & (infls < right))]].iloc[:, 0]:
                 ax.axvline(x,
-                           color='blue',
-                           linewidth=0.4,
-                           alpha=0.4,
+                           color='#00F',
+                           linewidth=0.7,
+                           alpha=0.8,
                            gid=f"{label}-{x}-Inflection-Der")
+        if params['show_smoothed']:
+            ax.plot(spectraData.peakDetector.normalised[0],
+                    spectraData.peakDetector.normalised[1],
+                    gid=f"{spectraData.name}-normal-Der",
+                    label=f"{label}-normal")
+            ax.plot(spectraData.graphData.iloc[:, 0],
+                    spectraData.peakDetector.baseline,
+                    gid=f"{spectraData.name}-baseline-Der",
+                    label=f"{label}-baseline")
 
-        # ax.hlines(*spectraData.peakDetector.widths[1:], color='C2')
-        # ax.plot(spectraData.graphData[0],
-        #         spectraData.peakDetector.baseline,
-        #         color='#c14',
-        #         linewidth=0.4,
-        #         alpha=0.4,
-        #         gid=f"{label}-Baseline")
+        # widths, h_eval, left_ips, right_ips = spectraData.peakDetector.widths
+        # ax.hlines(h_eval, left_ips, right_ips, color='green', linewidth=1.5)
 
     def updateLegend(self):
         """
@@ -2862,7 +2901,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         # Creating a legend to toggle on and off plots--------------------------------------------------------------
 
-        legend = self.ax.legend(fancybox=True, shadow=True)
+        legend: matplotlib.legend.DraggableLegend = self.ax.legend(fancybox=True,
+                                                                   shadow=True,
+                                                                   loc='upper right',
+                                                                   draggable=True)
 
         if len(self.ax.get_lines()) == 0:
             self.clear()

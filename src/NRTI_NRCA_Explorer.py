@@ -1,20 +1,29 @@
 from __future__ import annotations
 import os
 import sys
+from time import perf_counter
+from copy import deepcopy
+
 import matplotlib.axes
-import numpy as np
-import pandas as pd
+import matplotlib.figure
+import matplotlib.legend
+import matplotlib.style
 import matplotlib.rcsetup
 import matplotlib.pyplot as plt
 from matplotlib.ticker import LogLocator, LogFormatterSciNotation
+
+from project.helpers.interpName import interpName
 matplotlib.use('QtAgg')
+matplotlib.style.use('fast')
 from matplotlib.backends.backend_qt5agg import (
     NavigationToolbar2QT as NavigationToolbar
 )
+import numpy as np
+import pandas as pd
+
 from PyQt6 import QtGui, QtWidgets
 from PyQt6.QtCore import Qt, QModelIndex, QRegularExpression as QRegExp, pyqtSignal
 from PyQt6.QtGui import QAction, QCursor, QRegularExpressionValidator as QRegExpValidator, QIcon
-
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -43,12 +52,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget
 )
+from pyparsing import Literal
 from scipy.interpolate import interp1d
 
-from copy import deepcopy
-from pyparsing import Literal
 
 from project.spectra.SpectraDataStructure import SpectraData
+
 from project.myPyQt.ButtonDelegate import ButtonDelegate
 from project.myPyQt.CustomSortingProxy import CustomSortingProxy
 from project.myPyQt.ExtendedComboBox import ExtendedComboBox
@@ -64,14 +73,12 @@ from project.helpers.getWidgets import getLayoutWidgets
 from project.helpers.resourcePath import resource_path
 from project.settings import params
 
-# todo ------------------------------------------- Issues/Feature TODO list -------------------------------------------
+# todo ------------------------------------------- Issue / Feature TODO list -------------------------------------------
 # todo - Add periodic table GUI for selection.
 
 # todo - Matplotlib icons.
 
-# todo - Incorporate multiprocessing and multithreading?
-
-# todo - Add menu for Importing as energy (eV) or tof (u).
+# ! todo - Add menu for Importing as energy (eV) or tof (u).
 
 # todo - clearBtn confirmation Dialog
 
@@ -79,11 +86,17 @@ from project.settings import params
 
 # todo - Look into scipy.find_peaks not working on peaks within 1 unit of one another
 
-# todo - Look into peak limit algorithm picking bad limits.
+# todo - properly updating peak limits after changing, in peak limit dialog and plotted peak limits
 
-# ! todo - Investigate 2nd derivative (point of inflection as main integration limit criterion)
+# todo - Look into update checks for installer and Inno Setup Wizard
 
-# ! todo - Create executable for complex project structure, am incorporate github actions and build testing
+# todo - Optimsiations for Spectra Data init
+
+# todo - Table sorting by column
+
+# todo - Option to correct for flux distribution (Mulitply by roughly constant wave)
+
+# ! todo - Create a reset controls function to properly enable or disable functions when erros occur
 
 # * Energy Log scales
 
@@ -100,9 +113,6 @@ from project.settings import params
 # ! Maybe Change back to inputs if required
 #  input('Enter the filepath where the latest NRCA code data folder is \n For Example:'
 #                         'C://Users/ccj88542/NRCA/Rehana/Latest/main/data: \n')
-
-matplotlib.rcParamsDefault["path.simplify"] = True
-matplotlib.rcParamsDefault["agg.path.chunksize"] = 1000
 
 
 class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
@@ -136,8 +146,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.selectionName: str = None
         self.numRows: int = None
 
-        self.ax: plt.axes = None
-        self.axPD: plt.axes = None
+        self.ax: matplotlib.axes.Axes = None
+        self.axPD: matplotlib.axes.Axes = None
 
         self.plotCount: int = -1
         self.annotations: list[matplotlib.text.Annotations] = []
@@ -324,6 +334,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         # * ----------------------------------------------
 
         # ¦ --------------- Combobox Group ---------------
+
         # For copying data directory to local directory for plotting later
         # Establishing source and destination directories
 
@@ -337,7 +348,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.spectraNames.append(filename)
 
         # Creating combo box (drop down menu)
-        self.combobox = ExtendedComboBox()
+        self.combobox = ExtendedComboBox(self)
         self.combobox.view().setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.combobox.setObjectName("combobox")
 
@@ -352,6 +363,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             index=self.combobox.currentIndex(),
             comboboxName=self.combobox.objectName()
         ))
+
         # * ----------------------------------------------
 
         pointingCursor = QCursor(Qt.CursorShape.PointingHandCursor)
@@ -720,57 +732,77 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         spectras = optionsWindow.spectras
 
-        def drawPeakData(peak: float = None,
+        def drawPeakData(peak: tuple[float] = None,
                          left: tuple[float] = None,
                          right: tuple[float] = None,
                          removeAll: bool = False):
+            spectraName: str = spectras.itemText(spectras.currentIndex() or 0)
+            spectra: SpectraData = self.spectraData[spectraName]
+            which = 'max' if maxOptionRadio.isChecked() else 'min'
+            peakList = spectra.maxima if which == 'max' else spectra.minima
+            whichLim = 'both' if firstLimitX.text(
+            ) and secondLimitX.text() else 'left' if firstLimitX.text() else 'right' if secondLimitX.text() else None
             ax: matplotlib.axes.Axes = self.axPD if self.axPD is not None else self.ax
             for line in [line for line in ax.lines if 'peakEdit' in line.get_gid()]:
                 if removeAll:
                     line.remove()
+
                 elif str(peak[0]) in line.get_gid():
                     line.remove()
+
             if removeAll:
                 self.figure.canvas.draw()
                 return
-            spectraName: str = spectras.itemText(spectras.currentIndex() or 0)
-            spectra: SpectraData = self.spectraData[spectraName]
-            which = 'max' if maxOptionRadio.isChecked() else 'min'
             if not spectra.whichAnnotationsDrawn == which:
                 self.drawAnnotations(spectra, which)
+            xLims, yLims = (spectra.maxPeakLimitsX, spectra.maxPeakLimitsY) if maxOptionRadio.isChecked(
+            ) else (spectra.minPeakLimitsX, spectra.minPeakLimitsY)
+            leftLim, rightLim = list(zip(xLims[peak[0]], yLims[peak[0]]))
+            index = np.where(peakList == peak[0])[0][0]
+            if whichLim is not None:
+                for line in [line for line in ax.lines
+                             if f'{which}-limL-{index}' in line.get_gid() or f'{which}-limR-{index}' in line.get_gid()]:
+
+                    if whichLim in ['left', 'both'] and 'limL' in line.get_gid():
+                        line.set_data(leftLim)
+
+                    elif whichLim in ['right', 'both'] and 'limR' in line.get_gid():
+                        line.set_data(rightLim)
+
             ax.plot(peak[0],
                     peak[1],
                     "x",
                     color="black",
                     markersize=3,
                     alpha=0.6,
-                    gid=f"peakEdit-{peak[0]}"
+                    gid=f"peakEdit-{peak[0]}-peak"
                     )
-            ax.axline(left,
-                      right,
+            ax.axline(leftLim,
+                      rightLim,
                       linestyle="--",
                       color='r',
-                      linewidth=0.5,
-                      gid=f"peakEdit-{peak[0]}"
+                      linewidth=0.8,
+                      gid=f"peakEdit-{peak[0]}-midLine"
                       )
 
-            ax.axvline(x=left[0],
+            ax.axvline(x=leftLim[0],
                        linestyle="--",
                        color='r',
-                       linewidth=0.5,
-                       gid=f"peakEdit-{peak[0]}"
+                       linewidth=0.8,
+                       gid=f"peakEdit-{peak[0]}-leftLine"
                        )
-            ax.axvline(x=right[0],
+            ax.axvline(x=rightLim[0],
                        linestyle="--",
                        color='r',
-                       linewidth=0.5,
-                       gid=f"peakEdit-{peak[0]}"
+                       linewidth=0.8,
+                       gid=f"peakEdit-{peak[0]}-rightLim"
                        )
             self.toolbar.push_current()
-            ax.set_xlim([max(left[0] * 0.8, left[0] - (right[0] - left[0]) * 0.8),
-                         min(right[0] * 1.1, right[0] + (right[0] - left[0]) * 0.8)])
-            ax.set_ylim([(min(left[1], right[1]) if maxOptionRadio.isChecked() else peak[1]) * 0.8,
-                        (peak[1] if maxOptionRadio.isChecked() else max(left[1], right[1])) * 1.2])
+
+            ax.set_xlim(0.8 * leftLim[0],
+                        1.2 * rightLim[0])
+            ax.set_ylim([(min(left[1], right[1]) if maxOptionRadio.isChecked() else peak[1]) * 0.5,
+                        (peak[1] if maxOptionRadio.isChecked() else max(leftLim[1], rightLim[1])) * 1.5])
             self.figure.canvas.draw()
 
         def onAccept():
@@ -778,7 +810,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectraName: str = spectras.itemText(spectras.currentIndex() or 0)
             spectra: SpectraData = self.spectraData[spectraName]
             which: str = 'max' if maxOptionRadio.isChecked() else 'min'
-            peak: float = float(spectraPeaks.currentText())
+            peakList = spectra.maxima if maxOptionRadio.isChecked() else spectra.minima
+            peakX: float = float(spectraPeaks.currentText())
+            peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
             leftLimitX = float(firstLimitX.placeholderText() if firstLimitX.text(
             ) == '' else firstLimitX.text())
 
@@ -791,17 +825,29 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             if which == 'max':
 
-                spectra.maxPeakLimitsX[peak] = (leftLimitX, rightLimitX)
-                spectra.maxPeakLimitsY[peak] = (leftLimitY, rightLimitY)
+                spectra.maxPeakLimitsX[peakX] = (leftLimitX, rightLimitX)
+                spectra.maxPeakLimitsY[peakX] = (leftLimitY, rightLimitY)
 
             else:
 
-                spectra.minPeakLimitsX[peak] = (leftLimitX, rightLimitX)
-                spectra.minPeakLimitsY[peak] = (leftLimitY, rightLimitY)
+                spectra.minPeakLimitsX[peakX] = (leftLimitX, rightLimitX)
+                spectra.minPeakLimitsY[peakX] = (leftLimitY, rightLimitY)
+
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
+
+            drawPeakData((peakX, peakY), left, right, np.where(peakList == peakX)[0][0])
 
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
-            spectra.recalculatePeakData(peak, which=which)
+            spectra.recalculatePeakData(peakX, which=which)
             self.addTableData(reset=True)
         applyBtn.clicked.connect(onAccept)
 
@@ -811,6 +857,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
             optionsWindow.close()
 
+        optionsWindow.finished.connect(onClose)
         cancelBtn.clicked.connect(onClose)
 
         def onPeakOptionChange():
@@ -845,6 +892,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectraPeaks.setEnabled(True)
             firstLimitX.setEnabled(True)
             secondLimitX.setEnabled(True)
+            firstLimitX.setText(None)
+            secondLimitX.setText(None)
             firstLimitBtn.setEnabled(True)
             secondLimitBtn.setEnabled(True)
             applyBtn.setEnabled(True)
@@ -860,8 +909,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                    if peakLimits[0].get(peak, False)])
             peakX = float(spectraPeaks.currentText())
             peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
-            left = (peakLimits[0][peakX][0], peakLimits[1][peakX][0])
-            right = (peakLimits[0][peakX][1], peakLimits[1][peakX][1])
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else [0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
 
             firstLimitX.setPlaceholderText(str(left[0]))
             secondLimitX.setPlaceholderText(str(right[0]))
@@ -970,20 +1026,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             peakX = float(spectraPeaks.currentText())
             peakList = spectra.maxima if maxOptionRadio.isChecked() else spectra.minima
-            peakLimits = (spectra.maxPeakLimitsX,
-                          spectra.maxPeakLimitsY) if maxOptionRadio.isChecked() else (spectra.minPeakLimitsX,
-                                                                                      spectra.minPeakLimitsY)
 
             if maxOptionRadio.isChecked():
                 firstLimitX.setPlaceholderText(str(spectra.maxPeakLimitsX[peakX][0]))
                 secondLimitX.setPlaceholderText(str(spectra.maxPeakLimitsX[peakX][1]))
-                left = spectra.maxPeakLimitsX[peakX][0]
-                right = spectra.maxPeakLimitsX[peakX][1]
+
             else:
                 firstLimitX.setPlaceholderText(str(spectra.minPeakLimitsX[peakX][0]))
                 secondLimitX.setPlaceholderText(str(spectra.minPeakLimitsX[peakX][1]))
-                left = spectra.minPeakLimitsX[peakX][0]
-                right = spectra.minPeakLimitsX[peakX][1]
+
             try:
                 optionsWindow.blittedCursor.on_remove()
                 del optionsWindow.blitterCursor
@@ -992,8 +1043,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 pass
 
             peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
-            left = (peakLimits[0][peakX][0], peakLimits[1][peakX][0])
-            right = (peakLimits[0][peakX][1], peakLimits[1][peakX][1])
+            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
+
+            zerosList = spectra.peakDetector.dips if maxOptionRadio.isChecked() else spectra.peakDetector.flats
+            validFlats = zerosList[np.where(zerosList < peakIndex)]
+
+            left = spectra.graphData.iloc[(np.max(validFlats))] if validFlats.size != 0 else spectra.graphData.iloc[0]
+
+            validFlats = zerosList[np.where(zerosList > peakIndex)]
+            right = spectra.graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else spectra.graphData.iloc[-1]
             drawPeakData(removeAll=True)
             drawPeakData((peakX, peakY), left, right)
 
@@ -1003,18 +1061,14 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             minOptionRadio.blockSignals(False)
         spectraPeaks.currentIndexChanged.connect(lambda: onPeakChange(spectras.currentIndex()))
 
-        def onLimitChange():
+        def onLimitChange(which: Literal['left', 'right']):
+
             spectra: SpectraData = self.spectraData.get(spectras.currentText(), False)
             leftlimit: str = firstLimitX.placeholderText() if firstLimitX.text(
             ) == '' else firstLimitX.text()
             rightLimit: str = secondLimitX.placeholderText() if secondLimitX.text(
             ) == '' else secondLimitX.text()
             peakX: float = float(spectraPeaks.currentText())
-            peakList = spectra.maxima if maxOptionRadio.isChecked() else spectra.minima
-            peakLimits = (spectra.maxPeakLimitsX,
-                          spectra.maxPeakLimitsY) if maxOptionRadio.isChecked() else (spectra.minPeakLimitsX,
-                                                                                      spectra.minPeakLimitsY)
-            peakY = peakList[1][np.where(peakList[0] == peakX)[0][0]]
             if leftlimit == 'Null' or rightLimit == 'Null':
                 applyBtn.setEnabled(False)
                 applyBtn.setToolTip("Limits cannot be Null.")
@@ -1038,12 +1092,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     line.remove()
             applyBtn.setEnabled(True)
             applyBtn.setToolTip(None)
-            left = (peakLimits[0][peakX][0], peakLimits[1][peakX][0])
-            right = (peakLimits[0][peakX][1], peakLimits[1][peakX][1])
-            drawPeakData(removeAll=True)
-            drawPeakData((peakX, peakY), left, right)
-        firstLimitX.textChanged.connect(onLimitChange)
-        secondLimitX.textChanged.connect(onLimitChange)
+
+        firstLimitX.textChanged.connect(lambda: onLimitChange(which='left'))
+        secondLimitX.textChanged.connect(lambda: onLimitChange(which='right'))
 
         def onLimitSelect(event):
             if not optionsWindow.blittedCursor.valid:
@@ -1060,6 +1111,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             except AttributeError:
                 pass
+
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
 
@@ -1374,13 +1426,14 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         Opens a dialog allowing the user to edit settings related to different functionality within the program.
         """
-        settingsDialog = QDialog()
+        settingsDialog = QDialog(self)
         settingsDialog.setWindowTitle("Settings")
-        settingsDialog.setObjectName("inputWindow")
+        settingsDialog.setObjectName("settings")
         settingsDialog.setMinimumSize(600, 820)
+        settingsDialog.setStyleSheet(self.setStyleTo(self.currentStyle))
         mainLayout = QVBoxLayout()
         formLayout = QGridLayout()
-        formLayout.setObjectName("inputForm")
+        formLayout.setObjectName("settings")
         scrollArea = QScrollArea()
 
         scrollArea.setWidgetResizable(True)
@@ -1401,19 +1454,21 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     subRowContentLayout = QHBoxLayout()
                     subRowContentLayout.setObjectName('row')
                     subInputLineEdit = QLineEdit()
-                    subInputLineEdit.setObjectName(f"{key}>{subKey}-sub")
-                    subInputLineEdit.setText(str(subValue))
-                    if isinstance(value, float):
-                        subInputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*[.])?[0-9]+")))
-                    if isinstance(value, int):
-                        subInputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*)+")))
+                    subInputLineEdit.setObjectName(f"{key}>{subKey}")
+                    subInputLineEdit.setPlaceholderText(str(subValue))
+                    if isinstance(subValue, float):
+                        subInputLineEdit.setValidator(QRegExpValidator(QRegExp(r"([0-9]*[.])?[0-9]+")))
+                    elif isinstance(subValue, int):
+                        subInputLineEdit.setValidator(QRegExpValidator(QRegExp(r"([0-9]*)+")))
+                    elif key == 'threshold_exceptions':
+                        subInputLineEdit.setValidator(QRegExpValidator(QRegExp(r"\((\d+(\.\d+)?),(\d+(\.\d+)?)\)")))
 
                     subRowContentLayout.addWidget(subRowTitleLabel)
                     if 'grid' in key:
                         comboBox = QComboBox()
                         comboBox.setEditText(subValue)
                         comboBox.setMinimumSize(150, 40)
-                        comboBox.setObjectName(f"{key}>{subKey}-sub")
+                        comboBox.setObjectName(f"{key}>{subKey}")
                         if subKey == 'which':
                             comboBox.addItems(['major', 'minor', 'both'])
                             subRowContentLayout.addWidget(comboBox, alignment=Qt.AlignmentFlag.AlignLeft)
@@ -1425,7 +1480,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                         else:
                             colorDialog = QColorDialog()
                             colorDialog.setCurrentColor(QtGui.QColor(subValue))
-                            colorDialog.setObjectName(f"{key}>{subKey}-sub")
+                            colorDialog.setObjectName(f"{key}>{subKey}")
                             subRowContentLayout.addWidget(colorDialog, alignment=Qt.AlignmentFlag.AlignLeft)
 
                             inputs.append(colorDialog)
@@ -1436,26 +1491,39 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 rowLayout.addLayout(subContentLayout)
 
             else:
-                inputLineEdit.setText(str(value))
-                if isinstance(value, float):
+                inputLineEdit.setPlaceholderText(str(value))
+                if type(value) is float or 'prominence' in key:
+                    inputLineEdit.setObjectName(f'{key}-float')
                     inputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*[.])?[0-9]+")))
                     rowLayout.addWidget(inputLineEdit, alignment=Qt.AlignmentFlag.AlignLeft)
                     inputs.append(inputLineEdit)
 
-                if isinstance(value, int):
+                if type(value) is int:
+                    inputLineEdit.setObjectName(f'{key}-int')
                     inputLineEdit.setValidator(QRegExpValidator(QRegExp("([0-9]*)+")))
                     rowLayout.addWidget(inputLineEdit, alignment=Qt.AlignmentFlag.AlignLeft)
                     inputs.append(inputLineEdit)
 
+                if type(value) is bool:
+                    comboBox = QComboBox()
+                    comboBox.addItems(['False', 'True'])
+                    comboBox.setCurrentIndex(value)
+                    comboBox.setMinimumSize(150, 40)
+                    comboBox.setObjectName(f"{key}-bool")
+                    rowLayout.addWidget(comboBox, alignment=Qt.AlignmentFlag.AlignLeft)
+                    inputs.append(comboBox)
+
                 if 'dir' in key:
-                    dirLabel = QLabel(value)
-                    dirLabel.setObjectName(key)
-                    fileDialogButton = QPushButton()
-                    fileDialogButton.setFixedWidth(40)
-                    fileDialogButton.clicked.connect(lambda: handleFileChange(dirLabel))
-                    rowLayout.addWidget(dirLabel)
-                    inputs.append(dirLabel)
-                    rowLayout.addWidget(fileDialogButton, alignment=Qt.AlignmentFlag.AlignRight)
+                    continue
+                    # dirLabel = QLabel(value)
+                    # dirLabel.setObjectName(f'{key}-str')
+
+                    # fileDialogButton = QPushButton()
+                    # fileDialogButton.setFixedWidth(40)
+                    # fileDialogButton.clicked.connect(lambda: handleFileChange(dirLabel))
+                    # rowLayout.addWidget(dirLabel)
+                    # inputs.append(dirLabel)
+                    # rowLayout.addWidget(fileDialogButton, alignment=Qt.AlignmentFlag.AlignRight)
             formLayout.addWidget(rowTitleLabel, i, 0, alignment=Qt.AlignmentFlag.AlignTop)
             formLayout.addLayout(rowLayout, i, 1, alignment=Qt.AlignmentFlag.AlignLeft)
         buttonBox = QDialogButtonBox()
@@ -1470,26 +1538,37 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         def onAccept() -> None:
             # ! Work out assignment to nested dictionary
-            settings = {key:
-                        {w.objectName().split('>')[1]: ((float(w.text()[1:-1].split(',')[0]),
-                                                         float(w.text()[1:-1].split(',')[1]))
-                                                        if ',' in w.text()
-                                                        else float(w.text())
-                                                        )
-                         if isinstance(w, QLineEdit)
-                         else w.currentColor().name()
-                         if isinstance(w, QColorDialog)
-                         else w.currentText() for w in inputs if '>' in w.objectName()}
-                        for key in list(set([w.objectName().split('>')[0] for w in inputs if '>' in w.objectName()]))}
+            newLength = {}
+            newThresholds = {}
+            newGridSettings = {}
+            for key in params.keys():
+                newInputs = [input for input in inputs if key in input.objectName()]
+                for input in newInputs:
+                    if isinstance(input, QComboBox):
+                        value = input.currentText()
+                    elif isinstance(input, QColorDialog):
+                        value = input.currentColor().name()
+                    else:
+                        value = input.text() if input.text() else input.placeholderText()
+                    if '>' in input.objectName():  # Handling dictionary assignment within params
+                        dicKey, dicSubKey = input.objectName().split('>')
+                        if dicKey == 'length':
+                            newLength[dicSubKey] = float(value)
+                        elif dicKey == 'threshold_exceptions':
+                            newThresholds[dicSubKey] = (float(value[1:-1].split(',')[0]),
+                                                        float(value[1:-1].split(',')[1]))
+                        elif dicKey == 'grid_settings':
+                            newGridSettings[dicSubKey] = value
+                    elif isinstance(input, (QLineEdit, QLabel, QComboBox)):
+                        params[key] = float(value
+                                            ) if 'float' in input.objectName(
+                        ) else int(value) if 'int' in input.objectName(
+                        ) else bool(True if 'True' in input.currentText() else False) if 'bool' in input.objectName(
+                        ) else value
 
-            for key, value in [(w.objectName().split('>')[0],
-                                float(w.text()) if isinstance(w, QLineEdit) and '>' not in w.objectName()
-                                else w.text() if isinstance(w, QLabel) and '>' not in w.objectName() else None
-                                ) for w in inputs]:
-                params[key] = value
-
-            for key, value in settings.items():
-                params[key] = value
+            params['length'] = newLength
+            params['threshold_exceptions'] = newThresholds
+            params['grid_settings'] = newGridSettings
         onAcceptBtn.clicked.connect(onAccept)
 
         def onReset() -> None:
@@ -1880,6 +1959,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.show()
 
     def setStyleTo(self, style: Literal['dark', 'light', 'contrast']) -> str:
+        self.currentStyle = style
         if style == 'dark':
             self.bg_color = "#202020"
             self.text_color = "#FFF"
@@ -1894,9 +1974,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             background-color: {self.bg_color};
         }}
 
-        #settingsMenu{{
+        #settings{{
             background-color: {self.bg_color};
-            text-color: {self.text_color};
+            color: {self.text_color};
         }}
 
         *{{
@@ -1924,7 +2004,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             image: url({self.checkBoxChecked});
         }}
 
-        QComboBox, #settingsMenu QComboBox{{
+        QComboBox{{
             background-color: #EEE;
             border-radius: 3px;
             font-family: 'Roboto Mono';
@@ -1951,6 +2031,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
               #gridOptionLabel{{
             font: 12pt 'Roboto Mono Medium';
             color: {self.text_color};
+        }}
+        QLineEdit#dir{{
+            direction: left;
+            text-overflow: ellipsis;
         }}
 
         QPushButton#plotEnergyBtn, #plotTOFBtn, #clearBtn, #pdBtn, #compoundBtn{{
@@ -2037,7 +2121,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             color: {self.text_color};
             background-color: {self.bg_color};
         }}
-
         QDialog#inputWindow, QDialog#optionsWindow
         {{
             color: {self.text_color};
@@ -2060,7 +2143,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         QDockWidget::title{{
             color: {self.text_color};
         }}
-
+        QGridLayout#settings{{
+            color: {self.text_color};
+            background-color: {self.bg_color};
+        }}
         QGridLayout#inputForm{{
             color: {self.text_color};
             border: 1px solid #AAA;
@@ -2307,6 +2393,29 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         except AttributeError:
             self.table.setModel(None)
 
+    def updateLabels(self) -> None:
+
+        dataSymbol = interpName(self.selectionName)['symbol']
+        self.threshold = params['threshold_exceptions'].get(dataSymbol, 100)
+        # Setting label information based on threshold value
+        if self.threshold == 100:
+            labelInfo = (
+                "Threshold for peak detection (n-tot mode, n-g mode): (100, 100)"
+            )
+
+        else:
+            labelInfo = (
+                f"Threshold for peak detection (n-tot mode, n-g mode): ({self.threshold[0]},{self.threshold[1]})"
+            )
+            if self.selectionName[-1] == 't':
+                self.threshold = params['threshold_exceptions'][dataSymbol][0]
+            else:
+                self.threshold = params['threshold_exceptions'][dataSymbol][1]
+        self.thresholdLabel.setText(str(labelInfo))
+        # Changing the peak label text
+
+        self.peaklabel.setText("Number of peaks: " + str(self.numRows))
+
     def displayData(self) -> None:
         """
         ``displayData``
@@ -2331,34 +2440,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.toggleCheckboxControls(enableAll=False)
 
         # Getting symbol from element
-        split = self.selectionName.split("-")
-        if self.selectionName.startswith("e"):
-            dataSymbolSort = split[1]
-            dataSymbol = dataSymbolSort[:-2]
-        else:
-            dataSymbol = split[1]
 
         self.showTableData()
 
-        self.threshold = self.thresholds.get(dataSymbol, 100)
-        # Setting label information based on threshold value
-        if self.threshold == 100:
-            labelInfo = (
-                "Threshold for peak detection (n-tot mode, n-g mode): (100, 100)"
-            )
-
-        else:
-            labelInfo = (
-                f"Threshold for peak detection (n-tot mode, n-g mode): ({self.threshold[0]},{self.threshold[1]})"
-            )
-            if self.selectionName[-1] == 't':
-                self.threshold = self.thresholds[dataSymbol][0]
-            else:
-                self.threshold = self.thresholds[dataSymbol][1]
-        self.thresholdLabel.setText(str(labelInfo))
-        # Changing the peak label text
-        labelInfo = "Number of peaks: " + str(self.numRows)
-        self.peaklabel.setText(str(labelInfo))
+        self.updateLabels()
 
     def showTableData(self):
         """
@@ -2392,7 +2477,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             if self.selectionName not in self.plottedSpectra:
                 self.numRows = file.shape[0]
             print("Number of peaks: ", self.numRows)
-            self.peaklabel.setText(f"Number of peaks: {self.numRows}")
             # Fill Table with data
             tempTableModel = ExtendedQTableModel(file)
             proxy = CustomSortingProxy()
@@ -2498,7 +2582,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             return
         if imported:
             self.selectionName = name
-            self.threshold = 100
+        if interpName(self.selectionName)['symbol'] is None and not imported:
+            QMessageBox.warning(self, "Warning", "Graph is already plotted")
+            self.toggleCheckboxControls(enableAll=False)
+            return
         # Checks for adding mutliple graphs for the same selection, energy/tof types.
         if (self.selectionName, tof) in self.plottedSpectra and not distAltered:
             QMessageBox.warning(self, "Warning", "Graph is already plotted")
@@ -2540,6 +2627,12 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 graphData = graphData[~graphData[0].str.contains('#')].astype(float)
             except AttributeError:
                 pass
+            except ValueError:
+                QMessageBox.warning(self, "Warning", "Invalid Format - Requires (x,y)")
+                self.plottedSpectra.remove((self.selectionName, tof))
+                if self.plotCount == -1:
+                    self.toggleCheckboxControls(enableAll=False)
+                return
 
             try:
                 elementTableDataMax = pd.read_csv(
@@ -2595,7 +2688,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             if self.spectraData.get(title, False):
                 for point in self.spectraData[title].annotations:
                     point.remove()
-
+            symbol = interpName(spectraName)['symbol']
+            threshold = params['threshold_exceptions'].get(symbol, (100, 100))[0 if 'n-tot' in spectraName else 1]
             newSpectra = SpectraData(name=spectraName,
                                      numPeaks=self.numRows,
                                      tableDataMax=elementTableDataMax,
@@ -2608,7 +2702,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                      distChanging=distAltered,
                                      isCompound='compound' in spectraName,
                                      isAnnotationsHidden=self.peakLabelCheck.isChecked(),
-                                     threshold=float(self.threshold or 100),
+                                     threshold=threshold,
                                      length=params['length'],
                                      isImported=imported,
                                      updatingDatabase=params['updating_database'])
@@ -2670,20 +2764,20 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.ax = self.figure.add_subplot(111)
             # Setting scale to be logarithmic
 
-            self.ax.set_yscale("log")
-            self.ax.set_xscale("log")
+            self.ax.set_xscale('log')
+            self.ax.set_yscale('log')
             self.ax.xaxis.set_minor_locator(LogLocator(10, 'all'))
             self.ax.xaxis.set_minor_formatter(LogFormatterSciNotation(10, False, (np.inf, np.inf)))
             self.ax.minorticks_on()
             plt.minorticks_on()
             self.ax.xaxis.set_tick_params('major',
                                           size=12,
-                                          color="#888",
+                                          color='#888',
                                           labelsize=9
                                           )
             self.ax.xaxis.set_tick_params('minor',
                                           size=4,
-                                          color="#888",
+                                          color='#888',
                                           labelsize=6,
                                           labelrotation=45,
                                           )
@@ -2780,43 +2874,55 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             line.remove()
         smoothGraph = spectraData.peakDetector.smoothGraph
         graphData = spectraData.peakDetector.secDerivative
+        label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-Smoothed"
         if params['show_smoothed']:
-            label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-Smoothed"
 
             ax.plot(smoothGraph.iloc[:, 0],
                     smoothGraph.iloc[:, 1],
                     "-",
                     alpha=0.6,
-                    color='blue',
+                    color='#00F',
                     linewidth=0.8,
                     label=label,
                     gid=f"{spectraData.name}-Der"
                     )
         if params['show_first_der']:
-            infls = spectraData.peakDetector.infls
-            for x in graphData.iloc[infls[np.where((infls > left) & (infls < right))]].iloc[:, 0]:
-                ax.axvline(x,
-                           color='blue',
-                           linewidth=0.4,
-                           alpha=0.4,
-                           gid=f"{label}-{x}-Inflection-Der")
-
-        if params['show_second_der']:
             dips = spectraData.peakDetector.dips
             flats = spectraData.peakDetector.flats
             for x in graphData.iloc[flats[np.where(flats < right)]].iloc[:, 0]:
                 ax.axvline(x,
-                           color='green',
-                           linewidth=0.4,
-                           alpha=0.4,
+                           color='#00ff00aa',
+                           linewidth=0.7,
+                           alpha=0.8,
                            gid=f"{label}-{x}-Flats-Der")
 
             for x in graphData.iloc[dips[np.where(dips < right)]].iloc[:, 0]:
                 ax.axvline(x,
-                           color='red',
-                           linewidth=0.4,
-                           alpha=0.4,
+                           color='#F0F',
+                           linewidth=0.7,
+                           alpha=0.8,
                            gid=f"{label}-{x}-Dips-Der")
+
+        if params['show_second_der']:
+            infls = spectraData.peakDetector.infls
+            for x in graphData.iloc[infls[np.where((infls > left) & (infls < right))]].iloc[:, 0]:
+                ax.axvline(x,
+                           color='#00F',
+                           linewidth=0.7,
+                           alpha=0.8,
+                           gid=f"{label}-{x}-Inflection-Der")
+        if params['show_smoothed']:
+            ax.plot(spectraData.peakDetector.normalised.iloc[:, 0],
+                    spectraData.peakDetector.normalised.iloc[:, 1],
+                    gid=f"{spectraData.name}-normal-Der",
+                    label=f"{label}-normal")
+            ax.plot(spectraData.peakDetector.baselineGraph.iloc[:, 0],
+                    spectraData.peakDetector.baselineGraph.iloc[:, 1],
+                    gid=f"{spectraData.name}-baseline-Der",
+                    label=f"{label}-baseline")
+
+        # widths, h_eval, left_ips, right_ips = spectraData.peakDetector.widths
+        # ax.hlines(h_eval, left_ips, right_ips, color='green', linewidth=1.5)
 
     def updateLegend(self):
         """
@@ -2827,7 +2933,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         # Creating a legend to toggle on and off plots--------------------------------------------------------------
 
-        legend = self.ax.legend(fancybox=True, shadow=True)
+        legend: matplotlib.legend.DraggableLegend = self.ax.legend(fancybox=True,
+                                                                   shadow=True,
+                                                                   loc='upper right',
+                                                                   draggable=True)
 
         if len(self.ax.get_lines()) == 0:
             self.clear()
@@ -3124,7 +3233,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         else:
             maxDraw = spectra.maxima.shape[1] if which == 'max' else spectra.minima.shape[1]
             maxDraw = spectra.maxPeaks if maxDraw > spectra.maxPeaks else maxDraw
-
+        t1 = perf_counter()
         spectra.annotations = [self.ax.annotate(text=f'{i}',
                                                 xy=xy[i],
                                                 xytext=xy[i],
@@ -3139,6 +3248,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                for i in
                                (range(0, maxDraw) if type(xy) is np.ndarray else xy.keys())
                                if i < maxDraw]
+        t2 = perf_counter()
+        print(f"Elapsed Time - {which} Annotations - {t2-t1}")
         if spectra.isGraphHidden or self.peakLabelCheck.isChecked():
             for annotation in spectra.annotations:
                 annotation.set_visible(False)
@@ -3196,7 +3307,12 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         if len(self.spectraData) == 0:
             return
 
-        optionsWindow = QDialog(self)
+        optionsWindow = InputSpectraDialog(self, self.styleSheet())
+        optionsWindow.inputForm.windowTitle = "Export Menu"
+
+        spectras = optionsWindow.spectras
+        spectras.addItems(self.spectraData.keys())
+
         optionsWindow.setObjectName("inputWindow")
         mainLayout = QVBoxLayout()
         inputForm = QFormLayout()
@@ -3209,48 +3325,46 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         optionsWindow.setWindowTitle("Export")
         optionsWindow.setLayout(mainLayout)
 
-        for spectra in self.spectraData.keys():
-            row = QHBoxLayout()
-            row.setSpacing(8)
-            name = QLabel(spectra)
-            name.setObjectName('spectraName')
+        row = QHBoxLayout()
+        row.setSpacing(8)
 
-            graphDataBox = QHBoxLayout()
-            graphDataBox.setSpacing(5)
-            graphDataLabel = QLabel("Graph Data")
-            graphDataCheck = QCheckBox()
-            graphDataCheck.setObjectName('graphCheck')
+        graphDataBox = QHBoxLayout()
+        graphDataBox.setSpacing(5)
+        graphDataLabel = QLabel("Graph Data")
+        graphDataCheck = QCheckBox()
+        graphDataCheck.setObjectName('graphCheck')
 
-            graphDataBox.addWidget(graphDataLabel)
-            graphDataBox.addWidget(graphDataCheck)
+        graphDataBox.addWidget(graphDataLabel)
+        graphDataBox.addWidget(graphDataCheck)
 
-            tableDataBox = QHBoxLayout()
-            tableDataBox.setSpacing(5)
-            tableDataLabel = QLabel("Table Data")
-            tableDataCheck = QCheckBox()
-            tableDataCheck.setObjectName('tableCheck')
+        tableDataBox = QHBoxLayout()
+        tableDataBox.setSpacing(5)
+        tableDataLabel = QLabel("Table Data")
+        tableDataCheck = QCheckBox()
+        tableDataCheck.setObjectName('tableCheck')
 
-            tableDataBox.addWidget(tableDataLabel)
-            tableDataBox.addWidget(tableDataCheck)
+        tableDataBox.addWidget(tableDataLabel)
+        tableDataBox.addWidget(tableDataCheck)
 
-            limitDataBox = QHBoxLayout()
-            limitDataBox.setSpacing(5)
-            limitDataLabel = QLabel("Peak Limits Data")
-            limitDataCheck = QCheckBox()
-            limitDataCheck.setObjectName('limitCheck')
+        limitDataBox = QHBoxLayout()
+        limitDataBox.setSpacing(5)
+        limitDataLabel = QLabel("Peak Limits Data")
+        limitDataCheck = QCheckBox()
+        limitDataCheck.setObjectName('limitCheck')
 
-            limitDataBox.addWidget(limitDataLabel)
-            limitDataBox.addWidget(limitDataCheck)
+        limitDataBox.addWidget(limitDataLabel)
+        limitDataBox.addWidget(limitDataCheck)
 
-            row.addItem(graphDataBox)
-            row.addItem(tableDataBox)
-            row.addItem(limitDataBox)
+        row.addItem(graphDataBox)
+        row.addItem(tableDataBox)
+        row.addItem(limitDataBox)
 
-            rowWidget = QWidget()
-            rowWidget.setObjectName('row')
-            rowWidget.setLayout(row)
-            inputForm.addRow(name, rowWidget)
+        rowWidget = QWidget()
+        rowWidget.setObjectName('row')
+        rowWidget.setLayout(row)
+        inputForm.addRow(rowWidget)
 
+        mainLayout.addWidget(spectras)
         mainLayout.addLayout(inputForm)
         mainLayout.addWidget(buttonBox)
 
@@ -3259,35 +3373,38 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             exportDir = QFileDialog.getExistingDirectory(self, 'Select Folder')
             if exportDir == '':
                 return
-            for label, row in list(zip(*(getLayoutWidgets(inputForm, QLabel), getLayoutWidgets(inputForm, QWidget)))):
-                name = label.text()
-
-                saveGraph = row.findChild(QCheckBox, 'graphCheck').isChecked()
-                saveTable = row.findChild(QCheckBox, 'tableCheck').isChecked()
-                saveLimit = row.findChild(QCheckBox, 'limitCheck').isChecked()
-                spec = self.spectraData[name]
-                if saveGraph:
-                    spec.graphData[1:].to_csv(
-                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_graphData.csv',
-                        index=False,
-                        header=False)
-                if saveTable:
+            name = spectras.currentText()
+            row = getLayoutWidgets(inputForm, QWidget)[0]
+            saveGraph = row.findChild(QCheckBox, 'graphCheck').isChecked()
+            saveTable = row.findChild(QCheckBox, 'tableCheck').isChecked()
+            saveLimit = row.findChild(QCheckBox, 'limitCheck').isChecked()
+            spec = self.spectraData[name]
+            if saveGraph:
+                spec.graphData[1:].to_csv(
+                    f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_graphData.csv',
+                    index=False,
+                    header=False)
+            if saveTable:
+                if not spec.maxTableData[1:].empty:
                     spec.maxTableData[1:].to_csv(
                         f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_table_max.csv',
-                        index=False,)
+                        index=False)
+                if not spec.minTableData[1:].empty:
                     spec.minTableData[1:].to_csv(
                         f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_table_min.csv',
                         index=False)
 
-                if saveLimit:
-                    pd.DataFrame(spec.maxPeakLimitsX.values()).to_csv(
-                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_peakLim_max.csv',
-                        header=False,
-                        index=False)
-                    pd.DataFrame(spec.minPeakLimitsX.values()).to_csv(
-                        f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_peakLim_min.csv',
-                        header=False,
-                        index=False)
+            if saveLimit:
+                pd.DataFrame(spec.maxPeakLimitsX.values()).to_csv(
+                    f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_peakLim_max.csv',
+                    header=False,
+                    index=False)
+                pd.DataFrame(spec.minPeakLimitsX.values()).to_csv(
+                    f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_peakLim_min.csv',
+                    header=False,
+                    index=False)
+
+            QMessageBox.warning(self, text="Save Complete")
 
         saveBtn.clicked.connect(onAccept)
 
@@ -3540,7 +3657,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                color="black",
                                markersize=3,
                                alpha=0.6,
-                               gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min")
+                               gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min-p-{i}")
                 spectraData.isMinDrawn = True
                 if spectraData.minPeakLimitsX.get(x, False):
                     limitXFirst = spectraData.minPeakLimitsX[x][0]
@@ -3566,7 +3683,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                markersize=8,
                                gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min-limR-{i}")
 
-        legendPD = self.axPD.legend(fancybox=True, shadow=True)
+        legendPD: matplotlib.legend.DraggableLegend = self.axPD.legend(fancybox=True, shadow=True, draggable=True)
         self.legOrigLinesPD = {}
         origlines = [line for line in self.axPD.get_lines() if not ('max' in line.get_gid() or 'min' in line.get_gid())]
         for legLine, origLine in zip(legendPD.get_lines(), origlines):

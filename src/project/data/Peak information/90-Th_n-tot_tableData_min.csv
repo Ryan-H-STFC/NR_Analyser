@@ -1,3 +1,3 @@
 Rank by Integral,Energy (eV),Rank by Energy,TOF (us),Integral,Peak Width,Rank by Peak Width,Peak Height,Rank by Peak Height,Relevant Isotope
-0,1400000.0,(1),1.4332,3157620.0,2512500.0,(0),6.44557,(1),['90-Th-232_n-tot']
-1,0.6125,(0),2166.79,6771.79,0.645293,(1),136.239,(0),['90-Th-232_n-tot']
+0,1400000.0,(1),1.4332,13911800.0,2992420.0,(0),6.44557,(1),['90-Th-232_n-tot']
+1,0.6125,(0),2166.79,211.444,0.625079,(1),136.239,(0),['90-Th-232_n-tot']

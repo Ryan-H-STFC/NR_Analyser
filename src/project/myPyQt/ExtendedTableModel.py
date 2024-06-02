@@ -1,10 +1,7 @@
 from __future__ import annotations
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PyQt6.QtWidgets import QTableView
-import pandas
 from pandas import DataFrame
 
-from project.myPyQt.CustomSortingProxy import CustomSortingProxy
 
 # todo - Add dictionary for row indexes for each section of data associated with each plotted element.
 
@@ -30,8 +27,8 @@ class ExtendedQTableModel(QAbstractTableModel):
 
         Args:
             index (QModelIndex): Used to identify the index of a specific cell in the model.
-            role (Qt.ItemDataRole): Used to describe the type of call being made by Qt, e.g. Qt.DisplayRole tells the model a
-            data retrieval call is being made for displaying.
+            role (Qt.ItemDataRole): Used to describe the type of call being made by Qt, e.g. Qt.DisplayRole tells the
+            model a data retrieval call is being made for displaying.
 
         Returns:
             QVariant: default Qt item.

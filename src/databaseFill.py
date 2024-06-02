@@ -1,8 +1,9 @@
 import os
 import pandas as pd
-from spectra.SpectraDataStructure import SpectraData
-from helpers.resourcePath import resource_path
-from settings import params
+from project.spectra.SpectraDataStructure import SpectraData
+from project.helpers.resourcePath import resource_path
+from project.settings import params
+from time import perf_counter
 
 from multiprocessing import Pool
 
@@ -20,8 +21,7 @@ for file in os.listdir(f"{params['dir_graphData']}"):
     if ".csv" not in filename[-4:]:
         continue
     filename = filename[:-4]
-    if any([sym in filename for sym in ['Cu', 'As', 'Fe']]):
-        spectraNames.append(filename)
+    spectraNames.append(filename)
 
 thresholds = params['threshold_exceptions']
 exportDir = 'C:\\Users\\gzi47552\\Desktop\\NRT-NRCA Test Database'
@@ -91,9 +91,10 @@ def exportDatabaseValues(name):
 if __name__ == "__main__":
     # for name in spectraNames:
     #     exportDatabaseValues(name)
+    t1 = perf_counter()
     with Pool() as p:
         map = p.map(exportDatabaseValues, spectraNames)
         for item in map:
             pass
-
-    print("Finished")
+    t2 = perf_counter()
+    print(f'\n\nFinished All - Elapsed Time: {t2-t1}')

@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath("./src/"))
 sys.path.append(os.path.abspath("./src/project/"))
 sys.path.append(os.path.abspath("./src/project/spectra"))
 sys.path.append(os.path.abspath("./src/project/myPyQt"))
-from src.project.spectra.SpectraDataStructure import SpectraData
+from project.spectra.SpectraDataStructure import SpectraData
 
 filepath = f"{os.path.dirname(__file__)}"
 

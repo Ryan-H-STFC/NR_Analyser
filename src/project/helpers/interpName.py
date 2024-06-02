@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 
 def interpName(name: str = None) -> dict[str | None]:
     """

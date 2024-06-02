@@ -89,6 +89,7 @@ class SpectraData:
 
         t1 = perf_counter()
 
+        t3 = perf_counter()
         self.name: str = name
         self.plotType: str = 'n-tot' if 'tot' in self.name else 'n-g'
         self.numPeaks: int = numPeaks
@@ -136,13 +137,17 @@ class SpectraData:
 
         if self.isToF and not self.graphData.empty and not distChanging:
             self.graphData[0] = self.energyToTOF(graphData[0], length=self.length)
-            self.graphData.sort_values(0, ignore_index=True, inplace=True)
         if self.graphData.empty:
             self.peakDetector = None
         else:
+            self.graphData.sort_values(0, ignore_index=True, inplace=True)
+
             self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
                                                            smoothCoeff=2 if self.isImported else 12)
+        t4 = perf_counter()
 
+        print(f"Elapsed Time - Start Init - {t4-t3}")
+        t3 = perf_counter()
         try:
             if self.peakDetector is not None:
                 self.maxima = np.array(self.peakDetector.maxima(threshold))
@@ -150,8 +155,10 @@ class SpectraData:
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
-
+        t4 = perf_counter()
+        print(f"Elapsed Time - Peak Detector - {t4-t3}")
         # Grab Peak Limits for max from file, otherwise calculate
+        t3 = perf_counter()
         try:
             if updatingDatabase:
                 raise FileNotFoundError
@@ -188,7 +195,9 @@ class SpectraData:
                     self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX.copy()
                     self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='max')
-
+        t4 = perf_counter()
+        print(f"Elapsed Time - Max Peak Limits - {t4-t3}")
+        t3 = perf_counter()
         try:
             if updatingDatabase:
                 raise FileNotFoundError
@@ -199,6 +208,7 @@ class SpectraData:
                     minLimits['left'] = self.energyToTOF(minLimits['left'], self.length)
                     minLimits['right'] = self.energyToTOF(minLimits['right'], self.length)
                     minLimits['left'], minLimits['right'] = minLimits['right'], minLimits['left']
+                interpGraphData = interp1d(graphData[0], graphData[1])
                 for min in self.minima[0]:
                     lim = minLimits[(minLimits['left'] < min) & (minLimits['right'] > min)]
                     if lim.empty:
@@ -207,7 +217,6 @@ class SpectraData:
                     leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
                     rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
 
-                    interpGraphData = interp1d(graphData[0], graphData[1])
                     self.minPeakLimitsY[min] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
             else:
                 raise FileNotFoundError
@@ -223,13 +232,16 @@ class SpectraData:
                     self.minPeakLimitsY = self.peakDetector.minPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='min')
 
+        t4 = perf_counter()
+        print(f"Elapsed Time - Max Peak Limits - {t4-t3}")
+
         if self.numPeaks is None:
             self.numPeaks = None if self.maxima is None else len(self.maxima[0])
         self.changePeakTableData()
 
         t2 = perf_counter()
         self.isUpdating = False
-        print(f"{self.name} - init - Elapsed Time: {t2-t1}")
+        print(f"Elapsed Time - {self.name} Init - {t2-t1}")
 
     def __eq__(self, other) -> bool:
         """

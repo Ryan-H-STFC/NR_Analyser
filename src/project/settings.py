@@ -54,11 +54,11 @@ params = {
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                        Peak Detector Parameters
     # ? ------------------------------------------------------------------------------------------------------------
-    'max_prominence': 5,
+    'max_prominence': 5.0,
     # Prominence Factor, threshold for identifying
-    'min_prominence': 1,
+    'min_prominence': 1.0,
     # Height Threshold,
-    'min_required_height': -99999999,
+    'min_required_height': -99999999.0,
 
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                     Peak Integral Limit Parameters

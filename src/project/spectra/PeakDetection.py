@@ -14,6 +14,8 @@ from project.helpers.getIndex import getIndex
 from project.helpers.smooth import smooth
 from project.helpers.nearestNumber import nearestnumber
 
+from peakutils.baseline import baseline
+
 
 class PeakDetector:
     """
@@ -22,6 +24,7 @@ class PeakDetector:
     """
 
     def __init__(self, name, graphData, isImported=False, smoothCoeff=12) -> None:
+        t1 = perf_counter()
         self.name: str = name
         self.graphData: DataFrame = graphData.copy()
         self.isImported: bool = isImported
@@ -40,7 +43,10 @@ class PeakDetector:
         self.dips = np.where(np.diff(np.sign(self.npDer)) > 0)[0]
         self.info = None
         self.widths = None
+        baselineY = baseline(graphData.iloc[:, 1], 5)
 
+        self.normalised = DataFrame([self.graphData.iloc[:, 0], self.graphData.iloc[:, 1] + baselineY]).T
+        self.baselineGraph = DataFrame([self.graphData.iloc[:, 0], baselineY]).T
         self.maximaList: np.ndarray = None
         self.minimaList: np.ndarray = None
         self.maxPeakLimitsX: dict = None
@@ -49,6 +55,9 @@ class PeakDetector:
         self.maxPeakLimitsY2: dict = None
         self.minPeakLimitsX: dict = None
         self.minPeakLimitsY: dict = None
+        t2 = perf_counter()
+
+        print(f"Elapsed Time - PeakDetector Init - {t2-t1}")
 
     def definePeakLimits(self, which: Literal['max', 'min'] = 'max'):
         """
@@ -87,7 +96,7 @@ class PeakDetector:
 
                 validFlats = zerosList[np.where(zerosList > peakIndex)]
 
-                rightFlat = graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [2e7]
+                rightFlat = graphData.iloc[(np.min(validFlats))] if validFlats.size != 0 else [max(graphData[0])]
                 rightData = graphData[(peakX <= graphData[0]) & (graphData[0] <= rightFlat[0])]
                 rightElbow = self.findElbow(rightData)
 
@@ -152,7 +161,7 @@ class PeakDetector:
         """
         x, y = self.graphData.iloc[:, 0], self.graphData.iloc[:, 1] * -1
         # height = -0.9, prominence = 0.003 / 0.1
-        minima = signal.find_peaks(y, prominence=0.1 if self.isImported else params['min_prominence'])[0]
+        minima = signal.find_peaks(y, prominence=params['min_prominence'])[0]
 
         minima_list_x = []
         minima_list_y = []
@@ -405,7 +414,7 @@ class PeakDetector:
         allCoord = np.vstack((x, y)).T
 
         firstPoint = allCoord[0]
-        lineVec = allCoord[-1] - allCoord[0]
+        lineVec = allCoord[-1] - firstPoint
         lineVecNorm = lineVec / np.sqrt(np.sum(lineVec**2))
         vecFromFirst = allCoord - firstPoint
         scalarProduct = np.sum(vecFromFirst * repmat(lineVecNorm, nPoints, 1), axis=1)

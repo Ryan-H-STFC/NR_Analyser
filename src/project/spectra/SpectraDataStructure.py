@@ -347,7 +347,7 @@ class SpectraData:
 
         return (length ** 2 * 1e12 * neutronMass) / (2 * electronCharge * xData ** 2)
 
-    def updatePeaks(self, which: Literal['max', 'min', 'both']) -> None:
+    def updatePeaks(self, which: Literal['max', 'min', 'both'], newGraphData: bool = False) -> None:
         """
         ``updatePeaks``
         ---------------
@@ -359,6 +359,9 @@ class SpectraData:
             which (Literal[&#39;max&#39;, &#39;min&#39;, &#39;both&#39;]): Update maximas or minimas or both.
         """
         t1 = perf_counter()
+        if newGraphData:
+            self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
+                                                           smoothCoeff=2 if self.isImported else 12)
         self.maxima = np.array(self.peakDetector.maxima(self.threshold))
         self.minima = np.array(self.peakDetector.minima())
 

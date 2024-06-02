@@ -156,7 +156,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         self.spectraNames: list[str] = None
 
         self.orderByIntegral: bool = True
-        self.spectraData: dict = dict()
+        self.spectraData: dict[SpectraData] = dict()
         self.elementDataNames: list[str] = []
 
         self.compoundData: dict[SpectraData] = dict()
@@ -1404,14 +1404,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 if spectra.isToF:
                     spectra.graphData = spectra.graphData * [lengthConversion[spectra.plotType], 1]
 
-                spectra.definePeaks()
-                spectra.recalculateAllPeakData('max')
-                spectra.recalculateAllPeakData('min')
+                spectra.updatePeaks('both', True)
+                spectra.orderAnnotations('max')
+                spectra.orderAnnotations('min')
 
                 for line in self.ax.lines:
                     if f"{spectra.name}-{'ToF'}" == line.get_label():
                         line.set_xdata(spectra.graphData[0])
                         break
+
                 self.drawAnnotations(spectra=spectra, which='max' if self.maxTableOptionRadio.isChecked() else 'min')
             self.canvas.draw()
         applyBtn.clicked.connect(onAccept)
@@ -1601,7 +1602,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Options include: Which axis to plot gridlines for, which type; major, minor or both ticks, as well as color.
         """
 
-        optionsWindowDialog = QDialog()
+        optionsWindowDialog = QDialog(self)
         optionsWindowDialog.setStyleSheet(self.styleSheet())
         optionsWindowDialog.setWindowTitle("Gridline Options")
         optionsWindowDialog.setObjectName("optionsDialog")

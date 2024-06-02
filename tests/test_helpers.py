@@ -29,12 +29,12 @@ class TestHelpers(TestCase):
         self.assertTrue(isinstance(interpName('80-Hg-198_n-tot'), dict))
         self.assertTrue(isinstance(interpName('element_78-Pt_n-tot'), dict))
         self.assertTrue(isinstance(interpName('70-Yb-168_n-tot'), dict))
-        self.assertTrue(interpName() is None)
-        self.assertTrue(interpName('') is None)
-        self.assertTrue(interpName(True) is None)
-        self.assertTrue(interpName(0.45324) is None)
-        self.assertTrue(interpName(222) is None)
-        self.assertTrue(interpName('hbdfv -df0=f-12   \n\t  dn1klv dfs-=fa s-df=a') is None)
+        self.assertTrue(interpName()['nNum'] is None)
+        self.assertTrue(interpName('')['nNum'] is None)
+        self.assertTrue(interpName(True)['nNum'] is None)
+        self.assertTrue(interpName(0.45324)['nNum'] is None)
+        self.assertTrue(interpName(222)['nNum'] is None)
+        self.assertTrue(interpName('hbdfv -df0=f-12   \n\t  dn1klv dfs-=fa s-df=a')['nNum'] is None)
 
 
 if __name__ == '__main__':

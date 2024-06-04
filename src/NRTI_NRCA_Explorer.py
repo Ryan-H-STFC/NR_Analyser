@@ -779,6 +779,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     )
             ax.axline(leftLim,
                       rightLim,
+
                       linestyle="--",
                       color='r',
                       linewidth=0.8,
@@ -801,8 +802,11 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             ax.set_xlim(0.8 * leftLim[0],
                         1.2 * rightLim[0])
-            ax.set_ylim([(min(left[1], right[1]) if maxOptionRadio.isChecked() else peak[1]) * 0.5,
-                        (peak[1] if maxOptionRadio.isChecked() else max(leftLim[1], rightLim[1])) * 1.5])
+            ax.set_ylim(
+                [(min(left[1], right[1])
+                  if maxOptionRadio.isChecked()
+                  else peak[1] - abs(peak[1] - max(left[1], right[1]))),
+                 (peak[1] if maxOptionRadio.isChecked() else max(leftLim[1], rightLim[1])) * 1.2])
             self.figure.canvas.draw()
 
         def onAccept():
@@ -848,6 +852,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.figure.canvas.mpl_disconnect(optionsWindow.motionEvent)
             self.figure.canvas.mpl_disconnect(optionsWindow.buttonPressEvent)
             spectra.recalculatePeakData(peakX, which=which)
+            spectra.orderAnnotations(which=which, byIntegral=self.byIntegralCheck.isChecked())
             self.addTableData(reset=True)
         applyBtn.clicked.connect(onAccept)
 

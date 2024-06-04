@@ -23,17 +23,20 @@ class PeakDetector:
     peak widths used in integration calculations.
     """
 
-    def __init__(self, name, graphData, isImported=False, smoothCoeff=12) -> None:
+    def __init__(self, name: str, graphData: DataFrame, isImported: bool = False, smoothCoeff: float = 12.0) -> None:
         t1 = perf_counter()
         self.name: str = name
-        self.graphData: DataFrame = graphData.copy()
+        self.graphData = graphData.copy()
         self.isImported: bool = isImported
 
         # self.baseline = peakutils.baseline(graphData.iloc[:, 1], 5)
         # self.normalised = DataFrame([graphData.iloc[:, 0], graphData.iloc[:, 1] + self.baseline]).T
-        self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
+        if isImported:
+            self.npSmoothGraph = graphData.copy().iloc[:, 1]
+        else:
+            self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
         self.npDer = np.gradient(self.npSmoothGraph)
-        self.npSecDer = np.gradient(self.npDer)
+        self.npSecDer = np.gradient(self.npDer, )
 
         self.smoothGraph = DataFrame([graphData.iloc[:, 0], self.npSmoothGraph]).T
         self.derivative = DataFrame([graphData.iloc[:, 0], self.npDer]).T
@@ -45,8 +48,8 @@ class PeakDetector:
         self.widths = None
         baselineY = baseline(graphData.iloc[:, 1], 5)
 
-        self.normalised = DataFrame([self.graphData.iloc[:, 0], self.graphData.iloc[:, 1] + baselineY]).T
-        self.baselineGraph = DataFrame([self.graphData.iloc[:, 0], baselineY]).T
+        self.normalised = DataFrame([graphData.iloc[:, 0], graphData.iloc[:, 1] + baselineY]).T
+        self.baselineGraph = DataFrame([graphData.iloc[:, 0], baselineY]).T
         self.maximaList: np.ndarray = None
         self.minimaList: np.ndarray = None
         self.maxPeakLimitsX: dict = None

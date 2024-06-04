@@ -143,7 +143,7 @@ class SpectraData:
             self.graphData.sort_values(0, ignore_index=True, inplace=True)
 
             self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
-                                                           smoothCoeff=2 if self.isImported else 12)
+                                                           smoothCoeff=1 if self.isImported else 12)
         t4 = perf_counter()
 
         print(f"Elapsed Time - Start Init - {t4-t3}")
@@ -172,15 +172,15 @@ class SpectraData:
                     maxLimits['right'] = self.energyToTOF(maxLimits['right'], self.length)
                     maxLimits['left'], maxLimits['right'] = maxLimits['right'], maxLimits['left']
 
-                for max in self.maxima[0]:
-                    lim = maxLimits[(maxLimits['left'] < max) & (maxLimits['right'] > max)]
+                for peak in self.maxima[0]:
+                    lim = maxLimits[(maxLimits['left'] < peak) & (maxLimits['right'] > peak)]
                     if lim.empty:
                         continue
-                    self.maxPeakLimitsX[max] = (lim['left'].iloc[0], lim['right'].iloc[0])
+                    self.maxPeakLimitsX[peak] = (lim['left'].iloc[0], lim['right'].iloc[0])
                     leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
                     rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
                     interpGraphData = interp1d(graphData[0], graphData[1])
-                    self.maxPeakLimitsY[max] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
+                    self.maxPeakLimitsY[peak] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
             else:
                 raise FileNotFoundError
 
@@ -209,15 +209,15 @@ class SpectraData:
                     minLimits['right'] = self.energyToTOF(minLimits['right'], self.length)
                     minLimits['left'], minLimits['right'] = minLimits['right'], minLimits['left']
                 interpGraphData = interp1d(graphData[0], graphData[1])
-                for min in self.minima[0]:
-                    lim = minLimits[(minLimits['left'] < min) & (minLimits['right'] > min)]
+                for peak in self.minima[0]:
+                    lim = minLimits[(minLimits['left'] < peak) & (minLimits['right'] > peak)]
                     if lim.empty:
                         continue
-                    self.minPeakLimitsX[min] = (lim['left'].iloc[0], lim['right'].iloc[0])
+                    self.minPeakLimitsX[peak] = (lim['left'].iloc[0], lim['right'].iloc[0])
                     leftLimit = nearestnumber(graphData[0], lim['left'].iloc[0])
                     rightLimit = nearestnumber(graphData[0], lim['right'].iloc[0])
 
-                    self.minPeakLimitsY[min] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
+                    self.minPeakLimitsY[peak] = (float(interpGraphData(leftLimit)), float(interpGraphData(rightLimit)))
             else:
                 raise FileNotFoundError
         except ValueError:
@@ -361,7 +361,7 @@ class SpectraData:
         t1 = perf_counter()
         if newGraphData:
             self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
-                                                           smoothCoeff=2 if self.isImported else 12)
+                                                           smoothCoeff=1 if self.isImported else 12)
         self.maxima = np.array(self.peakDetector.maxima(self.threshold))
         self.minima = np.array(self.peakDetector.minima())
 
@@ -470,9 +470,6 @@ class SpectraData:
         if self.maxima.size == 0 and which == 'max':
             return
         if self.minima.size == 0 and which == 'min':
-            return
-
-        if self.isImported:
             return
 
         tableData = self.maxTableData if which == 'max' else self.minTableData

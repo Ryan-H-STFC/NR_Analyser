@@ -56,34 +56,9 @@ params = {
     # ? ------------------------------------------------------------------------------------------------------------
     'max_prominence': 5.0,
     # Prominence Factor, threshold for identifying
-    'min_prominence': 1.0,
+    'min_prominence': 0.1,
     # Height Threshold,
     'min_required_height': -99999999.0,
-
-    # ? ------------------------------------------------------------------------------------------------------------
-    # ?                                     Peak Integral Limit Parameters
-    # ? ------------------------------------------------------------------------------------------------------------
-    # Maximum value prange can get.
-    'prangemax': 500,
-    # Maximum allowed slope (abolute value) at outermost left side of spectra.
-    # i.e. starting from left, everything will be set to 0 until the (unsigned) slope reaches this value.
-    'maxleftslope': 3000,
-    # Maximum allowed slope outside the peaks, as in, far away from them.
-    'maxouterslope': 10,
-    # Peak edges is set when its slope has fallen down to this fraction of the one nearby the peak summit.
-    'slopedrop': .1,
-    # Density of boxes (box/b) for slope computation.
-    'dboxes': 100,
-    # Smoothing iterations on slope derivative for computations.
-    'itersmooth': 1,
-    # Smoothing iterations on sample peak detection.
-    'itersmoothsamp': 0,
-    # Strip-peaks iterations for background fitting in sample imports.
-    'iterspeaks': 4,
-    # Number of coefficients in smaple background fitting, i.e., polynomial order + 1s
-    'fitting_coeff': 8,
-    # Default tolerance value (us) for finding nearby peaks in pmatch function.
-    'max_match': 3.5,
 
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                             Graph Settings

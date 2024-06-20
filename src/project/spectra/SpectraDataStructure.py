@@ -43,7 +43,7 @@ class SpectraData:
     annotations: list
     maxAnnotationOrder: dict
     minAnnotationOrder: dict
-    threshold: float = 100.0
+    threshold: dict[float] = {'n-tot': 100.0, 'n-g': 100}
     length: dict[float] = None
 
     maxima: ndarray = None
@@ -82,7 +82,7 @@ class SpectraData:
                  distChanging: bool = False,
                  isCompound: bool = False,
                  isAnnotationsHidden: bool = False,
-                 threshold: float = 100,
+                 thresholds: float = 100,
                  length: dict[float] = params['length'],
                  isImported: bool = False,
                  updatingDatabase: bool = False) -> None:
@@ -108,12 +108,17 @@ class SpectraData:
         self.minPeakLimitsX: dict[tuple[float]] = {}
         self.minPeakLimitsY: dict[tuple[float]] = {}
 
-        self.threshold: float = threshold
+        self.thresholds: dict[float] = thresholds if isinstance(
+            thresholds, dict) else {'n-tot': thresholds[0], 'n-g': thresholds[1]} if isinstance(
+                thresholds, tuple) else {'n-tot': 100, 'n-g': 100}
+        if self.thresholds is not None:
+            self.threshold: float = self.thresholds[self.plotType]
         self.length: dict[float] = length
 
         self.tableData: DataFrame = DataFrame()
         self.maxTableData: DataFrame = tableDataMax
         self.minTableData: DataFrame = tableDataMin
+        dataChanged: bool = isCompound or distChanging
 
         if self.maxTableData is None:
             self.maxTableData = DataFrame()
@@ -150,7 +155,7 @@ class SpectraData:
         t3 = perf_counter()
         try:
             if self.peakDetector is not None:
-                self.maxima = np.array(self.peakDetector.maxima(threshold))
+                self.maxima = np.array(self.peakDetector.maxima(self.threshold))
                 self.minima = np.array(self.peakDetector.minima())
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
@@ -160,7 +165,7 @@ class SpectraData:
         # Grab Peak Limits for max from file, otherwise calculate
         t3 = perf_counter()
         try:
-            if updatingDatabase:
+            if updatingDatabase or dataChanged:
                 raise FileNotFoundError
             if not self.distChanging:
                 name = self.name[8:] if 'element' in self.name else self.name
@@ -393,7 +398,6 @@ class SpectraData:
         plotType = "n-tot" if 'n-tot' in self.name else "n-g"
         self.weightedIsoGraphData = {name: pandas.read_csv(resource_path(
             f"{params['dir_graphData']}{name}{'' if self.isCompound else '_'+plotType}.csv"),
-            names=['x', 'y'],
             header=None) * [1, dist]
             for name, dist in self.distributions.items() if dist != 0}
 

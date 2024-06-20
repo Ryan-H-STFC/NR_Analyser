@@ -1,4 +1,4 @@
-# NRTI/NRCA-Viewing-Database
+# NR Analyser
 
 ![Tests](https://github.com/Ryan-H-STFC/NRTI-NRCA_Explorer/actions/workflows/test.yml/badge.svg)
 

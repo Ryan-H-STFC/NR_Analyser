@@ -22,7 +22,7 @@ class TestSpectraData(TestCase):
     )
 
     tableData = pd.read_csv(
-        f"{filepath}/test_data/tableData/element_29-Cu_n-g.csv",
+        f"{filepath}/test_data/tableData/29-Cu_n-g_tableData_max.csv",
         header=None
     )
 
@@ -31,7 +31,7 @@ class TestSpectraData(TestCase):
         header=None)
 
     tableData2 = pd.read_csv(
-        f"{filepath}/test_data/tableData/element_48-Cd_n-g.csv",
+        f"{filepath}/test_data/tableData/48-Cd_n-g_tableData_max.csv",
         header=None)
 
     def test_ElementData_init_Normal(self):
@@ -44,7 +44,7 @@ class TestSpectraData(TestCase):
             tableDataMin=None,
             graphData=self.graphData,
             graphColour=(0, 0, 0),
-            isToF=True,
+            isToF=False,
             distributions={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500},
             defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}
         )
@@ -54,7 +54,7 @@ class TestSpectraData(TestCase):
             tableDataMax=self.tableData,
             tableDataMin=None,
             graphData=self.graphData,
-            isToF=False,
+            isToF=True,
             graphColour=(0, 0, 0),
             distributions={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500},
             defaultDist={"29-Cu-63": 0.691500, "29-Cu-65": 0.308500}

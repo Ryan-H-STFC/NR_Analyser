@@ -57,7 +57,7 @@ class PeakDetector:
         self.minPeakLimitsY: dict = None
         t2 = perf_counter()
 
-        print(f"Elapsed Time - PeakDetector Init - {t2-t1}")
+        print(f"Elapsed Time - PeakDetector Init - {t2 - t1}")
 
     def definePeakLimits(self, which: Literal['max', 'min'] = 'max'):
         """
@@ -112,7 +112,7 @@ class PeakDetector:
             except ValueError:
                 pass
         t2 = perf_counter()
-        print(f"{self.name} - Peak Limits {which} - {t2-t1}")
+        print(f"{self.name} - Peak Limits {which} - {t2 - t1}")
 
     def maxima(self, threshold: float = 100) -> tuple[list[float]]:
         """

@@ -5,6 +5,7 @@ from pyparsing import Literal
 from scipy.interpolate import interp1d
 import pandas
 from pandas import DataFrame
+from decimal import Decimal, getcontext
 import concurrent.futures
 
 from project.spectra.PeakDetection import PeakDetector
@@ -12,6 +13,7 @@ from project.helpers.getSpacedElements import getSpacedElements
 from project.helpers.integration import integrate_simps
 from project.helpers.nearestNumber import nearestnumber
 from project.helpers.resourcePath import resource_path
+from project.helpers.smartRound import smart_round
 from project.spectra.Integrator import IsotopeIntegrator
 from time import perf_counter
 from project.settings import params
@@ -130,6 +132,7 @@ class SpectraData:
             self.graphData = DataFrame()
         else:
             self.graphData.drop_duplicates(0, inplace=True)
+            self.graphData.dropna(inplace=True)
             self.graphData.reset_index(drop=True, inplace=True)
 
         self.graphColour = graphColour
@@ -151,7 +154,7 @@ class SpectraData:
                                                            smoothCoeff=1 if self.isImported else 12)
         t4 = perf_counter()
 
-        print(f"Elapsed Time - Start Init - {t4-t3}")
+        print(f"Elapsed Time - Start Init - {t4 - t3}")
         t3 = perf_counter()
         try:
             if self.peakDetector is not None:
@@ -161,7 +164,7 @@ class SpectraData:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
         t4 = perf_counter()
-        print(f"Elapsed Time - Peak Detector - {t4-t3}")
+        print(f"Elapsed Time - Peak Detector - {t4 - t3}")
         # Grab Peak Limits for max from file, otherwise calculate
         t3 = perf_counter()
         try:
@@ -201,7 +204,7 @@ class SpectraData:
                     self.maxPeakLimitsY = self.peakDetector.maxPeakLimitsY.copy()
                     self.recalculateAllPeakData(which='max')
         t4 = perf_counter()
-        print(f"Elapsed Time - Max Peak Limits - {t4-t3}")
+        print(f"Elapsed Time - Max Peak Limits - {t4 - t3}")
         t3 = perf_counter()
         try:
             if updatingDatabase:
@@ -238,7 +241,7 @@ class SpectraData:
                     self.recalculateAllPeakData(which='min')
 
         t4 = perf_counter()
-        print(f"Elapsed Time - Max Peak Limits - {t4-t3}")
+        print(f"Elapsed Time - Max Peak Limits - {t4 - t3}")
 
         if self.numPeaks is None:
             self.numPeaks = None if self.maxima is None else len(self.maxima[0])
@@ -246,7 +249,7 @@ class SpectraData:
 
         t2 = perf_counter()
         self.isUpdating = False
-        print(f"Elapsed Time - {self.name} Init - {t2-t1}")
+        print(f"Elapsed Time - {self.name} Init - {t2 - t1}")
 
     def __eq__(self, other) -> bool:
         """
@@ -324,10 +327,20 @@ class SpectraData:
         """
         if self.length is not None:
             length = self.length[self.plotType]
-        neutronMass = float(1.68e-27)
-        electronCharge = float(1.60e-19)
 
-        return length * 1e6 * (0.5 * neutronMass / (xData * electronCharge)) ** 0.5
+        # Set the decimal context to avoid precision errors
+        getcontext().prec = 50
+
+        neutronMass = Decimal('1.68e-27')
+        electronCharge = Decimal('1.60e-19')
+        xData = Decimal(str(xData))  # Convert xData to Decimal
+        length = Decimal(str(length))  # Convert length to Decimal
+
+        # Perform calculations using Decimal
+        result = length * Decimal('1e6') * (Decimal('0.5') * neutronMass / (xData * electronCharge)) ** Decimal('0.5')
+
+        # Convert the result back to float before returning
+        return float(result)
 
     def tof2e(self, xData: float, length: dict[float] = params['length']) -> float:
         """
@@ -347,10 +360,20 @@ class SpectraData:
         """
         if self.length is not None:
             length = self.length[self.plotType]
-        neutronMass = float(1.68e-27)
-        electronCharge = float(1.68e-19)
 
-        return (length ** 2 * 1e12 * neutronMass) / (2 * electronCharge * xData ** 2)
+        # Set the decimal context to avoid precision errors
+        getcontext().prec = 50
+
+        neutronMass = Decimal('1.68e-27')
+        electronCharge = Decimal('1.60e-19')  # Corrected electronCharge value
+        xData = Decimal(str(xData))  # Convert xData to Decimal
+        length = Decimal(str(length))  # Convert length to Decimal
+
+        # Perform calculations using Decimal
+        result = (length ** 2 * Decimal('1e12') * neutronMass) / (Decimal('2') * electronCharge * xData ** 2)
+
+        # Convert the result back to float before returning
+        return float(result)
 
     def updatePeaks(self, which: Literal['max', 'min', 'both'], newGraphData: bool = False) -> None:
         """
@@ -383,7 +406,7 @@ class SpectraData:
             self.minPeakLimitsY = self.peakDetector.minPeakLimitsY
             self.recalculateAllPeakData(which='min')
         t2 = perf_counter()
-        print(f"{self.name} - updatePeaks {which} - Elapsed Time: {t2-t1}")
+        print(f"{self.name} - updatePeaks {which} - Elapsed Time: {t2 - t1}")
 
     def onDistChange(self) -> None:
         """
@@ -397,7 +420,7 @@ class SpectraData:
             return
         plotType = "n-tot" if 'n-tot' in self.name else "n-g"
         self.weightedIsoGraphData = {name: pandas.read_csv(resource_path(
-            f"{params['dir_graphData']}{name}{'' if self.isCompound else '_'+plotType}.csv"),
+            f"{params['dir_graphData']}{name}{'' if self.isCompound else '_' + plotType}.csv"),
             header=None) * [1, dist]
             for name, dist in self.distributions.items() if dist != 0}
 
@@ -543,20 +566,19 @@ class SpectraData:
         Args:
             which (Literal[&#39;max&#39;, &#39;min&#39;], optional): Max or Min table data. Defaults to 'max'.
         """
+        columns = [
+            "Rank by Integral",
+            "TOF (us)" if self.isToF else "Energy (eV)",
+            "Rank by " + "TOF" if self.isToF else "Energy",
+            "Integral",
+            "Peak Width",
+            "Rank by Peak Width",
+            "Peak Height",
+            "Rank by Peak Height",
+            "Relevant Isotope"
+        ]
         if which == 'max' and self.maxima.size == 0 or which == 'min' and self.minima.size == 0:
-            self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 9]],
-                                              columns=[
-                                              "Rank by Integral",
-                                              "Energy (eV)",
-                                              "Rank by Energy",
-                                              "TOF (us)",
-                                              "Integral",
-                                              "Peak Width",
-                                              "Rank by Peak Width",
-                                              "Peak Height",
-                                              "Rank by Peak Height",
-                                              "Relevant Isotope"
-                                              ])
+            self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 9]], columns=columns)
             return
 
         if which == 'max':
@@ -570,11 +592,13 @@ class SpectraData:
 
         integral = self.peakIntegral(peakLimitsX[peak][0], peakLimitsX[peak][1], which=which)
         column = 'TOF (us)' if self.isToF else "Energy (eV)"
-        table.loc[table[column] == float(f"{peak:.6g}"), 'Integral'] = float(f"{integral[0]:.6g}")
+        intColumn = "Integral"
+        table.loc[table[column] == float(f"{peak:.6g}"), intColumn] = float(f"{integral[0]:.6g}")
 
-        integrals = {peak: (table.loc[table[column] == float(f"{peak:.6g}"), 'Integral'].iloc[0],
+        integrals = {peak: (table.loc[table[column] == float(f"{peak:.6g}"), "Integral"].iloc[0],
                             table.loc[table[column] == float(f"{peak:.6g}"), 'Relevant Isotope'].iloc[0])
                      for peak in peakLimitsX.keys()}
+
         integralRanks = {peak: i for i, peak in enumerate(dict(
             sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
 
@@ -586,72 +610,33 @@ class SpectraData:
 
         peakWidthRank = {peak: i for i, peak in enumerate(dict(
             sorted(peakWidth.items(), key=lambda item: item[1], reverse=True)).keys())}
+        t1 = perf_counter()
+        tableDataTemp = [
+            [
+                integralRanks[x],                                                           # Rank by Integral
+                float(np.format_float_positional(x, 6, fractional=False)),                  # Value
+                f"({np.where(peakList[0] == x)[0][0]})",                                    # Rank by Value
+                float(np.format_float_positional(integrals[x][0], 6, fractional=False)),    # Integral
+                float(np.format_float_positional(peakWidth[x], 6, fractional=False)),       # Peak Width
+                f"({peakWidthRank[x]})",                                                    # Rank by Peak Width
+                float(np.format_float_positional(y, 6, fractional=False)),                  # Peak Height
+                f"({peakHeightRank[y]})",                                                   # Rank by Peak Height
+                integrals[x][1]                                                             # Relevant Isotope
+            ]
+            for x, y in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
 
-        if self.isToF:
-            tableDataTemp = [
-                [
-                    integralRanks[x],                                                   # Rank by Integral
-                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # Energy  (eV)
-                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
-                    float(np.format_float_positional(x, 6, fractional=False)),                 # TOF (us)
-                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
-                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
-                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
-                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
-                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
-                    integrals[x][1]                                                     # Relevant Isotope
-                ]
-                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
-        else:
-            tableDataTemp = [
-                [
-                    integralRanks[x],                                                   # Rank by Integral
-                    float(np.format_float_positional(x, 6, fractional=False)),                 # Energy (eV)
-                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
-                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # TOF (us)
-                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
-                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
-                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
-                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
-                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
-                    integrals[x][1]                                                     # Relevant Isotope
-                ]
-                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
-
+        t2 = perf_counter()
+        print(f"Table Data Creation - {t2 - t1}")
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
         if which == 'max':
-            self.maxTableData = pandas.DataFrame(tableDataTemp,
-                                                 columns=[
-                                                     "Rank by Integral",
-                                                     "Energy (eV)",
-                                                     "Rank by Energy",
-                                                     "TOF (us)",
-                                                     "Integral",
-                                                     "Peak Width",
-                                                     "Rank by Peak Width",
-                                                     "Peak Height",
-                                                     "Rank by Peak Height",
-                                                     "Relevant Isotope"
-                                                 ])
-            self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 9]
+            self.maxTableData = pandas.DataFrame(tableDataTemp, columns=columns)
+            self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.maxTableData.index += 1
             self.maxTableData.sort_index(inplace=True)
         else:
-            self.minTableData = pandas.DataFrame(tableDataTemp,
-                                                 columns=[
-                                                     "Rank by Integral",
-                                                     "Energy (eV)",
-                                                     "Rank by Energy",
-                                                     "TOF (us)",
-                                                     "Integral",
-                                                     "Peak Width",
-                                                     "Rank by Peak Width",
-                                                     "Peak Height",
-                                                     "Rank by Peak Height",
-                                                     "Relevant Isotope"
-                                                 ])
-            self.minTableData.loc[-1] = [f"{self.name}", *[""] * 9]
+            self.minTableData = pandas.DataFrame(tableDataTemp, columns=columns)
+            self.minTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.minTableData.index += 1
             self.minTableData.sort_index(inplace=True)
         self.changePeakTableData(which=which)
@@ -665,20 +650,19 @@ class SpectraData:
         Loops over the existing peaks of the instance and calculates the data associated with each. Updating the table
         data.
         """
+        columns = [
+            "Rank by Integral",
+            "TOF (us)" if self.isToF else "Energy (eV)",
+            "Rank by " + ("TOF" if self.isToF else "Energy"),
+            "Integral",
+            "Peak Width",
+            "Rank by Peak Width",
+            "Peak Height",
+            "Rank by Peak Height",
+            "Relevant Isotope"
+        ]
         if (which == 'max' and self.maxPeakLimitsX == {}) or (which == 'min' and self.minPeakLimitsX == {}):
-            self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 9]],
-                                              columns=[
-                                              "Rank by Integral",
-                                              "Energy (eV)",
-                                              "Rank by Energy",
-                                              "TOF (us)",
-                                              "Integral",
-                                              "Peak Width",
-                                              "Rank by Peak Width",
-                                              "Peak Height",
-                                              "Rank by Peak Height",
-                                              "Relevant Isotope"
-                                              ])
+            self.tableData = pandas.DataFrame([[f"No Peak Data for {self.name}", *[""] * 8]], columns=columns)
 
             if which == 'max':
                 self.maxTableData = self.tableData.copy()
@@ -686,6 +670,7 @@ class SpectraData:
                 self.minTableData = self.tableData.copy()
 
             return
+
         if which == 'max':
             peakList = self.maxima
             peakLimitsX = self.maxPeakLimitsX
@@ -700,103 +685,68 @@ class SpectraData:
                 peakLimitsX[peak][1],
                 which=which): peak for peak in peakLimitsX.keys()}
             integrals = {peak: future.result() for future, peak in futures.items()}
+
         t2 = perf_counter()
-        print(f"Integral Calc - {t2-t1}")
+        print(f"Integral Calc - {t2 - t1}")
         t1 = perf_counter()
         integralRanks = {peak: i for i, peak in enumerate(dict(
             sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
+
         t2 = perf_counter()
-        print(f"Integral Ranks Calc - {t2-t1}")
+        print(f"Integral Ranks Calc - {t2 - t1}")
         t1 = perf_counter()
+
         peakHeightRank = {peak: i for i, peak in enumerate(
             sorted(peakList[1], key=lambda item: item, reverse=True))}
         t2 = perf_counter()
-        print(f"Peak Height Rank Calc - {t2-t1}")
+        print(f"Peak Height Rank Calc - {t2 - t1}")
         t1 = perf_counter()
+
         peakWidth = {peak: peakLimitsX[peak][1] - peakLimitsX[peak][0]
                      for peak in peakLimitsX.keys()}
         t2 = perf_counter()
-        print(f"Peak Width Calc - {t2-t1}")
+        print(f"Peak Width Calc - {t2 - t1}")
         t1 = perf_counter()
+
         peakWidthRank = {peak: i for i, peak in enumerate(dict(
             sorted(peakWidth.items(), key=lambda item: item[1], reverse=True)).keys())}
         t2 = perf_counter()
-        print(f"Peak Width Rank Calc - {t2-t1}")
-
+        print(f"Peak Width Rank Calc - {t2 - t1}")
         t1 = perf_counter()
-        if self.isToF:
-            tableDataTemp = [
-                [
-                    integralRanks[x],                                                   # Rank by Integral
-                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # Energy  (eV)
-                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
-                    float(np.format_float_positional(x, 6, fractional=False)),                 # TOF (us)
-                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
-                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
-                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
-                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
-                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
-                    integrals[x][1]                                                     # Relevant Isotope
-                ]
-                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
-        else:
-            tableDataTemp = [
-                [
-                    integralRanks[x],                                                   # Rank by Integral
-                    float(np.format_float_positional(x, 6, fractional=False)),                 # Energy (eV)
-                    f"({np.where(peakList[0] == x)[0][0]})",                            # Rank by Energy
-                    float(np.format_float_positional(self.e2TOF(x), 6, fractional=False)),     # TOF (us)
-                    float(np.format_float_positional(integrals[x][0], 6, fractional=False)),   # Integral
-                    float(np.format_float_positional(peakWidth[x], 6, fractional=False)),      # Peak Width
-                    f"({peakWidthRank[x]})",                                            # Rank by Peak Width
-                    float(np.format_float_positional(y, 6, fractional=False)),                 # Peak Height
-                    f"({peakHeightRank[y]})",                                           # Rank by Peak Height
-                    integrals[x][1]                                                     # Relevant Isotope
-                ]
-                for x, y in (peak for peak in peakList.T if peak[0] in integralRanks.keys())]
+
+        tableDataTemp = [
+            [
+                integralRanks[x],                                                           # Rank by Integral
+                float(np.format_float_positional(x, 6, fractional=False)),                  # Value
+                f"({np.where(peakList[0] == x)[0][0]})",                                    # Rank by Value
+                float(np.format_float_positional(integrals[x][0], 6, fractional=False)),    # Integral
+                float(np.format_float_positional(peakWidth[x], 6, fractional=False)),       # Peak Width
+                f"({peakWidthRank[x]})",                                                    # Rank by Peak Width
+                float(np.format_float_positional(y, 6, fractional=False)),                  # Peak Height
+                f"({peakHeightRank[y]})",                                                   # Rank by Peak Height
+                integrals[x][1]                                                             # Relevant Isotope
+            ]
+            for x, y in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+
         t2 = perf_counter()
-        print(f"Table Data Creation - {t2-t1}")
+        print(f"Table Data Creation - {t2 - t1}")
         tableDataTemp = sorted(tableDataTemp, key=lambda item: item[0])
 
         if which == 'max':
-            self.maxTableData = pandas.DataFrame(tableDataTemp,
-                                                 columns=[
-                                                     "Rank by Integral",
-                                                     "Energy (eV)",
-                                                     "Rank by Energy",
-                                                     "TOF (us)",
-                                                     "Integral",
-                                                     "Peak Width",
-                                                     "Rank by Peak Width",
-                                                     "Peak Height",
-                                                     "Rank by Peak Height",
-                                                     "Relevant Isotope"
-                                                 ])
-            self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 9]
+            self.maxTableData = pandas.DataFrame(tableDataTemp, columns=columns)
+            self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.maxTableData.index += 1
             self.maxTableData.sort_index(inplace=True)
         else:
-            self.minTableData = pandas.DataFrame(tableDataTemp,
-                                                 columns=[
-                                                     "Rank by Integral",
-                                                     "Energy (eV)",
-                                                     "Rank by Energy",
-                                                     "TOF (us)",
-                                                     "Integral",
-                                                     "Peak Width",
-                                                     "Rank by Peak Width",
-                                                     "Peak Height",
-                                                     "Rank by Peak Height",
-                                                     "Relevant Isotope"
-                                                 ])
-            self.minTableData.loc[-1] = [f"{self.name}", *[""] * 9]
+            self.minTableData = pandas.DataFrame(tableDataTemp, columns=columns)
+            self.minTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.minTableData.index += 1
             self.minTableData.sort_index(inplace=True)
         self.changePeakTableData(which=which)
 
         t2 = perf_counter()
 
-        print(f"{self.name} - TableData {which} - Elapsed Time: {t2-t1}")
+        print(f"{self.name} - TableData {which} - Elapsed Time: {t2 - t1}")
 
     def changePeakTableData(self, which: Literal['max', 'min'] = 'max') -> None:
         """

@@ -1201,7 +1201,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.peaklabel.setText(
                         f"""Number of Peaks: {
                             spectra.maxima.shape[1] if self.maxTableOptionRadio.isChecked() else spectra.minima.shape[1]
-                            }""")
+                        }""")
                     self.updateGuiData(tof=Tof, distAltered=True)
 
         applyBtn.clicked.connect(onAccept)
@@ -1343,6 +1343,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectra.thresholds[spectra.plotType] = threshold_value
             spectra.threshold = threshold_value
             self.threshold = threshold_value
+            self.numRows = spectra.numPeaks
             spectra.updatePeaks(which='max')
             self.addTableData()
             self.toggleThreshold()
@@ -1994,7 +1995,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         *{{
             font-family: 'Roboto Mono';
             font-size: 10pt;
-            font-weight: 400;            
+            font-weight: 400;
         }}
 
         QMenuBar {{
@@ -2420,19 +2421,26 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             if name is None:
                 raise KeyError
             self.thresholds = self.spectraData[name].thresholds
+            numPeaks = str(self.spectraData[name].numPeaks)
         except KeyError:
             self.thresholds = params['threshold_exceptions'].get(interpName(self.selectionName)['symbol'], (100, 100))
+            numPeaks = self.numRows
             # Setting label information based on threshold value
-
-        labelInfo = (
-            f"""Threshold for peak detection (n-tot mode, n-g mode): ({
-                self.thresholds[0]},{self.thresholds[1]})"""
-        )
+        try:
+            labelInfo = (
+                f"""Threshold for peak detection (n-tot mode, n-g mode): ({
+                    self.thresholds[0]},{self.thresholds[1]})"""
+            )
+        except KeyError:
+            labelInfo = (
+                f"""Threshold for peak detection (n-tot mode, n-g mode): ({
+                    self.thresholds['n-tot']},{self.thresholds['n-g']})"""
+            )
 
         self.thresholdLabel.setText(str(labelInfo))
         # Changing the peak label text
 
-        self.peaklabel.setText("Number of Peaks: " + str(self.numRows))
+        self.peaklabel.setText(f"Number of Peaks: {numPeaks}")
 
     def displayData(self) -> None:
         """
@@ -2475,7 +2483,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             if self.selectionName.replace('element_', '') in file:
                 filepath = resource_path(f"""{
                     params['dir_peakInfo']
-                    }{file[:-7]}{'max' if self.maxTableOptionRadio.isChecked() else 'min'}.csv""")
+                }{file[:-7]}{'max' if self.maxTableOptionRadio.isChecked() else 'min'}.csv""")
                 break
 
         try:
@@ -2659,14 +2667,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
             try:
                 elementTableDataMax = pd.read_csv(
-                    resource_path(f"{peakInfoDir}{spectraName.replace('element_','')}_tableData_max.csv"))
+                    resource_path(
+                        f"{peakInfoDir}{'TOF' if tof else 'Energy'}/{spectraName.replace(
+                            'element_', '')}_tableData_max.csv"))
             except FileNotFoundError:
                 elementTableDataMax = pd.DataFrame(
                     columns=[
                         "Rank by Integral",
-                        "Energy (eV)",
-                        "Rank by Energy",
-                        "TOF (us)",
+                        "TOF (us)" if tof else "Energy (eV)",
+                        "Rank by " + "TOF" if tof else "Energy",
                         "Integral",
                         "Peak Width",
                         "Rank by Peak Width",
@@ -2676,22 +2685,23 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     ])
             # Title Rows
             if elementTableDataMax.empty:
-                elementTableDataMax.loc[-1] = [f"No Peak Data for {spectraName}", *[""] * 9]
+                elementTableDataMax.loc[-1] = [f"No Peak Data for {spectraName}", *[""] * 8]
 
             else:
-                elementTableDataMax.loc[-1] = [spectraName, *[""] * 9]
+                elementTableDataMax.loc[-1] = [spectraName, *[""] * 8]
             elementTableDataMax.index += 1
             elementTableDataMax.sort_index(inplace=True)
             try:
                 elementTableDataMin = pd.read_csv(
-                    resource_path(f"{peakInfoDir}{spectraName.replace('element_','')}_tableData_min.csv"))
+                    resource_path(
+                        f"{peakInfoDir}{'TOF' if tof else 'Energy'}/{spectraName.replace(
+                            'element_', '')}_tableData_min.csv"))
             except FileNotFoundError:
                 elementTableDataMin = pd.DataFrame(
                     columns=[
                         "Rank by Integral",
-                        "Energy (eV)",
-                        "Rank by Energy",
-                        "TOF (us)",
+                        "TOF (us)" if tof else "Energy (eV)",
+                        "Rank by " + "TOF" if tof else "Energy",
                         "Integral",
                         "Peak Width",
                         "Rank by Peak Width",
@@ -2701,10 +2711,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     ])
             # Title Rows
             if elementTableDataMin.empty:
-                elementTableDataMin.loc[-1] = [f"No Peak Data for {spectraName}", *[""] * 9]
+                elementTableDataMin.loc[-1] = [f"No Peak Data for {spectraName}", *[""] * 8]
 
             else:
-                elementTableDataMin.loc[-1] = [spectraName, *[""] * 9]
+                elementTableDataMin.loc[-1] = [spectraName, *[""] * 8]
             elementTableDataMin.index += 1
             elementTableDataMin.sort_index(inplace=True)
 
@@ -3272,7 +3282,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                                (range(0, maxDraw) if type(xy) is np.ndarray else xy.keys())
                                if i < maxDraw]
         t2 = perf_counter()
-        print(f"Elapsed Time - {which} Annotations - {t2-t1}")
+        print(f"Elapsed Time - {which} Annotations - {t2 - t1}")
         if spectra.isGraphHidden or self.peakLabelCheck.isChecked():
             for annotation in spectra.annotations:
                 annotation.set_visible(False)

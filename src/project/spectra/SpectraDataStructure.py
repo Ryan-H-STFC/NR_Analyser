@@ -569,7 +569,7 @@ class SpectraData:
         columns = [
             "Rank by Integral",
             "TOF (us)" if self.isToF else "Energy (eV)",
-            "Rank by " + "TOF" if self.isToF else "Energy",
+            "Rank by " + ("TOF" if self.isToF else "Energy"),
             "Integral",
             "Peak Width",
             "Rank by Peak Width",

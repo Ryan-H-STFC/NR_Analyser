@@ -7,7 +7,7 @@
   },
   {
    "optionDest": "filenames",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/NRTI_NRCA_Explorer.py"
+   "value": "C:/Users/Ryanh/Documents/STFC/NR_Analyser/src/NR Analyser.py"
   },
   {
    "optionDest": "onefile",
@@ -15,15 +15,15 @@
   },
   {
    "optionDest": "console",
-   "value": true
+   "value": false
   },
   {
    "optionDest": "icon_file",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/img/final_logo_icon.ico"
+   "value": "C:/Users/Ryanh/Documents/STFC/NR_Analyser/src/img/final_logo_icon.ico"
   },
   {
    "optionDest": "name",
-   "value": "NRTI NRCA Explorer"
+   "value": "NR Analyser"
   },
   {
    "optionDest": "clean_build",
@@ -59,35 +59,15 @@
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/fonts;./fonts/"
+   "value": "C:/Users/Ryanh/Documents/STFC/NR_Analyser/src/img;img/"
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/img;./img/"
+   "value": "C:/Users/Ryanh/Documents/STFC/NR_Analyser/src/fonts;fonts/"
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/project/data;./project/data/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/project/data/Distribution Information;./project/data/Distribution Information/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/project/data/Graph Data;./project/data/Graph Data/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/project/data/Peak information;./project/data/Peak information/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/project/data/Peak Limit Information;./project/data/Peak Limit Information/"
-  },
-  {
-   "optionDest": "datas",
-   "value": "C:/Users/gzi47552/Documents/Work/NRTI-NRCA_Explorer/src/project/data/Graph Data/Compound Data;./project/data/Graph Data/Compound Data/"
+   "value": "C:/Users/Ryanh/Documents/STFC/NR_Analyser/src/project/data;project/data/"
   }
  ],
  "nonPyinstallerOptions": {

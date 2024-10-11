@@ -13,20 +13,31 @@ from project.settings import params
 
 class IsotopeIntegrator:
     def __init__(self, parent):
+        self.parent = parent
         self.name = parent.name
         self.distributions = parent.distributions
         self.plotType = parent.plotType
+        self.isToF = parent.isToF
         self.isoGraphData: dict = self._load_and_preprocess_data()
 
     def _load_and_preprocess_data(self) -> dict[str: DataFrame]:
         # Load and preprocess data for all isotopes here
         # Store the preprocessed data in a dictionary or class variable
-        return {
+        isoTempGraphData = {
             name: read_csv(
                 resource_path(f"{params['dir_graphData']}{name}_{self.name.split('_')[-1]}.csv"),
                 names=['x', 'y'],
                 header=None)
             for name, dist in self.distributions.items() if dist != 0}
+        if self.isToF:
+            isoGraphData = {}
+            for name, data in isoTempGraphData.items():
+                data['x'] = self.parent.energyToTOF(data['x'], length=self.parent.length)
+                data.sort_values('x', ignore_index=True, inplace=True)
+                isoGraphData[name] = data
+        else:
+            isoGraphData = isoTempGraphData
+        return isoGraphData
 
     def _integrate_isotope(self, name, left_limit, right_limit, which):
         graph_data = self.isoGraphData[name]

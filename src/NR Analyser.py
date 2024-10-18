@@ -2675,7 +2675,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     columns=[
                         "Rank by Integral",
                         "TOF (us)" if tof else "Energy (eV)",
-                        "Rank by " + "TOF" if tof else "Energy",
+                        "Rank by " + ("TOF" if tof else "Energy"),
                         "Integral",
                         "Peak Width",
                         "Rank by Peak Width",
@@ -2701,7 +2701,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     columns=[
                         "Rank by Integral",
                         "TOF (us)" if tof else "Energy (eV)",
-                        "Rank by " + "TOF" if tof else "Energy",
+                        "Rank by " + ("TOF" if tof else "Energy"),
                         "Integral",
                         "Peak Width",
                         "Rank by Peak Width",
@@ -2903,7 +2903,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             right = 2e7
         ax: matplotlib.axes.Axes = self.axPD if self.axPD is not None else self.ax
 
-        for line in [line for line in ax.get_lines() if 'Der' in line.get_gid()]:
+        for line in [line for line in ax.get_lines() if 'Der' in line.get_gid() and spectraData.name in line.get_gid()]:
             line.remove()
         smoothGraph = spectraData.peakDetector.smoothGraph
         graphData = spectraData.peakDetector.secDerivative
@@ -3058,6 +3058,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 line.set_visible(newVisible)
                 continue
             if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min" in line.get_gid():
+                line.set_visible(newVisible)
+                continue
+            if spectraData.name in line.get_gid() and "Der" in line.get_gid():
                 line.set_visible(newVisible)
                 continue
 
@@ -3466,7 +3469,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     header=False,
                     index=False)
 
-            QMessageBox.warning(self, text="Save Complete")
+            QMessageBox.warning(self, "warning", "Save Complete")
 
         saveBtn.clicked.connect(onAccept)
 

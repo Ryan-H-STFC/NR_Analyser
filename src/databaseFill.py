@@ -48,7 +48,7 @@ def exportDatabaseValues(name):
             columns=[
                 "Rank by Integral",
                 "TOF (us)" if tof else "Energy (eV)",
-                "Rank by " + "TOF" if tof else "Energy",
+                "Rank by " + ("TOF" if tof else "Energy"),
                 "Integral",
                 "Peak Width",
                 "Rank by Peak Width",

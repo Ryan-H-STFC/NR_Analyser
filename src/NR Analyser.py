@@ -510,6 +510,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             index=self.compoundCombobox.currentIndex(),
             comboboxName=self.compoundCombobox.objectName()
         ))
+        self.compoundCombobox.setMaximumWidth(250)
         self.compoundNames = [None]
         for file in os.listdir(resource_path(params['dir_compoundGraphData'])):
             filename = os.fsdecode(file)
@@ -1784,7 +1785,10 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
 
         optionsWindow = InputSpectraDialog(self, self.styleSheet())
+        nameLineEdit = QLineEdit()
+        nameLineEdit.setPlaceholderText("Enter Name")
 
+        optionsWindow.mainLayout.insertWidget(0, nameLineEdit)
         spectras = optionsWindow.spectras
 
         spectras.lineEdit().setPlaceholderText("Select an Isotope / Element")
@@ -1819,8 +1823,12 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 widget.findChild(QLabel).text()[:-1]: float(widget.findChild(QLineEdit).text())
                 for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget)
             }
-            name = f"""compound_{'-'.join([f'{name.split("-", 1)[1].split("_")[0]}[{str(dist)}]'
-                                           for name, dist in compoundDist.items()])}_{compoundMode[0]}"""
+
+            name = f"compound_{nameLineEdit.text()}"
+            if nameLineEdit.text() == '':
+                QMessageBox.warning(self, "Warning", "Enter a name")
+                applyBtn.setEnabled(True)
+                return
             weightedGraphData = {name: pd.read_csv(resource_path(f"{self.graphDataDir}{name}.csv"),
                                                    header=None) * [1, dist]
                                  for name, dist in compoundDist.items() if dist != 0}
@@ -2023,6 +2031,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             font-family: 'Roboto Mono';
             font-size: 10pt;
             font-weight: 400;
+        }}
+        QCombobox QAbstractItemView {{
+            min-width: 1000px;
         }}
 
         QMenuBar{{
@@ -2608,7 +2619,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             return
         if imported:
             self.selectionName = name
-        if interpName(self.selectionName)['symbol'] is None and not imported:
+        if interpName(self.selectionName)['symbol'] is None and not imported and 'compound' not in self.selectionName:
             QMessageBox.warning(self, "Warning", "Graph is already plotted")
             self.toggleCheckboxControls(enableAll=False)
             return
@@ -2907,7 +2918,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             line.remove()
         smoothGraph = spectraData.peakDetector.smoothGraph
         graphData = spectraData.peakDetector.secDerivative
-        label = f"{spectraData.name}{'-ToF' if spectraData.isToF else '-Energy'}-Smoothed"
+        label = f"{spectraData.name}-{"ToF" if spectraData.isToF else "Energy"}"
         if params['show_smoothed']:
 
             ax.plot(smoothGraph.iloc[:, 0],
@@ -2916,9 +2927,11 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     alpha=0.6,
                     color='#00F',
                     linewidth=1.0,
-                    label=label,
-                    gid=f"{spectraData.name}-Der"
+                    label=f"{label}-Smoothed",
+                    gid=f"{label}-Smoothed-Der"
                     )
+            self.plottedSpectra.append((f"{label}-Smoothed", spectraData.isToF))
+
         if params['show_first_der']:
             dips = spectraData.peakDetector.dips
             flats = spectraData.peakDetector.flats
@@ -2947,12 +2960,14 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         if params['show_smoothed']:
             ax.plot(spectraData.peakDetector.normalised.iloc[:, 0],
                     spectraData.peakDetector.normalised.iloc[:, 1],
-                    gid=f"{spectraData.name}-normal-Der",
-                    label=f"{label}-normal")
+                    label=f"{label}-normal",
+                    gid=f"{label}-normal-Der")
             ax.plot(spectraData.peakDetector.baselineGraph.iloc[:, 0],
                     spectraData.peakDetector.baselineGraph.iloc[:, 1],
-                    gid=f"{spectraData.name}-baseline-Der",
-                    label=f"{label}-baseline")
+                    label=f"{label}-baseline",
+                    gid=f"{label}-baseline-Der")
+            self.plottedSpectra.append((f"{label}-normal", spectraData.isToF))
+            self.plottedSpectra.append((f"{label}-baseline", spectraData.isToF))
 
         # widths, h_eval, left_ips, right_ips = spectraData.peakDetector.widths
         # ax.hlines(h_eval, left_ips, right_ips, color='green', linewidth=1.5)
@@ -3047,22 +3062,23 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         legline.set_alpha(1.0 if newVisible else 0.2)
         origLine.set_visible(newVisible)
         # Hiding relevant labels
-        spectraData = self.spectraData[orgline_name.replace("-Smoothed", "")]
-        spectraData.isGraphHidden = not newVisible
-        spectraData.hideAnnotations(self.peakLabelCheck.isChecked())
-        for line in axis.lines:
-            if line.get_gid() == f"pd_threshold-{orgline_name}":
-                line.set_visible(newVisible)
-                continue
-            if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-max" in line.get_gid():
-                line.set_visible(newVisible)
-                continue
-            if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min" in line.get_gid():
-                line.set_visible(newVisible)
-                continue
-            if spectraData.name in line.get_gid() and "Der" in line.get_gid():
-                line.set_visible(newVisible)
-                continue
+        if self.spectraData.get(orgline_name, False):
+            spectraData = self.spectraData[orgline_name]
+            spectraData.isGraphHidden = not newVisible
+            spectraData.hideAnnotations(self.peakLabelCheck.isChecked())
+            for line in axis.lines:
+                if line.get_gid() == f"pd_threshold-{orgline_name}":
+                    line.set_visible(newVisible)
+                    continue
+                if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-max" in line.get_gid():
+                    line.set_visible(newVisible)
+                    continue
+                if f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min" in line.get_gid():
+                    line.set_visible(newVisible)
+                    continue
+                if spectraData.name in line.get_gid() and "Der" in line.get_gid():
+                    line.set_visible(newVisible)
+                    continue
 
         self.canvas.draw()
 

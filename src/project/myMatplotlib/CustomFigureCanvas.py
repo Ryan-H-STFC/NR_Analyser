@@ -28,15 +28,19 @@ class FigureCanvas(FigureCanvasQTAgg):
 
         res = menu.exec(event.globalPos())
         if res is not None:
+            name = res.text()
             graphLine = graphDict[res.text()][0]
             graphLine.remove()
-
-            self.widgetParent.plottedSpectra.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
-
-            for anno in self.widgetParent.spectraData[res.text()].annotations:
-                anno.remove()
+            try:
+                self.widgetParent.plottedSpectra.remove((name, 'ToF' in name))
+            except ValueError:
+                self.widgetParent.plottedSpectra.remove(
+                    (name.replace("-ToF", "").replace("-Energy", ""), 'ToF' in res.text()))
+            if self.widgetParent.spectraData.get(res.text(), False):
+                for anno in self.widgetParent.spectraData[res.text()].annotations:
+                    anno.remove()
+                self.widgetParent.spectraData.pop(res.text())
             self.widgetParent.elementDataNames.clear()
-            self.widgetParent.spectraData.pop(res.text())
             for row in self.widgetParent.titleRows:
                 self.widgetParent.table.setItemDelegateForRow(row, None)
             self.widgetParent.updateLegend()

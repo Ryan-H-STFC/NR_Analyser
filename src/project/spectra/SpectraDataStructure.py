@@ -143,7 +143,7 @@ class SpectraData:
         if distChanging:
             self.onDistChange()
 
-        if self.isToF and not self.graphData.empty and not distChanging:
+        if self.isToF and not self.graphData.empty and not distChanging and not self.isImported:
             self.graphData[0] = self.energyToTOF(graphData[0], length=self.length)
         if self.graphData.empty:
             self.peakDetector = None

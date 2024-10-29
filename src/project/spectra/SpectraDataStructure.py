@@ -151,7 +151,7 @@ class SpectraData:
             self.graphData.sort_values(0, ignore_index=True, inplace=True)
 
             self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
-                                                           smoothCoeff=1 if self.isImported else 12)
+                                                           smoothCoeff=1.0001 if self.isImported else 12)
         t4 = perf_counter()
 
         print(f"Elapsed Time - Start Init - {t4 - t3}")

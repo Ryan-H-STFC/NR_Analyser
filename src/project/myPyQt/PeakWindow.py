@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from project.helpers.nearestNumber import nearestnumber
-from project.myMatplotlib.CustomFigureCanvas import FigureCanvas
+from project.myMatplotlib import CustomFigureCanvas
 from project.myPyQt.ExtendedTableModel import ExtendedQTableModel
 from project.myPyQt.InputSpectraDialog import InputSpectraDialog
 
@@ -47,7 +47,7 @@ class PeakWindow(QMainWindow):
         self.setStyleSheet(parent.styleSheet())
         # Creating a second canvas for singular peak plotting
         peakFigure = plt.figure()
-        peakCanvas = FigureCanvas(peakFigure, contextConnect=False)
+        peakCanvas = peakFigure.canvas
         toolbar = NavigationToolbar(peakCanvas, self)
         canvasLayout = QVBoxLayout()
 
@@ -134,7 +134,7 @@ class PeakWindow(QMainWindow):
                     return
                 # if element.maxPeakLimitsX == dict():
                 peakX = nearestnumber(element.maxima[0], float(parent.table_model.data(
-                    parent.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+                    parent.table_model.index(index.row(), 1), 0)))
                 peak = [max for max in element.maxima.T if max[0] == peakX][0]
                 limitsX = element.maxPeakLimitsX[peak[0]]
                 limitsY = element.maxPeakLimitsY[peak[0]]
@@ -143,7 +143,7 @@ class PeakWindow(QMainWindow):
                 if element.minima.size == 0:
                     return
                 peakX = nearestnumber(element.minima[0], float(parent.table_model.data(
-                    parent.table_model.index(index.row(), 3 if self.tof else 1), 0)))
+                    parent.table_model.index(index.row(), 1), 0)))
                 peak = [min for min in element.minima.T if min[0] == peakX][0]
                 limitsX = element.minPeakLimitsX[peak[0]]
                 limitsY = element.minPeakLimitsY[peak[0]]

@@ -65,8 +65,8 @@ from project.myPyQt.InputSpectraDialog import InputSpectraDialog
 from project.myPyQt.PeakWindow import PeakWindow
 from project.myPyQt.PeriodicTable import QtPeriodicTable
 
-from project.myMatplotlib.CustomFigureCanvas import FigureCanvas
 from project.myMatplotlib.BlittedCursor import BlittedCursor
+from project.myMatplotlib.CustomFigureCanvas import FigureCanvas
 
 from project.helpers.getRandomColor import getRandomColor
 from project.helpers.getWidgets import getLayoutWidgets
@@ -558,11 +558,11 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # ¦ ----------------- Plot Canvas -----------------
         self.figure = plt.figure()  # Creating canvas to plot graph on and toolbar
-        self.canvas = FigureCanvas(self.figure, self)
+        self.canvas = FigureCanvas(self.figure, self, contextConnect=True)
 
         self.canvas.__name__ = "canvas"
         self.canvas.mpl_connect('pick_event', self.hideGraph)
-        self.toolbar = NavigationToolbar(self.canvas, coordinates=True)
+        self.toolbar = NavigationToolbar(self.canvas, parent=self, coordinates=True)
 
         canvasLayout.addWidget(self.toolbar)
         canvasLayout.addWidget(self.canvas)

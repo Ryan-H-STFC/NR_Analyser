@@ -28,10 +28,11 @@ class PeakDetector:
 
         # self.baseline = peakutils.baseline(graphData.iloc[:, 1], 5)
         # self.normalised = DataFrame([graphData.iloc[:, 0], graphData.iloc[:, 1] + self.baseline]).T
-        if isImported:
-            self.npSmoothGraph = graphData.copy().iloc[:, 1]
-        else:
-            self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
+        # if isImported:
+        #     self.npSmoothGraph = graphData.copy().iloc[:, 1]
+        # else:
+        self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
+
         self.npDer = np.gradient(self.npSmoothGraph)
         self.npSecDer = np.gradient(self.npDer, )
 

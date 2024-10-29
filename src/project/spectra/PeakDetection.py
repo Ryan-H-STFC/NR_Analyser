@@ -34,7 +34,7 @@ class PeakDetector:
         self.npSmoothGraph = gaussian_filter1d(graphData.iloc[:, 1], smoothCoeff)
 
         self.npDer = np.gradient(self.npSmoothGraph)
-        self.npSecDer = np.gradient(self.npDer, )
+        self.npSecDer = np.gradient(self.npDer)
 
         self.smoothGraph = DataFrame([graphData.iloc[:, 0], self.npSmoothGraph]).T
         self.derivative = DataFrame([graphData.iloc[:, 0], self.npDer]).T

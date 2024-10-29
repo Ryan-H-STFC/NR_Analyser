@@ -1824,7 +1824,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget)
             }
 
-            name = f"compound_{nameLineEdit.text()}"
             if nameLineEdit.text() == '':
                 QMessageBox.warning(self, "Warning", "Enter a name")
                 applyBtn.setEnabled(True)
@@ -1832,6 +1831,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             weightedGraphData = {name: pd.read_csv(resource_path(f"{self.graphDataDir}{name}.csv"),
                                                    header=None) * [1, dist]
                                  for name, dist in compoundDist.items() if dist != 0}
+            plotType = 'n-tot' if 'n-tot' in str(weightedGraphData.keys()) else 'n-g'
+            name = f"compound_{nameLineEdit.text()}_{plotType}"
             newElement = SpectraData(name, None, None, None, None, None, None,
                                      compoundDist, compoundDist, isCompound=True)
             newElement.setGraphDataFromDist(weightedGraphData)

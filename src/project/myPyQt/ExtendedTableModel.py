@@ -1,7 +1,9 @@
 from __future__ import annotations
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from pandas import DataFrame
+from PyQt6.QtWidgets import QTableView
+from pandas import DataFrame, concat
 
+from project.myPyQt.CustomSortingProxy import CustomSortingProxy
 
 # todo - Add dictionary for row indexes for each section of data associated with each plotted element.
 
@@ -12,11 +14,14 @@ class ExtendedQTableModel(QAbstractTableModel):
     using panda dataframes. Useful for much larger files.
     """
 
-    def __init__(self, data):
+    def __init__(self, data, parent=None):
         super(ExtendedQTableModel, self).__init__()
         self._data: DataFrame = data
+        self.gui = parent
         self.columns: list[str] = list(data.columns.values)
-        self.titleRows: list[int] = []
+        # self.titleRows: list[int] = list(data.loc[data['Integral'] == ''].index)
+        # self.titleRows.append(data.shape[0])
+        # self.splitData = [data.iloc[self.titleRows[n]:self.titleRows[n + 1]] for n in range(len(self.titleRows) - 1)]
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole):
         """
@@ -54,16 +59,20 @@ class ExtendedQTableModel(QAbstractTableModel):
         if orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
             return self._data.index[section]
 
-    def sort(self, column: int, order: Qt.SortOrder = ...) -> None:
-        return super().sort(column, order)
-        # sortProxy = CustomSortingProxy()
-        # tableProxy = QTableView()
-        # for index in self.titleRows:
-        #     if index == self._data.shape[0]:
-        #         return
-        #     region = self._data.iloc[self.titleRows[0] + 1:self.titleRows[1], :]
-        #     sortProxy.setSourceModel(ExtendedQTableModel(region))
-        #     tableProxy.setModel(sortProxy)
-        #     tableProxy.setSortingEnabled(True)
-        #     tableProxy.sortByColumn(column, order)
-        #     tableProxy.model()
+    # def sort(self, column: int, order: Qt.SortOrder = ...) -> None:
+    #     proxy = CustomSortingProxy()
+    #     proxy.setSourceModel(self)
+    #     proxy.sort(column, order)
+    #     self.gui.table.setModel(self)
+    #     # if column == -1:
+    #     #     return super().sort(column, order)
+    #     # sortedData = []
+    #     # for data in self.splitData:
+
+    #     #     sortedData.append(concat([
+    #     #         data[0:1],
+    #     #         data[1:].sort_values(
+    #     #             by=self.columns[column], ascending=not order.value, ignore_index=True)],
+    #     #         ignore_index=True))
+
+    #     # concat(sortedData, ignore_index=True)

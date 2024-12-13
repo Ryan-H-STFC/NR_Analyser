@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 
 from project.helpers.nearestNumber import nearestnumber
-from project.myMatplotlib import CustomFigureCanvas
 from project.myPyQt.ExtendedTableModel import ExtendedQTableModel
 from project.myPyQt.InputSpectraDialog import InputSpectraDialog
 
@@ -104,18 +103,18 @@ class PeakWindow(QMainWindow):
 
         try:
             titleIndex = sorted([rowIndex for rowIndex in parent.titleRows if index.row() > rowIndex])[-1]
-            elementName = parent.table_model.data(parent.table_model.index(titleIndex, 0), 0)
-            plottedSpectra = [name for name in parent.plottedSpectra if elementName in name]
+            spectraName = parent.table_model.data(parent.table_model.index(titleIndex, 0), 0)
+            plottedSpectra = [name for name in parent.plottedSpectra if spectraName in name]
             optionsDialog = InputSpectraDialog(parent=parent, styleSheet=parent.styleSheet())
             if len(plottedSpectra) > 1:
                 spectraNames = [f"{name}-{'ToF' if tof else 'Energy'}" for name, tof in plottedSpectra]
-                optionsDialog.elements.addItems(spectraNames)
-                optionsDialog.mainLayout.addWidget(optionsDialog.elements)
+                optionsDialog.spectras.addItems(spectraNames)
+                optionsDialog.mainLayout.addWidget(optionsDialog.spectras)
 
                 acceptBtn = optionsDialog.buttonBox.addButton(QDialogButtonBox.StandardButton.Ok)
 
                 def onAccept():
-                    self.tof = 'ToF' in optionsDialog.elements.currentText()
+                    self.tof = 'ToF' in optionsDialog.spectras.currentText()
                     optionsDialog.close()
                 acceptBtn.clicked.connect(onAccept)
 
@@ -126,49 +125,52 @@ class PeakWindow(QMainWindow):
             else:
                 self.tof = plottedSpectra[0][1]
 
-            elementTitle = f"{elementName}-{'ToF' if self.tof else 'Energy'}"
-            element = parent.spectraData[elementTitle]
+            spectraTitle = f"{spectraName}-{'ToF' if self.tof else 'Energy'}"
+            spectra = parent.spectraData[spectraTitle]
             which = 'max' if parent.maxTableOptionRadio.isChecked() else 'min'
             if which == 'max':
-                if element.maxima.size == 0:
+                if spectra.maxima.size == 0:
                     return
-                # if element.maxPeakLimitsX == dict():
-                peakX = nearestnumber(element.maxima[0], float(parent.table_model.data(
+                # if spectra.maxPeakLimitsX == dict():
+                peakX = nearestnumber(spectra.maxima[:, 0], float(parent.table_model.data(
                     parent.table_model.index(index.row(), 1), 0)))
-                peak = [max for max in element.maxima.T if max[0] == peakX][0]
-                limitsX = element.maxPeakLimitsX[peak[0]]
-                limitsY = element.maxPeakLimitsY[peak[0]]
+                peakY = nearestnumber(spectra.maxima[:, 1], float(parent.table_model.data(
+                    parent.table_model.index(index.row(), 6), 0)))
+                limitsX = spectra.maxPeakLimitsX[peakX]
+                limitsY = spectra.maxPeakLimitsY[peakX]
 
             else:
-                if element.minima.size == 0:
+                if spectra.minima.size == 0:
                     return
-                peakX = nearestnumber(element.minima[0], float(parent.table_model.data(
+                peakX = nearestnumber(spectra.minima[:, 0], float(parent.table_model.data(
                     parent.table_model.index(index.row(), 1), 0)))
-                peak = [min for min in element.minima.T if min[0] == peakX][0]
-                limitsX = element.minPeakLimitsX[peak[0]]
-                limitsY = element.minPeakLimitsY[peak[0]]
+                peakY = nearestnumber(spectra.minima[:, 1], float(parent.table_model.data(
+                    parent.table_model.index(index.row(), 6), 0)))
+
+                limitsX = spectra.minPeakLimitsX[peakX]
+                limitsY = spectra.minPeakLimitsY[peakX]
 
             leftLimit, rightLimit = limitsX
         except FileNotFoundError:
             QMessageBox.warning(self, "Error", "No peak limits for this Selection")
         except AttributeError:
             QMessageBox.warning(self, "Warning", "Plot the Graph First")
-        tableData = element.maxTableData if which == 'max' else element.minTableData
+        tableData = spectra.maxTableData if which == 'max' else spectra.minTableData
         rank = tableData[
-            tableData["TOF (us)" if element.isToF else "Energy (eV)"] == float(f"{peak[0]:.6g}")
+            tableData["TOF (us)" if spectra.isToF else "Energy (eV)"] == float(f"{peakX:.6g}")
         ]["Rank by Integral"].iloc[0]
 
         limits = [f"({limitsX[0]:.6g}, {limitsX[1]:.6g})"]
-        peakCoords = [f"({peak[0]:.6g}, {peak[1]:.6g})"]
+        peakCoords = [f"({peakX:.6g}, {peakY:.6g})"]
         isoOrigin = [parent.table_model.data(parent.table_model.index(index.row(), 9), 0)]
         data = {"Peak Number (Integral Rank)": rank,
-                f"Integration Limits {'(us)' if element.isToF else '(eV)'}": limits,
-                f"Peak Co-ordinates {'(us)' if element.isToF else '(eV)'}": peakCoords,
+                f"Integration Limits {'(us)' if spectra.isToF else '(eV)'}": limits,
+                f"Peak Co-ordinates {'(us)' if spectra.isToF else '(eV)'}": peakCoords,
                 "Isotopic Origin": isoOrigin}
 
         tableData = pd.DataFrame(data, index=None)
 
-        peakTable.setModel(ExtendedQTableModel(tableData))
+        peakTable.setModel(ExtendedQTableModel(tableData, parent))
 
         peakTable.setObjectName('dataTable')
         peakTable.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -176,10 +178,10 @@ class PeakWindow(QMainWindow):
         peakTable.verticalHeader().setVisible(False)
         peakTable.setMinimumHeight(200)
 
-        graphData = element.graphData[(element.graphData[0] >= leftLimit) & (element.graphData[0] <= rightLimit)]
+        graphData = spectra.graphData[(spectra.graphData[0] >= leftLimit) & (spectra.graphData[0] <= rightLimit)]
 
         self.limitsCheck.clicked.connect(self.togglePeakLimits)
-        self.thresholdCheck.clicked.connect(lambda: self.togglePeakThreshold(element))
+        self.thresholdCheck.clicked.connect(lambda: self.togglePeakThreshold(spectra))
 
         self.peakAxis.set_xscale('log')
         self.peakAxis.set_yscale('log')
@@ -210,7 +212,7 @@ class PeakWindow(QMainWindow):
                                             labelsize=6,
                                             )
 
-        self.peakAxis.set_title(elementTitle,
+        self.peakAxis.set_title(spectraTitle,
                                 fontsize='small'
                                 )
         self.peakAxis.set_xlabel("Energy (eV)",
@@ -222,44 +224,44 @@ class PeakWindow(QMainWindow):
 
         self.peakAxis.plot(graphData[0],
                            graphData[1],
-                           color=element.graphColour,
+                           color=spectra.graphColour,
                            linewidth=0.8,
-                           label=elementTitle,
-                           gid=f"{elementTitle}-PeakWindow"
+                           label=spectraTitle,
+                           gid=f"{spectraTitle}-PeakWindow"
                            )
 
-        self.peakAxis.plot(peak[0],
-                           peak[1],
+        self.peakAxis.plot(peakX,
+                           peakY,
                            "x",
                            color="black",
                            markersize=3,
                            alpha=0.6,
-                           gid=f"{elementTitle}-PeakWindow-max"
+                           gid=f"{spectraTitle}-PeakWindow-max"
                            )
 
-        for i, (peakX, peakY) in enumerate(zip(limitsX, limitsY)):
-            self.peakAxis.plot(peakX,
-                               peakY,
+        for i, (limX, limY) in enumerate(zip(limitsX, limitsY)):
+            self.peakAxis.plot(limX,
+                               limY,
                                marker=2,
                                color="r",
                                markersize=8,
-                               gid=f"{elementTitle}-PeakWindow-lim-{i}")
+                               gid=f"{spectraTitle}-PeakWindow-lim-{i}")
 
         self.peakAxis.legend(fancybox=True, shadow=True)
         self.peakAxis.autoscale()
 
-    def togglePeakThreshold(self, element) -> None:
+    def togglePeakThreshold(self, spectra) -> None:
         if not self.thresholdCheck.isChecked():
             for line in self.peakAxis.get_lines():
-                if line.get_gid() == f"PeakWindow-Threshold-{element.name}":
+                if line.get_gid() == f"PeakWindow-Threshold-{spectra.name}":
                     line.remove()
 
         else:
-            self.peakAxis.axhline(y=element.threshold,
+            self.peakAxis.axhline(y=spectra.threshold,
                                   linestyle="--",
-                                  color=element.graphColour,
+                                  color=spectra.graphColour,
                                   linewidth=0.5,
-                                  gid=f"PeakWindow-Threshold-{element.name}")
+                                  gid=f"PeakWindow-Threshold-{spectra.name}")
         self.peakAxis.figure.canvas.draw()
 
     def togglePeakLimits(self) -> None:

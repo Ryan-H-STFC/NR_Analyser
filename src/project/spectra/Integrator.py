@@ -7,6 +7,7 @@ from scipy.interpolate import interp1d
 from numpy import arange
 
 from project.helpers.integration import integrate_simps
+from project.helpers.interpName import interpName
 from project.helpers.resourcePath import resource_path
 from project.settings import params
 
@@ -18,17 +19,26 @@ class IsotopeIntegrator:
         self.distributions = parent.distributions
         self.plotType = parent.plotType
         self.isToF = parent.isToF
+        self.isoDist = {}
+        if parent.isCompound:
+            for name in self.distributions.keys():
+                dist = read_csv(resource_path(
+                    f"{params['dir_distribution']}element_{name}_{self.plotType}.csv"), header=None)
+                for isoName, value in dist.values:
+                    self.isoDist[isoName] = value * self.distributions[name]
+
         self.isoGraphData: dict = self._load_and_preprocess_data()
 
     def _load_and_preprocess_data(self) -> dict[str: DataFrame]:
         # Load and preprocess data for all isotopes here
         # Store the preprocessed data in a dictionary or class variable
+        distList = self.isoDist if self.parent.isCompound else self.distributions
         isoTempGraphData = {
             name: read_csv(
-                resource_path(f"{params['dir_graphData']}{name}_{self.name.split('_')[-1]}.csv"),
+                resource_path(f"{params['dir_graphData']}{name}_{self.plotType}.csv"),
                 names=['x', 'y'],
                 header=None)
-            for name, dist in self.distributions.items() if dist != 0}
+            for name, dist in distList.items() if dist != 0}
         if self.isToF:
             isoGraphData = {}
             for name, data in isoTempGraphData.items():
@@ -43,7 +53,11 @@ class IsotopeIntegrator:
         graph_data = self.isoGraphData[name]
         if left_limit == right_limit:
             return '[]', 0
-
+        if left_limit <= min(graph_data.iloc[:, 0]):
+            return '[]', 0
+        if right_limit >= max(graph_data.iloc[:, 0]):
+            return '[]', 0
+        distList = self.isoDist if self.parent.isCompound else self.distributions
         graph_data_interp = interp1d(graph_data.iloc[:, 0], graph_data.iloc[:, 1])
         x_range = arange(left_limit, right_limit, (right_limit - left_limit) / 100)
 
@@ -51,7 +65,7 @@ class IsotopeIntegrator:
                                              columns=['x', 'y']),
                                    left_limit,
                                    right_limit,
-                                   which) * self.distributions[name]
+                                   which) * distList[name]
 
         return f"['{name}_{self.plotType}']", integral
 

@@ -44,19 +44,25 @@ class FigureCanvas(FigureCanvasQTAgg):
             graphLine = graphDict[res.text()][0]
             graphLine.remove()
 
-            self.widgetParent.plottedSpectra.remove((graphDict[res.text()][0].get_gid(), 'ToF' in res.text()))
-
-            for anno in self.widgetParent.spectraData[res.text()].annotations:
-                anno.remove()
-            self.widgetParent.elementDataNames.clear()
-            self.widgetParent.spectraData.pop(res.text())
-            for row in self.widgetParent.titleRows:
-                self.widgetParent.table.setItemDelegateForRow(row, None)
-            self.widgetParent.updateLegend()
-            axis.figure.canvas.draw()
-            self.widgetParent.addTableData()
-            if len(self.widgetParent.plottedSpectra) == 0:
-                self.widgetParent.clear()
+            self.widgetParent.plottedSpectra.remove(
+                (graphDict[res.text()][0].get_gid().removesuffix('-Der'), 'ToF' in res.text()))
+            if self.widgetParent.spectraData.get(res.text(), False):
+                for anno in self.widgetParent.spectraData[res.text()].annotations:
+                    anno.remove()
+                self.widgetParent.elementDataNames.clear()
+                self.widgetParent.spectraData.pop(res.text())
+                for row in self.widgetParent.titleRows:
+                    self.widgetParent.table.setItemDelegateForRow(row, None)
+                self.widgetParent.updateLegend()
+                axis.figure.canvas.draw()
+                self.widgetParent.addTableData()
+                if len(self.widgetParent.plottedSpectra) == 0:
+                    self.widgetParent.clear()
+                    return
+            else:
+                self.widgetParent.updateLegend()
+                axis.figure.canvas.draw()
+                self.widgetParent.addTableData()
                 return
 
 
@@ -310,13 +316,16 @@ def figure_edit(axes: matplotlib.axes.Axes, parent=None):
         new_legend.set_draggable(leg_draggable)
 
         # Amending dictionary of plotted lines - maps legend line to original line and allows for picking
-        gui = parent.parent().parent().parent()
-        if gui.axPD is not None and gui.axPD.get_visible():
-            gui.legOrigLinesPD = {}
-            legLines = gui.legOrigLinesPD
-        else:
-            gui.legOrigLines = {}
-            legLines = gui.legOrigLines
+        try:
+            gui = parent.parent().parent().parent()
+            if gui.axPD is not None and gui.axPD.get_visible():
+                gui.legOrigLinesPD = {}
+                legLines = gui.legOrigLinesPD
+            else:
+                gui.legOrigLines = {}
+                legLines = gui.legOrigLines
+        except AttributeError:
+            pass
 
         # Set / Curves
         for index, curve in enumerate(curves):

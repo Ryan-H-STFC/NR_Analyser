@@ -135,6 +135,9 @@ class SpectraData:
             self.graphData.dropna(inplace=True)
             self.graphData.reset_index(drop=True, inplace=True)
 
+        if params['normalise']:
+            self.normalise()
+
         self.graphColour = graphColour
 
         if self.length is None:
@@ -143,23 +146,23 @@ class SpectraData:
         if distChanging:
             self.onDistChange()
 
-        if self.isToF and not self.graphData.empty and not distChanging and not self.isImported:
+        if self.isToF and not self.graphData.empty and not self.distChanging and not self.isImported:
             self.graphData[0] = self.energyToTOF(graphData[0], length=self.length)
+
         if self.graphData.empty:
             self.peakDetector = None
         else:
             self.graphData.sort_values(0, ignore_index=True, inplace=True)
 
-            self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
-                                                           smoothCoeff=1.0001 if self.isImported else 12)
+            self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.threshold, self.isImported)
         t4 = perf_counter()
 
         print(f"Elapsed Time - Start Init - {t4 - t3}")
         t3 = perf_counter()
         try:
             if self.peakDetector is not None:
-                self.maxima = np.array(self.peakDetector.maxima(self.threshold))
-                self.minima = np.array(self.peakDetector.minima())
+                self.maxima = self.peakDetector.peaks
+                self.minima = self.peakDetector.dips
         except AttributeError:
             # Case when creating compounds, -> requires use of setGraphDataFromDist before plotting.
             pass
@@ -180,7 +183,7 @@ class SpectraData:
                     maxLimits['right'] = self.energyToTOF(maxLimits['right'], self.length)
                     maxLimits['left'], maxLimits['right'] = maxLimits['right'], maxLimits['left']
 
-                for peak in self.maxima[0]:
+                for peak in self.maxima[:, 0]:
                     lim = maxLimits[(maxLimits['left'] < peak) & (maxLimits['right'] > peak)]
                     if lim.empty:
                         continue
@@ -217,7 +220,7 @@ class SpectraData:
                     minLimits['right'] = self.energyToTOF(minLimits['right'], self.length)
                     minLimits['left'], minLimits['right'] = minLimits['right'], minLimits['left']
                 interpGraphData = interp1d(graphData[0], graphData[1])
-                for peak in self.minima[0]:
+                for peak in self.minima[:, 0]:
                     lim = minLimits[(minLimits['left'] < peak) & (minLimits['right'] > peak)]
                     if lim.empty:
                         continue
@@ -243,8 +246,8 @@ class SpectraData:
         t4 = perf_counter()
         print(f"Elapsed Time - Max Peak Limits - {t4 - t3}")
 
-        if self.numPeaks is None:
-            self.numPeaks = None if self.maxima is None else len(self.maxima[0])
+        if self.peakDetector is not None:
+            self.numPeaks = self.peakDetector.numPeaks
         self.changePeakTableData()
 
         t2 = perf_counter()
@@ -296,6 +299,7 @@ class SpectraData:
         Returns:
             list[float]: Mapped x-coords
         """
+
         if self.length is not None:
             length = self.length
         neutronMass = float(1.68e-27)
@@ -388,12 +392,10 @@ class SpectraData:
         """
         t1 = perf_counter()
         if newGraphData:
-            self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.isImported,
-                                                           smoothCoeff=1 if self.isImported else 12)
-        self.maxima = np.array(self.peakDetector.maxima(self.threshold))
-        self.minima = np.array(self.peakDetector.minima())
+            self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.threshold, self.isImported)
+        # self.maxima = np.array(self.peakDetector.maxima(self.threshold))
+        # self.minima = np.array(self.peakDetector.minima())
 
-        self.numPeaks = len(self.maxima[0])
         if which in ['max', 'both']:
             self.peakDetector.definePeakLimits(which='max')
             self.maxPeakLimitsX = self.peakDetector.maxPeakLimitsX
@@ -404,6 +406,7 @@ class SpectraData:
             self.peakDetector.definePeakLimits(which='min')
             self.minPeakLimitsX = self.peakDetector.minPeakLimitsX
             self.minPeakLimitsY = self.peakDetector.minPeakLimitsY
+            self.minima = self.peakDetector.dips
             self.recalculateAllPeakData(which='min')
         t2 = perf_counter()
         print(f"{self.name} - updatePeaks {which} - Elapsed Time: {t2 - t1}")
@@ -420,7 +423,7 @@ class SpectraData:
             return
         plotType = "n-tot" if 'n-tot' in self.name else "n-g"
         self.weightedIsoGraphData = {name: pandas.read_csv(resource_path(
-            f"{params['dir_graphData']}{name}{'' if self.isCompound else '_' + plotType}.csv"),
+            f"{params['dir_graphData']}{'element_' if self.isCompound else ''}{name}_{plotType}.csv"),
             header=None) * [1, dist]
             for name, dist in self.distributions.items() if dist != 0}
 
@@ -442,8 +445,11 @@ class SpectraData:
         graphDataX = []
         for name, graphData in weightedGraphData.items():
             peakD = PeakDetector(name, graphData)
-            graphDataX += peakD.maxima(self.threshold)[0] if self.maxima is None else list(self.maxima[0])
-            graphDataX += peakD.minima()[0] if self.minima is None else list(self.minima[0])
+
+            if peakD.maximaList is not None:
+                graphDataX += list(peakD.maximaList[:, 0])
+            if peakD.minimaList is not None:
+                graphDataX += list(peakD.minimaList[:, 0])
             graphDataX = list(getSpacedElements(np.array(graphData.iloc[:, 0]),
                                                 graphData.shape[0] // 2)) + graphDataX
         self.graphDataX = np.unique(graphDataX)
@@ -501,7 +507,7 @@ class SpectraData:
 
         tableData = self.maxTableData if which == 'max' else self.minTableData
         peaks = self.maxima if which == 'max' else self.minima
-        numPeaks = self.maxima.shape[1] if which == 'max' else self.minima.shape[1]
+        numPeaks = self.maxima.shape[0] if which == 'max' else self.minima.shape[0]
         if tableData[1:].empty:
             return
 
@@ -521,8 +527,8 @@ class SpectraData:
             if row.empty:
                 continue
             else:
-                peakX = nearestnumber(peaks[0], row[xCol].iloc[0])
-                peakY = nearestnumber(peaks[1], row[yCol].iloc[0])
+                peakX = nearestnumber(peaks[:, 0], row[xCol].iloc[0])
+                peakY = nearestnumber(peaks[:, 1], row[yCol].iloc[0])
 
             if which == 'max':
                 self.maxAnnotationOrder[i] = (float(f"{peakX:.6g}"), float(f"{peakY:.6g}"))
@@ -548,7 +554,7 @@ class SpectraData:
         Returns:
             tuple[float, str]: (Integral Value, Relevant Isotope)
         """
-        if "element" in self.name:
+        if (self.name.split('_')[0][-1].isalpha() or 'element' in self.name) and not self.isImported:
             integrator = IsotopeIntegrator(self)
             return integrator.peak_integral(leftLimit, rightLimit, which)
         else:
@@ -603,7 +609,7 @@ class SpectraData:
             sorted(integrals.items(), key=lambda item: item[1], reverse=True)).keys())}
 
         peakHeightRank = {peak: i for i, peak in enumerate(
-            sorted(peakList[1], key=lambda item: item, reverse=True))}
+            sorted(peakList[:, 1], key=lambda item: item, reverse=True))}
 
         peakWidth = {peak: peakLimitsX[peak][1] - peakLimitsX[peak][0]
                      for peak in peakLimitsX.keys()}
@@ -615,7 +621,7 @@ class SpectraData:
             [
                 integralRanks[x],                                                           # Rank by Integral
                 float(np.format_float_positional(x, 6, fractional=False)),                  # Value
-                f"({np.where(peakList[0] == x)[0][0]})",                                    # Rank by Value
+                f"({np.where(peakList[:, 0] == x)[0][0]})",                                    # Rank by Value
                 float(np.format_float_positional(integrals[x][0], 6, fractional=False)),    # Integral
                 float(np.format_float_positional(peakWidth[x], 6, fractional=False)),       # Peak Width
                 f"({peakWidthRank[x]})",                                                    # Rank by Peak Width
@@ -623,7 +629,7 @@ class SpectraData:
                 f"({peakHeightRank[y]})",                                                   # Rank by Peak Height
                 integrals[x][1]                                                             # Relevant Isotope
             ]
-            for x, y in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+            for x, y in [peak for peak in peakList if peak[0] in integralRanks.keys()]]
 
         t2 = perf_counter()
         print(f"Table Data Creation - {t2 - t1}")
@@ -672,18 +678,19 @@ class SpectraData:
             return
 
         if which == 'max':
-            peakList = self.maxima
+            peakList = self.peakDetector.maxima(self.threshold)
             peakLimitsX = self.maxPeakLimitsX
         else:
             peakList = self.minima
             peakLimitsX = self.minPeakLimitsX
+        self.numPeaks = peakList.shape[0]
         t1 = perf_counter()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = {executor.submit(
                 self.peakIntegral,
                 peakLimitsX[peak][0],
                 peakLimitsX[peak][1],
-                which=which): peak for peak in peakLimitsX.keys()}
+                which=which): peak for peak in peakLimitsX.keys() if peak in peakList[:, 0]}
             integrals = {peak: future.result() for future, peak in futures.items()}
 
         t2 = perf_counter()
@@ -697,12 +704,12 @@ class SpectraData:
         t1 = perf_counter()
 
         peakHeightRank = {peak: i for i, peak in enumerate(
-            sorted(peakList[1], key=lambda item: item, reverse=True))}
+            sorted(peakList[:, 1], key=lambda item: item, reverse=True))}
         t2 = perf_counter()
         print(f"Peak Height Rank Calc - {t2 - t1}")
         t1 = perf_counter()
 
-        peakWidth = {peak: peakLimitsX[peak][1] - peakLimitsX[peak][0]
+        peakWidth = {peak: round(peakLimitsX[peak][1] - peakLimitsX[peak][0], 6)
                      for peak in peakLimitsX.keys()}
         t2 = perf_counter()
         print(f"Peak Width Calc - {t2 - t1}")
@@ -718,7 +725,7 @@ class SpectraData:
             [
                 integralRanks[x],                                                           # Rank by Integral
                 float(np.format_float_positional(x, 6, fractional=False)),                  # Value
-                f"({np.where(peakList[0] == x)[0][0]})",                                    # Rank by Value
+                f"({np.where(peakList[:, 0] == x)[0][0]})",                                     # Rank by Value
                 float(np.format_float_positional(integrals[x][0], 6, fractional=False)),    # Integral
                 float(np.format_float_positional(peakWidth[x], 6, fractional=False)),       # Peak Width
                 f"({peakWidthRank[x]})",                                                    # Rank by Peak Width
@@ -726,7 +733,7 @@ class SpectraData:
                 f"({peakHeightRank[y]})",                                                   # Rank by Peak Height
                 integrals[x][1]                                                             # Relevant Isotope
             ]
-            for x, y in [peak for peak in peakList.T if peak[0] in integralRanks.keys()]]
+            for x, y in [peak for peak in peakList if peak[0] in integralRanks.keys()]]
 
         t2 = perf_counter()
         print(f"Table Data Creation - {t2 - t1}")
@@ -743,6 +750,7 @@ class SpectraData:
             self.minTableData.index += 1
             self.minTableData.sort_index(inplace=True)
         self.changePeakTableData(which=which)
+        self.orderAnnotations(which=which)
 
         t2 = perf_counter()
 
@@ -758,3 +766,8 @@ class SpectraData:
             Defaults to 'max'.
         """
         self.tableData = self.maxTableData.copy() if which == 'max' else self.minTableData.copy()
+
+    def normalise(self):
+        if self.isImported:
+            return
+        self.graphData.iloc[:, 1] = self.graphData.iloc[:, 1] / max(self.graphData.iloc[:, 1])

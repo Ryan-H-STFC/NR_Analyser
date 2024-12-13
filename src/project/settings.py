@@ -54,7 +54,9 @@ params = {
     # ? ------------------------------------------------------------------------------------------------------------
     # ?                                        Peak Detector Parameters
     # ? ------------------------------------------------------------------------------------------------------------
-    'max_prominence': 5.0,
+    'prominence_min': 0.0,
+    'prominence_max': 1e6,
+    'peak_wlen': 51,
     # Prominence Factor, threshold for identifying
     'min_prominence': 0.1,
     # Height Threshold,
@@ -82,4 +84,7 @@ params = {
     'show_first_der': False,
     # Draws vertical lines where the graph has a point of inflection, zero second derivative, in blue
     'show_second_der': False,
+    # 'Normalise ENDF data on plotting
+    'normalise': False,
+    'limits_from_first_der': False
 }

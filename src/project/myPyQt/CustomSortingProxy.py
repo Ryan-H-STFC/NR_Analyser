@@ -11,6 +11,7 @@ class CustomSortingProxy(QSortFilterProxyModel):
     """
 
     def __init__(self):
+
         super(QSortFilterProxyModel, self).__init__()
 
     def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
@@ -29,19 +30,24 @@ class CustomSortingProxy(QSortFilterProxyModel):
         col = left.column()
         dataLeft = left.data()
         dataRight = right.data()
-
+        if left.data() == '' or right.data() == '':
+            return False
         if col == 0:
             # Rank of Integral (int)
             return int(dataLeft) < int(dataRight)
-        if col in [2, 6]:
+        if col in [2, 5, 7]:
             # Rank of ... in format (123) (int)
             return int(dataLeft[1:-1]) < int(dataRight[1:-1])
-        if col in [1, 3, 4, 5, 7]:
+        if col in [1, 3, 4, 6]:
             # Numerical Data (float)
             return float(dataLeft) < float(dataRight)
 
-        return super(QSortFilterProxyModel, self).lessThan(left, right)
+        return super().lessThan(left, right)
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex) -> bool:
 
         return super().filterAcceptsRow(source_row, source_parent)
+
+    def sort(self, column, order=...):
+
+        return super().sort(column, order)

@@ -8,7 +8,7 @@ Open the releases tab on this repository and download the latest edition of the 
 
 or,
 
-Download this repository into your chosen IDE and run from the NR_Analyser.py file.
+Download this repository into your chosen IDE and run from the 'NR Analyser.py' file.
 
 ## **Purpose**
 

@@ -4,21 +4,16 @@
 
 ## **Installing and Starting the Application**
 
-Download the repository. The following python packages are required for the script to run:
-* matplotlib
-* numpy
-* pandas
-* scipy
-* PyQt6
+Open the releases tab on this repository and download the latest edition of the program.
 
-Download the repository and save it in a suitable filepath on your computer. Please keep the directory paths the same else the program will not run. You will be asked for the filepath upon running the application.
-You will also be asked for the filepath to the data folder from the most recent version of the NRCA code. This can be found on the ndw1901 computer at 'NRCA/Rehana/Latest_NRCA_Code/data'.
+or,
 
-Open in PyCharm or the interpreter of your choosing and run the script.
+Download this repository into your chosen IDE and run from the NR_Analyser.py file.
 
 ## **Purpose**
 
-It takes the data stored in the NRCA analysis code and provides the user with a physical interface to analyse the data. This allows the user to plot multiple graphs and analyse spectra via the program. Note: It is directly linked to the data directory used to store information in the NRCA database and so is updated as data files are added to the database. However, peak information is not currently automatically updated so any new data files will have no peak information for the user to see unless manually updated.
+Provides a GUI interface to plot and analyse data taken from the ENDF/B-VIII database. Both n-g the gamma emission and n-tot total cross section of neutron capture and emission, are available and built into this program, the user can import x-y data from experiments and use all the same features.
+
 
 ## **Overview of GUI**
 
@@ -28,25 +23,30 @@ It takes the data stored in the NRCA analysis code and provides the user with a 
 ## **Features**
 
 * Import and plot data
-* Compare spectra with the ability to hide and show different spectra within the plot
 * Provide automated peak detection feature for quick analysis upon importing of data or selecting data
-* Edit peak limits
+* Edit peak limits invidually or choose from a blanket algorithm using nearest zero derivative, or elbow point (recommended).
 * Provide further information about a singular peak selected from a spectrum
-* Save and export plots
-* Be accessible and straightforward in installation and use
-* Simple search for element selection
+* Create compounds of varying compositions
+* Save and export data from plots
+* Simple search for element or isotope
+* Periodic table menu to select the isotope or element of your choice
+* Changing the natural compositions of elements, and created compounds.
 
 Peak Integration Limit Algorithm:
-- More accurate data collection
-- Allowing for experiemental data to be analysed throughtout the program.
-- Changing threshold, natural abundance of elements, creating compounds, etc, will all be able to be analysed and data updated accordingly.
-  
-**Note** : You cannot alter limits or any data within this program.
 
+Using either the nearest zero derivative or, by default, the elbow point to find suitable limits of integration
+- Allowing for experiemental data to be analysed throughtout the program.
+- Changing threshold, natural abundance of elements, creating compounds, etc, can all be analysed and data updated accordingly.
+  
 ## **Bugs to be fixed soon**
+
+Check the issues tab, make note on that tab if you have any bugs or ideas.
 
 ## **Improvements Coming Soon**
 
+* Improved performance with data calculations, large calculations may take up to a few minutes on slow machines.
+* Sorting of data within tables
+  
 ## **Accessibility**
 
-A new colour schemes has been implemented than that seen in the picture above to provide high-contrast for those who are perhaps colour blind.
+A new colour schemes has been implemented than that seen in the picture above to provide high-contrast for those who are perhaps colour blind or otherwise visually impaired.

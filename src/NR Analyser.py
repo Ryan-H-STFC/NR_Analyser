@@ -4,6 +4,8 @@ import sys
 from time import perf_counter
 from copy import deepcopy
 
+from functools import partial
+
 import matplotlib.axes
 import matplotlib.figure
 import matplotlib.legend
@@ -25,6 +27,7 @@ from PyQt6.QtGui import (
     QCursor,
     QRegularExpressionValidator as QRegExpValidator,
     QIcon,
+
 )
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -36,6 +39,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -49,6 +53,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QScrollBar,
     QSizePolicy,
+    QSpacerItem,
     QSplitter,
     QTableView,
     QVBoxLayout,
@@ -60,7 +65,6 @@ from scipy.interpolate import interp1d
 
 from project.spectra.SpectraDataStructure import SpectraData
 
-from project.myPyQt.ButtonDelegate import ButtonDelegate
 from project.myPyQt.CustomSortingProxy import CustomSortingProxy
 from project.myPyQt.ExtendedComboBox import ExtendedComboBox
 from project.myPyQt.ExtendedTableModel import ExtendedQTableModel
@@ -641,26 +645,41 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # ¦ -------------------- Table --------------------
 
-        self.table = QTableView()
-        self.table.setObjectName("dataTable")
-        self.table.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeMode.Stretch
-        )
-        self.table.setAlternatingRowColors(True)
-        self.table.verticalHeader().setVisible(False)
-        self.table.setMinimumHeight(200)
+        self.tables = {}
+
+        # self.table = QTableView()
+        # self.table.setObjectName("dataTable")
+        # self.table.horizontalHeader().setSectionResizeMode(
+        #     QtWidgets.QHeaderView.ResizeMode.Stretch
+        # )
+        # self.table.setAlternatingRowColors(True)
+        # self.table.verticalHeader().setVisible(False)
+        # self.table.setMinimumHeight(200)
 
         # * -----------------------------------------------
+
+        splitter = QSplitter()
+        splitter.setOrientation(Qt.Orientation.Vertical)
+        splitter.setContentsMargins(0, 0, 0, 0)
 
         container = QWidget(self)
         container.setObjectName("mainContainer")
         container.setLayout(canvasLayout)
         container.setMinimumHeight(300)
 
-        splitter = QSplitter()
-        splitter.setOrientation(Qt.Orientation.Vertical)
+        self.tableArea = QVBoxLayout()
+        self.tableArea.setContentsMargins(0, 0, 0, 0)
+        self.tableArea.setSpacing(0)
+
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setWidget(QWidget())
+        self.scrollArea.widget().setLayout(self.tableArea)
+        self.scrollArea.setMinimumHeight(300)
+
         splitter.addWidget(container)
-        splitter.addWidget(self.table)
+        splitter.addWidget(self.scrollArea)
         splitter.setHandleWidth(10)
 
         contentLayout = QHBoxLayout()
@@ -677,7 +696,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         # If double-clicking cell, can trigger plot peak
 
-        self.table.doubleClicked.connect(self.plotPeakWindow)
         self.setAcceptDrops(True)
 
         self.setLayout(mainLayout)  # Generating layout
@@ -958,7 +976,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectra.orderAnnotations(
                 which=which, byIntegral=self.byIntegralCheck.isChecked()
             )
-            self.addTableData(reset=True)
+            self.addTableData()
 
         applyBtn.clicked.connect(onAccept)
 
@@ -1025,7 +1043,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             )
             peakX = float(spectraPeaks.currentText())
             peakY = peakList[:, 1][np.where(peakList[:, 0] == peakX)[0][0]]
-            peakIndex = spectra.graphData[spectra.graphData[0] == peakX].index[0]
 
             zerosList = (
                 spectra.peakDetector.dips
@@ -1353,9 +1370,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
                 self.elementDistributions[spectraName][title] = dist
 
-            for title, Tof in self.plottedSpectra:
-                if spectraName == title:
-                    title = f"{title}-{'ToF' if Tof else 'Energy'}"
+            for name, Tof in self.plottedSpectra:
+                if spectraName == name:
+                    title = f"{spectraName}-{'ToF' if Tof else 'Energy'}"
                     spectra: SpectraData = self.spectraData[title]
                     spectra.distributions = self.elementDistributions[spectraName]
 
@@ -1366,7 +1383,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     self.selectionName = spectraName
 
                     self.updateGuiData(tof=Tof, distAltered=True)
-                    self.addTableData(reset=True)
+                    self.addTableData(title)
                     self.updateLabels(title)
 
         applyBtn.clicked.connect(onAccept)
@@ -1548,7 +1565,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             spectra.peakDetector.threshold = threshold_value
             self.threshold = threshold_value
             self.numRows = spectra.numPeaks
-            spectra.updatePeaks(which="max")
+            spectra.updatePeaks('max')
             self.addTableData()
             self.toggleThreshold()
             self.plotDerivatives(spectra)
@@ -2126,7 +2143,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         def onAccept():
             applyBtn.setEnabled(False)
             compoundDist = {
-                widget.findChild(QLabel).text()[:-1].replace('element_', '').replace('_n-tot', '').replace('_n-g', ''):
+                widget.findChild(QLabel).text()[:-1].replace('element_', ''):
                     float(widget.findChild(QLineEdit).text()
                           )
                 for widget in getLayoutWidgets(optionsWindow.mainLayout, QWidget)
@@ -2137,6 +2154,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                 applyBtn.setEnabled(True)
                 return
             plotType = "n-tot" if "n-tot" in str(compoundDist.keys()) else "n-g"
+            compoundDist = {name.replace('_n-tot', '').replace('_n-g', ''): item for name, item in compoundDist.items()}
             weightedGraphData = {
                 name: pd.read_csv(
                     resource_path(f"{self.graphDataDir}element_{name}_{plotType}.csv"), header=None
@@ -2437,6 +2455,17 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                        color: #000;
                     }}
 
+        QPushButton#tableBtn{{
+            background-color: #507373;
+            border-radius: 0px;
+            color: #FFF;
+        }}
+        QPushButton#tableBtnEmpty{{
+            background-color: #7D9797;
+            border-radius: 0px;
+            color: #FFF;
+        }}
+
         QCheckBox#gridCheck,
                  #thresholdCheck,
                  #label_check,
@@ -2528,6 +2557,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             border: 1px solid #AAA;
             background-color: {self.bg_color};
         }}
+
         QRadioButton:enabled{{
             color: {self.text_color};
             font-size: 9pt;
@@ -2574,7 +2604,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         QHeaderView {{
             font-size: 7.5pt;
         }}
-
+        QScrollArea > *{{
+            border:1px solid red;
+        }}
         QHeaderView::section:horizontal{{
             border-top: 1px solid #000;
             border-bottom: 1px solid #000;
@@ -2592,11 +2624,6 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             image: url({self.expandUp});
         }}
 
-        QTableView#dataTable {{
-            font-size: 8pt;
-            border-style: none;
-        }}
-
         QMessageBox QLabel{{
             color: {self.text_color};
         }}
@@ -2608,6 +2635,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             color: {self.text_color};
             font-weight: 800;
             font-size: 12pt;
+        }}
+        QSpacerItem{{
+            border: 1px solid red;
         }}
         """
 
@@ -2758,42 +2788,8 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.combobox.blockSignals(False)
         self.compoundCombobox.blockSignals(False)
-        self.resetTableProxy(combobox)
-
-    def resetTableProxy(self, combobox: QComboBox) -> None:
-        """
-        ``resetTableProxy``
-        -------------------
-        Handles setting the data in the table, either displaying the data from a single selection, or returning to the
-        previous state of the table.
-
-        Args:
-            - ``combobox`` (QComboBox): The Combobox from which the selection was made.
-        """
-        substanceNames = combobox.getAllItemText()
-        try:
-            self.selectionName = combobox.currentText()
-            if combobox.currentText() == "" and self.table_model is not None:
-                self.table.setSortingEnabled(False)
-                proxy = CustomSortingProxy()
-                proxy.setSourceModel(self.table_model)
-
-                self.table.setModel(proxy)
-                self.table_model.titleRows = self.titleRows
-                self.table.setModel(self.table_model)
-                self.table.clearSpans()
-                for row in self.titleRows[:-1]:
-                    self.table.setSpan(row, 0, 1, 10)
-                    self.table.setItemDelegateForRow(
-                        row, ButtonDelegate(self, self.table, self.table_model)
-                    )
-                    self.table.openPersistentEditor(self.table_model.index(row, 0))
-                self.table.setSortingEnabled(True)
-
-            elif combobox.currentText() in substanceNames:
-                self.displayData()
-        except AttributeError:
-            self.table.setModel(None)
+        self.selectionName = combobox.currentText()
+        self.displayData()
 
     def updateLabels(self, name: str = None) -> None:
         numPeaks = self.numRows
@@ -2851,56 +2847,9 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.toggleBtnControls(plotEnergyBtn=True, plotToFBtn=True, clearBtn=True)
             self.toggleCheckboxControls(enableAll=False)
 
-        self.showTableData()
-
         self.updateLabels()
 
-    def showTableData(self):
-        """
-        ``showTableData``
-        -----------------
-        Read and display the selected substances data within the table.
-        """
-        # Finding relevant file for peak information
-        filepath = None
-        for file in os.listdir(params["dir_peakInfo"]):
-            if self.selectionName.replace("element_", "") in file:
-                filepath = resource_path(f"""{
-                    params['dir_peakInfo']
-                }{file[:-7]}{'max' if self.maxTableOptionRadio.isChecked() else 'min'}.csv""")
-                break
-
-        try:
-            for row in self.table_model.titleRows:
-                self.table.setItemDelegateForRow(row, None)
-        except AttributeError:
-            pass
-        try:
-            if filepath is None:
-                raise ValueError
-
-            self.table.blockSignals(True)
-            file = pd.read_csv(resource_path(filepath), header=0)
-            # Reset any changes to spans before displaying selection data.
-            self.table.clearSpans()
-
-            if self.selectionName not in self.plottedSpectra:
-                self.numRows = file.shape[0]
-            print("Number of peaks: ", self.numRows)
-            # Fill Table with data
-            tempTableModel = ExtendedQTableModel(file)
-            proxy = CustomSortingProxy()
-            proxy.setSourceModel(tempTableModel)
-
-            self.table.setModel(proxy)
-            self.table.setSortingEnabled(True)
-            self.table.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-
-        except (ValueError, FileNotFoundError):
-            self.table.setModel(None)
-            self.numRows = None
-
-    def addTableData(self, reset: bool = False):
+    def addTableData(self):
         """
         ``addTableData``
         ----------------
@@ -2909,59 +2858,88 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         Args:
             - ``reset`` (bool, optional): Whether to default back to the current state of the table. Defaults to False.
         """
-        # Amending the table for more than one plot.
-        self.table.reset()
-        self.table.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
+        inner = QFrame(self.scrollArea)
+        innerLayout = QVBoxLayout()
+        innerLayout.setSpacing(0)
+        inner.setLayout(innerLayout)
 
-        table_data = pd.DataFrame()
-        try:
-            self.table_model.beginResetModel()
-            self.table_model.endResetModel()
-            for row in self.table_model.titleRows[:-1]:
-                self.table.setItemDelegateForRow(row, None)
-        except AttributeError:
-            pass
-        self.table.setModel(None)
-        self.table_model = None
-        self.table.setSortingEnabled(False)
-        self.titleRows = [0]
-        dataInTable = []
-        # ! ---------------------------------------------------------------------------------
-        # ? Maybe sort the order in which they are plotted and added to the table.
-        for spectra in self.spectraData.values():
-            if spectra.name in dataInTable:
-                continue
-            table_data = pd.concat(
-                [
-                    table_data,
-                    spectra.maxTableData
-                    if self.maxTableOptionRadio.isChecked()
-                    else spectra.minTableData,
-                ],
-                ignore_index=True,
+        # for name in self.tables.keys():
+        #     table, tableBtn, _ = self.tables[name]
+        #     self.tableArea.removeWidget(table)
+        #     self.tableArea.removeWidget(tableBtn)
+        #     table.deleteLater()
+        #     tableBtn.deleteLater()
+        self.tables.clear()
+        for i, spectra in enumerate(self.spectraData.values()):
+            i *= 2
+
+            table = QTableView()
+            table.setViewportMargins(0, 0, 0, 0)
+            table.setContentsMargins(0, 0, 0, 0)
+            table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            table.setObjectName("dataTable")
+            table.horizontalHeader().setSectionResizeMode(
+                QtWidgets.QHeaderView.ResizeMode.Stretch
             )
-            self.titleRows.append(self.titleRows[-1] + spectra.tableData.shape[0])
-            dataInTable.append(spectra.name)
-            self.elementDataNames.append(spectra.name)
+            table.resizeColumnsToContents()
+            table.setAlternatingRowColors(True)
+            table.verticalHeader().setVisible(False)
+            data = spectra.maxTableData if self.maxTableOptionRadio.isChecked() else spectra.minTableData
+            table.setFixedHeight(data.shape[0] * 30 + 24)
+            tableModel = ExtendedQTableModel(data,
+                                             parent=self)
+            proxy = CustomSortingProxy()
+            proxy.setSourceModel(tableModel)
 
-        self.table_model = ExtendedQTableModel(table_data, parent=self)
+            table.setModel(proxy)
+            table.setSortingEnabled(True)
+            table.sortByColumn(0 if self.byIntegralCheck.isChecked() else 5, Qt.SortOrder.AscendingOrder)
+            table.clearSpans()
+            table.blockSignals(False)
+            table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        proxy = CustomSortingProxy()
-        proxy.setSourceModel(self.table_model)
+            table.doubleClicked.connect(self.plotPeakWindow)
 
-        self.table.setModel(proxy)
-        self.table.setSortingEnabled(True)
-        self.table_model.titleRows = self.titleRows
-        self.table.setModel(self.table_model)
-        self.table.setSortingEnabled(True)
-        self.table.clearSpans()
-        for row in self.titleRows[:-1]:
-            self.table.setSpan(row, 0, 1, 10)
-            self.table.setItemDelegateForRow(
-                row, ButtonDelegate(self, self.table, self.table_model)
-            )
-            self.table.openPersistentEditor(self.table_model.index(row, 0))
-        self.table.blockSignals(False)
+            tableBtn = QPushButton()
+            tableBtn.setCheckable(True)
+            tableBtn.setFixedHeight(22)
+            if data.empty:
+                tableBtn.setText(
+                    f"No Peak Data for {spectra.name}")
+                tableBtn.setObjectName('tableBtnEmpty')
+                table.horizontalHeader().setVisible(False)
+                table.setVisible(False)
+
+            else:
+                tableBtn.setText(spectra.name)
+                tableBtn.setObjectName('tableBtn')
+                tableBtn.setIcon(QIcon(f"{params['dir_img']}expand-down-component.svg"))
+                tableBtn.blockSignals(True)
+                tableBtn.clicked.connect(lambda _, spectraName=spectra.name: self.collapseTableRows(spectraName))
+                tableBtn.blockSignals(False)
+                table.horizontalHeader().setVisible(True)
+
+            inner.layout().addWidget(tableBtn, i, Qt.AlignmentFlag.AlignTop)
+            inner.layout().addWidget(table, i + 1, Qt.AlignmentFlag.AlignTop)
+
+            inner.layout().setSpacing(0)
+
+            self.tables[spectra.name] = [table, tableBtn]
+        inner.layout().setContentsMargins(0, 0, 0, 0)
+        inner.layout().setSpacing(0)
+        inner.layout().addItem(QSpacerItem(20, 40, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+
+        self.scrollArea.setWidget(inner)
+
+    def collapseTableRows(self, name: str):
+        table, button = self.tables[name]
+        if button.isChecked():
+            button.setIcon(QIcon(f"{params['dir_img']}expand-up-component.svg"))
+            table.setVisible(False)
+        else:
+            button.setIcon(QIcon(f"{params['dir_img']}expand-down-component.svg"))
+            table.setVisible(True)
 
     def updateGuiData(
         self,
@@ -3067,7 +3045,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             try:
                 graphData = graphData[~graphData[0].str.contains("#")].astype(float)
                 if graphData.select_dtypes(np.number).empty:
-                    QMessageBox.warning(self, "Wanring", "Data Format Invalid")
+                    QMessageBox.warning(self, "Warning", "Data Format Invalid")
                     self.plottedSpectra.remove((self.selectionName, tof))
                     return
             except AttributeError:
@@ -3101,15 +3079,15 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     ]
                 )
             # Title Rows
-            if elementTableDataMax.empty:
-                elementTableDataMax.loc[-1] = [
-                    f"No Peak Data for {spectraName}",
-                    *[""] * 8,
-                ]
+            # if elementTableDataMax.empty:
+            #     elementTableDataMax.loc[-1] = [
+            #         f"No Peak Data for {spectraName}",
+            #         *[""] * 8,
+            #     ]
 
-            else:
-                elementTableDataMax.loc[-1] = [spectraName, *[""] * 8]
-            elementTableDataMax.index += 1
+            # else:
+            #     elementTableDataMax.loc[-1] = [spectraName, *[""] * 8]
+            # elementTableDataMax.index += 1
             elementTableDataMax.sort_index(inplace=True)
             try:
                 elementTableDataMin = pd.read_csv(
@@ -3133,16 +3111,16 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     ]
                 )
             # Title Rows
-            if elementTableDataMin.empty:
-                elementTableDataMin.loc[-1] = [
-                    f"No Peak Data for {spectraName}",
-                    *[""] * 8,
-                ]
+            # if elementTableDataMin.empty:
+            #     elementTableDataMin.loc[-1] = [
+            #         f"No Peak Data for {spectraName}",
+            #         *[""] * 8,
+            #     ]
 
-            else:
-                elementTableDataMin.loc[-1] = [spectraName, *[""] * 8]
-            elementTableDataMin.index += 1
-            elementTableDataMin.sort_index(inplace=True)
+            # # else:
+            #     # elementTableDataMin.loc[-1] = [spectraName, *[""] * 8]
+            # elementTableDataMin.index += 1
+            # elementTableDataMin.sort_index(inplace=True)
 
             if self.spectraData.get(title, False):
                 for point in self.spectraData[title].annotations:
@@ -3175,7 +3153,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         redrawMax = False
         redrawMin = False
         if distAltered:
-            title = f"{newSpectra.name}-{'ToF' if tof else 'Energy'}"
+            title = newSpectra.title
             for line in self.ax.get_lines():
                 if title in line.get_label():
                     line.remove()
@@ -3204,13 +3182,12 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.canvas.draw()
 
-    def plot(
-        self,
-        spectraData: SpectraData,
-        filepath: str = None,
-        imported: bool = False,
-        name: str = None,
-    ) -> None:
+    def plot(self,
+             spectraData: SpectraData,
+             filepath: str = None,
+             imported: bool = False,
+             name: str = None,
+             ) -> None:
         """
         ``plot``
         --------
@@ -3498,13 +3475,13 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     line.set_visible(newVisible)
                     continue
                 if (
-                    f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-max"
+                    f"{spectraData.title}-max"
                     in line.get_gid()
                 ):
                     line.set_visible(newVisible)
                     continue
                 if (
-                    f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min"
+                    f"{spectraData.title}-min"
                     in line.get_gid()
                 ):
                     line.set_visible(newVisible)
@@ -3538,15 +3515,17 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
         self.spectraData = {}
         self.elementDataNames = []
-        try:
-            for row in self.table_model.titleRows:
-                self.table.setItemDelegateForRow(row, None)
-        except AttributeError:
-            pass
+        # try:
+        #     for table, btn in self.tables.values():
+        #         self.tableArea.removeWidget(table)
+        #         self.tableArea.removeWidget(btn)
+        #         table.deleteLater()
+        #         btn.deleteLater()
 
-        self.table.setModel(None)
-
-        self.table_model = None
+        # except AttributeError:
+        #     pass
+        self.addTableData()
+        self.tables.clear()
         self.plottedSpectra = []
         self.elementDistributions = deepcopy(self.defaultDistributions)
         if self.combobox.currentIndex() == 0:
@@ -3582,7 +3561,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             self.ax.minorticks_on()
             self.ax.tick_params(which="minor", axis="x")
             self.ax.tick_params(**self.gridSettings)
-            self.ax.grid(visible=False, which="both", linewidth=1.1, color=color)
+            self.ax.grid(visible=False, which="both", color=color)
 
             if visible and self.ax.get_visible():
                 self.ax.grid(
@@ -3680,15 +3659,14 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
 
     def onPeakTableOptionChange(self) -> None:
         which = "max" if self.maxTableOptionRadio.isChecked() else "min"
-        if self.selectionName in [
-            spectra.name for spectra in self.spectraData.values()
-        ]:
-            for spectra in self.spectraData.values():
+        if self.selectionName in [spectra.name for spectra in self.spectraData.values()]:
+            for i, spectra in enumerate(self.spectraData.values()):
 
                 spectra.changePeakTableData(which)
                 self.drawAnnotations(spectra=spectra, which=which)
 
-            self.addTableData(True)
+            self.updateLabels(spectra.title)
+            self.addTableData()
         else:
             self.displayData()
 
@@ -3705,7 +3683,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         """
         self.elementDataNames = []
         spectra.whichAnnotationsDrawn = which
-        gid = f"annotation-{spectra.name}-{'ToF' if spectra.isToF else 'Energy'}"
+        gid = f"annotation-{spectra.title}"
         if spectra.isAnnotationsDrawn:
             for anno in spectra.annotations:
                 anno.remove()
@@ -3913,19 +3891,19 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
             saveLimit = row.findChild(QCheckBox, "limitCheck").isChecked()
             spec = self.spectraData[name]
             if saveGraph:
-                spec.graphData[1:].to_csv(
+                spec.graphData.to_csv(
                     f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_graphData.csv',
                     index=False,
                     header=False,
                 )
             if saveTable:
-                if not spec.maxTableData[1:].empty:
-                    spec.maxTableData[1:].to_csv(
+                if not spec.maxTableData.empty:
+                    spec.maxTableData.to_csv(
                         f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_table_max.csv',
                         index=False,
                     )
-                if not spec.minTableData[1:].empty:
-                    spec.minTableData[1:].to_csv(
+                if not spec.minTableData.empty:
+                    spec.minTableData.to_csv(
                         f'{exportDir}/{name.replace("ToF (us)" if spec.isToF else "Energy (eV)", "")}_table_min.csv',
                         index=False,
                     )
@@ -4086,7 +4064,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         # ! Change how points are then plotted
         # Redrawing graph and Peak Detection Limits
         self.onPeakTableOptionChange()
-        self.addTableData(reset=True)
+        self.addTableData(spectraData.title)
         self.ax.set_visible(False)
         if self.axPD is None:
             self.axPD = self.figure.add_subplot(111)
@@ -4148,7 +4126,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
         )
 
         if isMax:
-            title = f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}"
+            title = spectraData.title
             pdPoints = [
                 a
                 for a in self.axPD.get_lines()
@@ -4182,7 +4160,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     color="black",
                     markersize=3,
                     alpha=0.6,
-                    gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-max-p-{i}",
+                    gid=f"{spectraData.title}-max-p-{i}",
                 )
                 spectraData.isMaxDrawn = True
                 if spectraData.maxPeakLimitsX.get(x, False):
@@ -4202,7 +4180,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     marker=2,
                     color="r",
                     markersize=8,
-                    gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-max-limL-{i}",
+                    gid=f"{spectraData.title}-max-limL-{i}",
                 )
                 self.axPD.plot(
                     limitXSecond,
@@ -4210,7 +4188,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     marker=2,
                     color="r",
                     markersize=8,
-                    gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-max-limR-{i}",
+                    gid=f"{spectraData.title}-max-limR-{i}",
                 )
 
         else:
@@ -4222,7 +4200,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     color="black",
                     markersize=3,
                     alpha=0.6,
-                    gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min-p-{i}",
+                    gid=f"{spectraData.title}-min-p-{i}",
                 )
                 spectraData.isMinDrawn = True
                 if spectraData.minPeakLimitsX.get(x, False):
@@ -4242,7 +4220,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     marker=2,
                     color="r",
                     markersize=8,
-                    gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min-limL-{i}",
+                    gid=f"{spectraData.title}-min-limL-{i}",
                 )
                 self.axPD.plot(
                     limitXSecond,
@@ -4250,7 +4228,7 @@ class ExplorerGUI(QWidget):  # Acts just like QWidget class (like a template)
                     marker=2,
                     color="r",
                     markersize=8,
-                    gid=f"{spectraData.name}-{'ToF' if spectraData.isToF else 'Energy'}-min-limR-{i}",
+                    gid=f"{spectraData.title}-min-limR-{i}",
                 )
 
         legendPD: matplotlib.legend.DraggableLegend = self.axPD.legend(

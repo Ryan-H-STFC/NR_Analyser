@@ -24,7 +24,7 @@ colors = {
     'Post-Transition Metal': '#003666',
     'Metalloid': '#015146',
     'Reactive Non-Metal': '#3e6418',
-    'Unstable': '#222',
+    'Unstable': '#111',
     'Noble Gas': '#3a2151',
     'Filler': '#00b'
 }
@@ -48,7 +48,7 @@ class ElementCell(QWidget):
         self.zNum = info['zNum']
         self.weight = info['weight']
         self.type = info['type']
-
+        self.stability = info['stability']
         self.setObjectName(self.type.replace(' ', ''))
         proxyWidget = QWidget(self.table)
 
@@ -77,28 +77,6 @@ class ElementCell(QWidget):
 
         self.setContentsMargins(0, 0, 0, 0)
 
-        # QWidget#Filler[class="top"]{{
-        #         background-color: {color};
-        #         border-top: 1px solid #444;
-        #         border-left: 1px solid {color};
-        #         border-right: 1px solid {color};
-        #         border-bottom: 1px solid {color};
-        #     }}
-        #     QWidget#Filler[class="middle"]{{
-        #         background-color: {color};
-        #         border-top: 1px solid {color};
-        #         border-left: 1px solid {color};
-        #         border-right: 1px solid {color};
-        #         border-bottom: 1px solid {color};
-
-        #     }}
-        #     QWidget#Filler[class="bottom"]{{
-        #         background-color: {color};
-        #         border-top: 1px solid {color};
-        #         border-left: 1px solid {color};
-        #         border-right: 1px solid {color};
-        #         border-bottom: 1px solid #444;
-        #     }}
         align = Qt.AlignmentFlag.AlignRight if self.nNum is None else Qt.AlignmentFlag.AlignLeft
         cellLayout.addWidget(self.nNumLabel, align)
         cellLayout.addWidget(self.symbolLabel, align)
@@ -138,7 +116,7 @@ class ElementCell(QWidget):
 
     def resizeEvent(self, a0: QResizeEvent | None) -> None:
         height = self.table.window().sizeHint().height() // 9
-        color = colors.get(self.type, '#444')
+        color = colors.get(self.type if self.stability else 'Unstable', '#444')
         self.setStyleSheet(f"""
                 *{{
                     padding: 0px;
@@ -149,19 +127,19 @@ class ElementCell(QWidget):
                     border: 1px solid #444;
                 }}
                 QLabel#Filler{{
-                    font-size: {max(height // 16, 8)}pt;
+                    font-size: {max(height // 24, 8)}pt;
                 }}
                 QWidget#cell:hover, QWidget#iso:hover{{
                     border: 1px solid #FFF;
                 }}
                 QLabel#nNum, QLabel#name, QLabel#weight{{
                     color: #DEDEDE;
-                    font-size: {max(height // 16, 8)}pt;
+                    font-size: {max(height // 24, 8)}pt;
                     font-weight: 600;
                 }}
                 QLabel#symbol{{
                     color: #FFF;
-                    font-size: {max(height // 10, 12)}pt;
+                    font-size: {max(height // 15, 12)}pt;
                     font-weight: 800;
                 }}
                 """)

@@ -26,12 +26,11 @@ for file in listdir(resource_path(f"{params['dir_graphData']}")):
         continue
     filename = filename[:-4]
     info = interpName(filename)
-    if info['nNum'] is None:
+    if info['zNum'] is None:
         elements.append(filename.removeprefix('element_'))
     else:
         isotopes.append(filename)
 
-pass
 
 periodic_table = {
     "H": {
@@ -40,7 +39,8 @@ periodic_table = {
         "name": "Hydrogen",
         "weight": 1.00784,
         "type": "Reactive Non-Metal",
-        "pos": (1, 1)
+        "pos": (1, 1),
+        "stability": True
     },
     "He": {
         "symbol": "He",
@@ -48,7 +48,8 @@ periodic_table = {
         "name": "Helium",
         "weight": 4.002602,
         "type": "Noble Gas",
-        "pos": (1, 18)
+        "pos": (1, 18),
+        "stability": True
     },
     "Li": {
         "symbol": "Li",
@@ -56,7 +57,8 @@ periodic_table = {
         "name": "Lithium",
         "weight": 6.94,
         "type": "Alkali Metal",
-        "pos": (2, 1)
+        "pos": (2, 1),
+        "stability": True
     },
     "Be": {
         "symbol": "Be",
@@ -64,7 +66,8 @@ periodic_table = {
         "name": "Beryllium",
         "weight": 9.012182,
         "type": "Alkaline Earth Metal",
-        "pos": (2, 2)
+        "pos": (2, 2),
+        "stability": True
     },
     "B": {
         "symbol": "B",
@@ -72,7 +75,8 @@ periodic_table = {
         "name": "Boron",
         "weight": 10.81,
         "type": "Metalloid",
-        "pos": (2, 13)
+        "pos": (2, 13),
+        "stability": True
     },
     "C": {
         "symbol": "C",
@@ -80,7 +84,8 @@ periodic_table = {
         "name": "Carbon",
         "weight": 12.011,
         "type": "Reactive Non-Metal",
-        "pos": (2, 14)
+        "pos": (2, 14),
+        "stability": True
     },
     "N": {
         "symbol": "N",
@@ -88,7 +93,8 @@ periodic_table = {
         "name": "Nitrogen",
         "weight": 14.00674,
         "type": "Reactive Non-Metal",
-        "pos": (2, 15)
+        "pos": (2, 15),
+        "stability": True
     },
     "O": {
         "symbol": "O",
@@ -96,7 +102,8 @@ periodic_table = {
         "name": "Oxygen",
         "weight": 15.9994,
         "type": "Reactive Non-Metal",
-        "pos": (2, 16)
+        "pos": (2, 16),
+        "stability": True
     },
     "F": {
         "symbol": "F",
@@ -104,7 +111,8 @@ periodic_table = {
         "name": "Fluorine",
         "weight": 18.9984032,
         "type": "Reactive Non-Metal",
-        "pos": (2, 17)
+        "pos": (2, 17),
+        "stability": True
     },
     "Ne": {
         "symbol": "Ne",
@@ -112,7 +120,8 @@ periodic_table = {
         "name": "Neon",
         "weight": 20.1797,
         "type": "Noble Gas",
-        "pos": (2, 18)
+        "pos": (2, 18),
+        "stability": True
     },
     "Na": {
         "symbol": "Na",
@@ -120,7 +129,8 @@ periodic_table = {
         "name": "Sodium",
         "weight": 22.98976928,
         "type": "Alkali Metal",
-        "pos": (3, 1)
+        "pos": (3, 1),
+        "stability": True
     },
     "Mg": {
         "symbol": "Mg",
@@ -128,7 +138,8 @@ periodic_table = {
         "name": "Magnesium",
         "weight": 24.305,
         "type": "Alkaline Earth Metal",
-        "pos": (3, 2)
+        "pos": (3, 2),
+        "stability": True
     },
     "Al": {
         "symbol": "Al",
@@ -136,7 +147,8 @@ periodic_table = {
         "name": "Aluminium",
         "weight": 26.9815386,
         "type": "Post-Transition Metal",
-        "pos": (3, 13)
+        "pos": (3, 13),
+        "stability": True
     },
     "Si": {
         "symbol": "Si",
@@ -144,7 +156,8 @@ periodic_table = {
         "name": "Silicon",
         "weight": 28.0855,
         "type": "Metalloid",
-        "pos": (3, 14)
+        "pos": (3, 14),
+        "stability": True
     },
     "P": {
         "symbol": "P",
@@ -152,7 +165,8 @@ periodic_table = {
         "name": "Phosphorus",
         "weight": 30.973762,
         "type": "Reactive Non-Metal",
-        "pos": (3, 15)
+        "pos": (3, 15),
+        "stability": True
     },
     "S": {
         "symbol": "S",
@@ -160,7 +174,8 @@ periodic_table = {
         "name": "Sulfur",
         "weight": 32.06,
         "type": "Reactive Non-Metal",
-        "pos": (3, 16)
+        "pos": (3, 16),
+        "stability": True
     },
     "Cl": {
         "symbol": "Cl",
@@ -168,7 +183,8 @@ periodic_table = {
         "name": "Chlorine",
         "weight": 35.45,
         "type": "Reactive Non-Metal",
-        "pos": (3, 17)
+        "pos": (3, 17),
+        "stability": True
     },
     "Ar": {
         "symbol": "Ar",
@@ -176,7 +192,8 @@ periodic_table = {
         "name": "Argon",
         "weight": 39.948,
         "type": "Noble Gas",
-        "pos": (3, 18)
+        "pos": (3, 18),
+        "stability": True
     },
     "K": {
         "symbol": "K",
@@ -184,7 +201,8 @@ periodic_table = {
         "name": "Potassium",
         "weight": 39.0983,
         "type": "Alkali Metal",
-        "pos": (4, 1)
+        "pos": (4, 1),
+        "stability": True
     },
     "Ca": {
         "symbol": "Ca",
@@ -192,7 +210,8 @@ periodic_table = {
         "name": "Calcium",
         "weight": 40.078,
         "type": "Alkaline Earth Metal",
-        "pos": (4, 2)
+        "pos": (4, 2),
+        "stability": True
     },
     "Sc": {
         "symbol": "Sc",
@@ -200,7 +219,8 @@ periodic_table = {
         "name": "Scandium",
         "weight": 44.955912,
         "type": "Transition Metal",
-        "pos": (4, 3)
+        "pos": (4, 3),
+        "stability": True
     },
     "Ti": {
         "symbol": "Ti",
@@ -208,7 +228,8 @@ periodic_table = {
         "name": "Titanium",
         "weight": 47.867,
         "type": "Transition Metal",
-        "pos": (4, 4)
+        "pos": (4, 4),
+        "stability": True
     },
     "V": {
         "symbol": "V",
@@ -216,7 +237,8 @@ periodic_table = {
         "name": "Vanadium",
         "weight": 50.9415,
         "type": "Transition Metal",
-        "pos": (4, 5)
+        "pos": (4, 5),
+        "stability": True
     },
     "Cr": {
         "symbol": "Cr",
@@ -224,7 +246,8 @@ periodic_table = {
         "name": "Chromium",
         "weight": 51.9961,
         "type": "Transition Metal",
-        "pos": (4, 6)
+        "pos": (4, 6),
+        "stability": True
     },
     "Mn": {
         "symbol": "Mn",
@@ -232,7 +255,8 @@ periodic_table = {
         "name": "Manganese",
         "weight": 54.938045,
         "type": "Transition Metal",
-        "pos": (4, 7)
+        "pos": (4, 7),
+        "stability": True
     },
     "Fe": {
         "symbol": "Fe",
@@ -240,7 +264,8 @@ periodic_table = {
         "name": "Iron",
         "weight": 55.847,
         "type": "Transition Metal",
-        "pos": (4, 8)
+        "pos": (4, 8),
+        "stability": True
     },
     "Co": {
         "symbol": "Co",
@@ -248,7 +273,8 @@ periodic_table = {
         "name": "Cobalt",
         "weight": 58.933195,
         "type": "Transition Metal",
-        "pos": (4, 9)
+        "pos": (4, 9),
+        "stability": True
     },
     "Ni": {
         "symbol": "Ni",
@@ -256,7 +282,8 @@ periodic_table = {
         "name": "Nickel",
         "weight": 58.6934,
         "type": "Transition Metal",
-        "pos": (4, 10)
+        "pos": (4, 10),
+        "stability": True
     },
     "Cu": {
         "symbol": "Cu",
@@ -264,7 +291,8 @@ periodic_table = {
         "name": "Copper",
         "weight": 63.546,
         "type": "Transition Metal",
-        "pos": (4, 11)
+        "pos": (4, 11),
+        "stability": True
     },
     "Zn": {
         "symbol": "Zn",
@@ -272,7 +300,8 @@ periodic_table = {
         "name": "Zinc",
         "weight": 65.38,
         "type": "Transition Metal",
-        "pos": (4, 12)
+        "pos": (4, 12),
+        "stability": True
     },
     "Ga": {
         "symbol": "Ga",
@@ -280,7 +309,8 @@ periodic_table = {
         "name": "Gallium",
         "weight": 69.723,
         "type": "Post-Transition Metal",
-        "pos": (4, 13)
+        "pos": (4, 13),
+        "stability": True
     },
     "Ge": {
         "symbol": "Ge",
@@ -288,7 +318,8 @@ periodic_table = {
         "name": "Germanium",
         "weight": 72.64,
         "type": "Metalloid",
-        "pos": (4, 14)
+        "pos": (4, 14),
+        "stability": True
     },
     "As": {
         "symbol": "As",
@@ -296,7 +327,8 @@ periodic_table = {
         "name": "Arsenic",
         "weight": 74.9216,
         "type": "Metalloid",
-        "pos": (4, 15)
+        "pos": (4, 15),
+        "stability": True
     },
     "Se": {
         "symbol": "Se",
@@ -304,7 +336,8 @@ periodic_table = {
         "name": "Selenium",
         "weight": 78.971,
         "type": "Reactive Non-Metal",
-        "pos": (4, 16)
+        "pos": (4, 16),
+        "stability": True
     },
     "Br": {
         "symbol": "Br",
@@ -312,7 +345,8 @@ periodic_table = {
         "name": "Bromine",
         "weight": 79.904,
         "type": "Reactive Non-Metal",
-        "pos": (4, 17)
+        "pos": (4, 17),
+        "stability": True
     },
     "Kr": {
         "symbol": "Kr",
@@ -320,7 +354,8 @@ periodic_table = {
         "name": "Krypton",
         "weight": 83.798,
         "type": "Noble Gas",
-        "pos": (4, 18)
+        "pos": (4, 18),
+        "stability": True
     },
     "Rb": {
         "symbol": "Rb",
@@ -328,7 +363,8 @@ periodic_table = {
         "name": "Rubidium",
         "weight": 85.4678,
         "type": "Alkali Metal",
-        "pos": (5, 1)
+        "pos": (5, 1),
+        "stability": True
     },
     "Sr": {
         "symbol": "Sr",
@@ -336,7 +372,8 @@ periodic_table = {
         "name": "Strontium",
         "weight": 87.62,
         "type": "Alkaline Earth Metal",
-        "pos": (5, 2)
+        "pos": (5, 2),
+        "stability": True
     },
     "Y": {
         "symbol": "Y",
@@ -344,7 +381,8 @@ periodic_table = {
         "name": "Yttrium",
         "weight": 88.90585,
         "type": "Transition Metal",
-        "pos": (5, 3)
+        "pos": (5, 3),
+        "stability": True
     },
     "Zr": {
         "symbol": "Zr",
@@ -352,7 +390,8 @@ periodic_table = {
         "name": "Zirconium",
         "weight": 91.224,
         "type": "Transition Metal",
-        "pos": (5, 4)
+        "pos": (5, 4),
+        "stability": True
     },
     "Nb": {
         "symbol": "Nb",
@@ -360,7 +399,8 @@ periodic_table = {
         "name": "Niobium",
         "weight": 92.90638,
         "type": "Transition Metal",
-        "pos": (5, 5)
+        "pos": (5, 5),
+        "stability": True
     },
     "Mo": {
         "symbol": "Mo",
@@ -368,7 +408,8 @@ periodic_table = {
         "name": "Molybdenum",
         "weight": 95.95,
         "type": "Transition Metal",
-        "pos": (5, 6)
+        "pos": (5, 6),
+        "stability": True
     },
     "Tc": {
         "symbol": "Tc",
@@ -376,7 +417,8 @@ periodic_table = {
         "name": "Technetium",
         "weight": "(98)",
         "type": "Transition Metal",
-        "pos": (5, 7)
+        "pos": (5, 7),
+        "stability": False
     },
     "Ru": {
         "symbol": "Ru",
@@ -384,7 +426,8 @@ periodic_table = {
         "name": "Ruthenium",
         "weight": 101.07,
         "type": "Transition Metal",
-        "pos": (5, 8)
+        "pos": (5, 8),
+        "stability": True
     },
     "Rh": {
         "symbol": "Rh",
@@ -392,7 +435,8 @@ periodic_table = {
         "name": "Rhodium",
         "weight": 102.9055,
         "type": "Transition Metal",
-        "pos": (5, 9)
+        "pos": (5, 9),
+        "stability": True
     },
     "Pd": {
         "symbol": "Pd",
@@ -400,7 +444,8 @@ periodic_table = {
         "name": "Palladium",
         "weight": 106.42,
         "type": "Transition Metal",
-        "pos": (5, 10)
+        "pos": (5, 10),
+        "stability": True
     },
     "Ag": {
         "symbol": "Ag",
@@ -408,7 +453,8 @@ periodic_table = {
         "name": "Silver",
         "weight": 107.8682,
         "type": "Transition Metal",
-        "pos": (5, 11)
+        "pos": (5, 11),
+        "stability": True
     },
     "Cd": {
         "symbol": "Cd",
@@ -416,7 +462,8 @@ periodic_table = {
         "name": "Cadmium",
         "weight": 112.411,
         "type": "Transition Metal",
-        "pos": (5, 12)
+        "pos": (5, 12),
+        "stability": True
     },
     "In": {
         "symbol": "In",
@@ -424,7 +471,8 @@ periodic_table = {
         "name": "Indium",
         "weight": 114.818,
         "type": "Post-Transition Metal",
-        "pos": (5, 13)
+        "pos": (5, 13),
+        "stability": True
     },
     "Sn": {
         "symbol": "Sn",
@@ -432,7 +480,8 @@ periodic_table = {
         "name": "Tin",
         "weight": 118.71,
         "type": "Post-Transition Metal",
-        "pos": (5, 14)
+        "pos": (5, 14),
+        "stability": True
     },
     "Sb": {
         "symbol": "Sb",
@@ -440,7 +489,8 @@ periodic_table = {
         "name": "Antimony",
         "weight": 121.76,
         "type": "Metalloid",
-        "pos": (5, 15)
+        "pos": (5, 15),
+        "stability": True
     },
     "Te": {
         "symbol": "Te",
@@ -448,7 +498,8 @@ periodic_table = {
         "name": "Tellurium",
         "weight": 127.6,
         "type": "Metalloid",
-        "pos": (5, 16)
+        "pos": (5, 16),
+        "stability": True
     },
     "I": {
         "symbol": "I",
@@ -456,7 +507,8 @@ periodic_table = {
         "name": "Iodine",
         "weight": 126.90447,
         "type": "Reactive Non-Metal",
-        "pos": (5, 17)
+        "pos": (5, 17),
+        "stability": True
     },
     "Xe": {
         "symbol": "Xe",
@@ -464,7 +516,8 @@ periodic_table = {
         "name": "Xenon",
         "weight": 131.293,
         "type": "Noble Gas",
-        "pos": (5, 18)
+        "pos": (5, 18),
+        "stability": True
     },
     "Cs": {
         "symbol": "Cs",
@@ -472,7 +525,8 @@ periodic_table = {
         "name": "Caesium",
         "weight": 132.9054519,
         "type": "Alkali Metal",
-        "pos": (6, 1)
+        "pos": (6, 1),
+        "stability": True
     },
     "Ba": {
         "symbol": "Ba",
@@ -480,7 +534,8 @@ periodic_table = {
         "name": "Barium",
         "weight": 137.327,
         "type": "Alkaline Earth Metal",
-        "pos": (6, 2)
+        "pos": (6, 2),
+        "stability": True
     },
     "57-71": {
         "symbol": "57-71",
@@ -488,7 +543,8 @@ periodic_table = {
         "name": None,
         "weight": None,
         "type": "Lanthanoid",
-        "pos": (6, 3)
+        "pos": (6, 3.1),
+        "stability": True
     },
     "La": {
         "symbol": "La",
@@ -496,7 +552,8 @@ periodic_table = {
         "name": "Lanthanum",
         "weight": 138.90547,
         "type": "Lanthanoid",
-        "pos": (6, 4.1)
+        "pos": (6, 4.1),
+        "stability": True
     },
     "Ce": {
         "symbol": "Ce",
@@ -504,7 +561,8 @@ periodic_table = {
         "name": "Cerium",
         "weight": 140.116,
         "type": "Lanthanoid",
-        "pos": (6, 5.1)
+        "pos": (6, 5.1),
+        "stability": True
     },
     "Pr": {
         "symbol": "Pr",
@@ -512,7 +570,8 @@ periodic_table = {
         "name": "Praseodymium",
         "weight": 140.90765,
         "type": "Lanthanoid",
-        "pos": (6, 6.1)
+        "pos": (6, 6.1),
+        "stability": True
     },
     "Nd": {
         "symbol": "Nd",
@@ -520,7 +579,8 @@ periodic_table = {
         "name": "Neodymium",
         "weight": 144.242,
         "type": "Lanthanoid",
-        "pos": (6, 7.1)
+        "pos": (6, 7.1),
+        "stability": True
     },
     "Pm": {
         "symbol": "Pm",
@@ -528,7 +588,8 @@ periodic_table = {
         "name": "Promethium",
         "weight": "(145)",
         "type": "Lanthanoid",
-        "pos": (6, 8.1)
+        "pos": (6, 8.1),
+        "stability": False
     },
     "Sm": {
         "symbol": "Sm",
@@ -536,7 +597,8 @@ periodic_table = {
         "name": "Samarium",
         "weight": 150.36,
         "type": "Lanthanoid",
-        "pos": (6, 9.1)
+        "pos": (6, 9.1),
+        "stability": True
     },
     "Eu": {
         "symbol": "Eu",
@@ -544,7 +606,8 @@ periodic_table = {
         "name": "Europium",
         "weight": 151.964,
         "type": "Lanthanoid",
-        "pos": (6, 10.1)
+        "pos": (6, 10.1),
+        "stability": True
     },
     "Gd": {
         "symbol": "Gd",
@@ -552,7 +615,8 @@ periodic_table = {
         "name": "Gadolinium",
         "weight": 157.25,
         "type": "Lanthanoid",
-        "pos": (6, 11.1)
+        "pos": (6, 11.1),
+        "stability": True
     },
     "Tb": {
         "symbol": "Tb",
@@ -560,7 +624,8 @@ periodic_table = {
         "name": "Terbium",
         "weight": 158.92535,
         "type": "Lanthanoid",
-        "pos": (6, 12.1)
+        "pos": (6, 12.1),
+        "stability": True
     },
     "Dy": {
         "symbol": "Dy",
@@ -568,7 +633,8 @@ periodic_table = {
         "name": "Dysprosium",
         "weight": 162.1,
         "type": "Lanthanoid",
-        "pos": (6, 13.1)
+        "pos": (6, 13.1),
+        "stability": True
     },
     "Ho": {
         "symbol": "Ho",
@@ -576,7 +642,8 @@ periodic_table = {
         "name": "Holmium",
         "weight": 164.93032,
         "type": "Lanthanoid",
-        "pos": (6, 14.1)
+        "pos": (6, 14.1),
+        "stability": True
     },
     "Er": {
         "symbol": "Er",
@@ -584,7 +651,8 @@ periodic_table = {
         "name": "Erbium",
         "weight": 167.259,
         "type": "Lanthanoid",
-        "pos": (6, 15.1)
+        "pos": (6, 15.1),
+        "stability": True
     },
     "Tm": {
         "symbol": "Tm",
@@ -592,7 +660,8 @@ periodic_table = {
         "name": "Thulium",
         "weight": 168.93422,
         "type": "Lanthanoid",
-        "pos": (6, 16.1)
+        "pos": (6, 16.1),
+        "stability": True
     },
     "Yb": {
         "symbol": "Yb",
@@ -600,7 +669,8 @@ periodic_table = {
         "name": "Ytterbium",
         "weight": 173.054,
         "type": "Lanthanoid",
-        "pos": (6, 17.1)
+        "pos": (6, 17.1),
+        "stability": True
     },
     "Lu": {
         "symbol": "Lu",
@@ -608,7 +678,8 @@ periodic_table = {
         "name": "Lutetium",
         "weight": 174.9668,
         "type": "Lanthanoid",
-        "pos": (6, 18.1)
+        "pos": (6, 18.1),
+        "stability": True
     },
     "Hf": {
         "symbol": "Hf",
@@ -616,7 +687,8 @@ periodic_table = {
         "name": "Hafnium",
         "weight": 178.49,
         "type": "Transition Metal",
-        "pos": (6, 4)
+        "pos": (6, 4),
+        "stability": True
     },
     "Ta": {
         "symbol": "Ta",
@@ -624,7 +696,8 @@ periodic_table = {
         "name": "Tantalum",
         "weight": 180.94788,
         "type": "Transition Metal",
-        "pos": (6, 5)
+        "pos": (6, 5),
+        "stability": True
     },
     "W": {
         "symbol": "W",
@@ -632,7 +705,8 @@ periodic_table = {
         "name": "Tungsten",
         "weight": 183.84,
         "type": "Transition Metal",
-        "pos": (6, 6)
+        "pos": (6, 6),
+        "stability": True
     },
     "Re": {
         "symbol": "Re",
@@ -640,7 +714,8 @@ periodic_table = {
         "name": "Rhenium",
         "weight": 186.207,
         "type": "Transition Metal",
-        "pos": (6, 7)
+        "pos": (6, 7),
+        "stability": True
     },
     "Os": {
         "symbol": "Os",
@@ -648,7 +723,8 @@ periodic_table = {
         "name": "Osmium",
         "weight": 190.23,
         "type": "Transition Metal",
-        "pos": (6, 8)
+        "pos": (6, 8),
+        "stability": True
     },
     "Ir": {
         "symbol": "Ir",
@@ -656,7 +732,8 @@ periodic_table = {
         "name": "Iridium",
         "weight": 192.217,
         "type": "Transition Metal",
-        "pos": (6, 9)
+        "pos": (6, 9),
+        "stability": True
     },
     "Pt": {
         "symbol": "Pt",
@@ -664,7 +741,8 @@ periodic_table = {
         "name": "Platinum",
         "weight": 195.084,
         "type": "Transition Metal",
-        "pos": (6, 10)
+        "pos": (6, 10),
+        "stability": True
     },
     "Au": {
         "symbol": "Au",
@@ -672,7 +750,8 @@ periodic_table = {
         "name": "Gold",
         "weight": 196.966569,
         "type": "Transition Metal",
-        "pos": (6, 11)
+        "pos": (6, 11),
+        "stability": True
     },
     "Hg": {
         "symbol": "Hg",
@@ -680,7 +759,8 @@ periodic_table = {
         "name": "Mercury",
         "weight": 200.592,
         "type": "Transition Metal",
-        "pos": (6, 12)
+        "pos": (6, 12),
+        "stability": True
     },
     "Tl": {
         "symbol": "Tl",
@@ -688,7 +768,8 @@ periodic_table = {
         "name": "Thallium",
         "weight": 204.3833,
         "type": "Post-Transition Metal",
-        "pos": (6, 13)
+        "pos": (6, 13),
+        "stability": True
     },
     "Pb": {
         "symbol": "Pb",
@@ -696,7 +777,8 @@ periodic_table = {
         "name": "Lead",
         "weight": 207.2,
         "type": "Post-Transition Metal",
-        "pos": (6, 14)
+        "pos": (6, 14),
+        "stability": True
     },
     "Bi": {
         "symbol": "Bi",
@@ -704,7 +786,8 @@ periodic_table = {
         "name": "Bismuth",
         "weight": 208.9804,
         "type": "Post-Transition Metal",
-        "pos": (6, 15)
+        "pos": (6, 15),
+        "stability": True
     },
     "Po": {
         "symbol": "Po",
@@ -712,7 +795,8 @@ periodic_table = {
         "name": "Polonium",
         "weight": "(209)",
         "type": "Post-Transition Metal",
-        "pos": (6, 16)
+        "pos": (6, 16),
+        "stability": False
     },
     "At": {
         "symbol": "At",
@@ -720,7 +804,8 @@ periodic_table = {
         "name": "Astatine",
         "weight": "(210)",
         "type": "Metalloid",
-        "pos": (6, 17)
+        "pos": (6, 17),
+        "stability": False
     },
     "Rn": {
         "symbol": "Rn",
@@ -728,7 +813,8 @@ periodic_table = {
         "name": "Radon",
         "weight": "(222.0176)",
         "type": "Noble Gas",
-        "pos": (6, 18)
+        "pos": (6, 18),
+        "stability": False
     },
     "Fr": {
         "symbol": "Fr",
@@ -736,7 +822,8 @@ periodic_table = {
         "name": "Francium",
         "weight": "(223)",
         "type": "Alkali Metal",
-        "pos": (7, 1)
+        "pos": (7, 1),
+        "stability": False
     },
     "Ra": {
         "symbol": "Ra",
@@ -744,7 +831,8 @@ periodic_table = {
         "name": "Radium",
         "weight": "(226)",
         "type": "Alkaline Earth Metal",
-        "pos": (7, 2)
+        "pos": (7, 2),
+        "stability": False
     },
     "79-103": {
         "symbol": "79-103",
@@ -752,7 +840,8 @@ periodic_table = {
         "name": None,
         "weight": None,
         "type": "Actinoid",
-        "pos": (7, 3)
+        "pos": (7, 3.0),
+        "stability": True
     },
     "Ac": {
         "symbol": "Ac",
@@ -760,7 +849,8 @@ periodic_table = {
         "name": "Actinium",
         "weight": "(227)",
         "type": "Actinoid",
-        "pos": (7, 4.2)
+        "pos": (7, 4.2),
+        "stability": False
     },
     "Th": {
         "symbol": "Th",
@@ -768,7 +858,8 @@ periodic_table = {
         "name": "Thorium",
         "weight": 232.03806,
         "type": "Actinoid",
-        "pos": (7, 5.2)
+        "pos": (7, 5.2),
+        "stability": True
     },
     "Pa": {
         "symbol": "Pa",
@@ -776,7 +867,8 @@ periodic_table = {
         "name": "Protactinium",
         "weight": 231.03588,
         "type": "Actinoid",
-        "pos": (7, 6.2)
+        "pos": (7, 6.2),
+        "stability": True
     },
     "U": {
         "symbol": "U",
@@ -784,7 +876,8 @@ periodic_table = {
         "name": "Uranium",
         "weight": 238.02891,
         "type": "Actinoid",
-        "pos": (7, 7.2)
+        "pos": (7, 7.2),
+        "stability": True
     },
     "Np": {
         "symbol": "Np",
@@ -792,7 +885,8 @@ periodic_table = {
         "name": "Neptunium",
         "weight": "(237.0482)",
         "type": "Actinoid",
-        "pos": (7, 8.2)
+        "pos": (7, 8.2),
+        "stability": False
     },
     "Pu": {
         "symbol": "Pu",
@@ -800,7 +894,8 @@ periodic_table = {
         "name": "Plutonium",
         "weight": "(244.0642)",
         "type": "Actinoid",
-        "pos": (7, 9.2)
+        "pos": (7, 9.2),
+        "stability": False
     },
     "Am": {
         "symbol": "Am",
@@ -808,7 +903,8 @@ periodic_table = {
         "name": "Americium",
         "weight": "(243.0614)",
         "type": "Actinoid",
-        "pos": (7, 10.2)
+        "pos": (7, 10.2),
+        "stability": False
     },
     "Cm": {
         "symbol": "Cm",
@@ -816,7 +912,8 @@ periodic_table = {
         "name": "Curium",
         "weight": "(247.0703)",
         "type": "Actinoid",
-        "pos": (7, 11.2)
+        "pos": (7, 11.2),
+        "stability": False
     },
     "Bk": {
         "symbol": "Bk",
@@ -824,7 +921,8 @@ periodic_table = {
         "name": "Berkelium",
         "weight": "(247.0703)",
         "type": "Actinoid",
-        "pos": (7, 12.2)
+        "pos": (7, 12.2),
+        "stability": False
     },
     "Cf": {
         "symbol": "Cf",
@@ -832,7 +930,8 @@ periodic_table = {
         "name": "Californium",
         "weight": "(251.0796)",
         "type": "Actinoid",
-        "pos": (7, 13.2)
+        "pos": (7, 13.2),
+        "stability": False
     },
     "Es": {
         "symbol": "Es",
@@ -840,7 +939,8 @@ periodic_table = {
         "name": "Einsteinium",
         "weight": "(252.083)",
         "type": "Actinoid",
-        "pos": (7, 14.2)
+        "pos": (7, 14.2),
+        "stability": False
     },
     "Fm": {
         "symbol": "Fm",
@@ -848,7 +948,8 @@ periodic_table = {
         "name": "Fermium",
         "weight": "(257.0951)",
         "type": "Actinoid",
-        "pos": (7, 15.2)
+        "pos": (7, 15.2),
+        "stability": False
     },
     "Md": {
         "symbol": "Md",
@@ -856,7 +957,8 @@ periodic_table = {
         "name": "Mendelevium",
         "weight": "(258.100)",
         "type": "Actinoid",
-        "pos": (7, 16.2)
+        "pos": (7, 16.2),
+        "stability": False
     },
     "No": {
         "symbol": "No",
@@ -864,7 +966,8 @@ periodic_table = {
         "name": "Nobelium",
         "weight": "(259.101)",
         "type": "Actinoid",
-        "pos": (7, 17.2)
+        "pos": (7, 17.2),
+        "stability": False
     },
     "Lr": {
         "symbol": "Lr",
@@ -872,7 +975,8 @@ periodic_table = {
         "name": "Lawrencium",
         "weight": "(262.110)",
         "type": "Actinoid",
-        "pos": (7, 18.2)
+        "pos": (7, 18.2),
+        "stability": False
     },
     "Rf": {
         "symbol": "Rf",
@@ -880,15 +984,17 @@ periodic_table = {
         "name": "Rutherfordium",
         "weight": "(267.122)",
         "type": "Transition Metal",
-        "pos": (7, 4)
+        "pos": (7, 4),
+        "stability": False
     },
     "Db": {
         "symbol": "Db",
-        "nNum": 120,
+        "nNum": 105,
         "name": "Dubnium",
         "weight": "(268.127)",
         "type": "Transition Metal",
-        "pos": (7, 5)
+        "pos": (7, 5),
+        "stability": False
     },
     "Sg": {
         "symbol": "Sg",
@@ -896,7 +1002,8 @@ periodic_table = {
         "name": "Seaborgium",
         "weight": "(271.133)",
         "type": "Transition Metal",
-        "pos": (7, 6)
+        "pos": (7, 6),
+        "stability": False
     },
     "Bh": {
         "symbol": "Bh",
@@ -904,7 +1011,8 @@ periodic_table = {
         "name": "Bohrium",
         "weight": "(272.138)",
         "type": "Transition Metal",
-        "pos": (7, 7)
+        "pos": (7, 7),
+        "stability": False
     },
     "Hs": {
         "symbol": "Hs",
@@ -912,7 +1020,8 @@ periodic_table = {
         "name": "Hassium",
         "weight": "(270.150)",
         "type": "Transition Metal",
-        "pos": (7, 8)
+        "pos": (7, 8),
+        "stability": False
     },
     "Mt": {
         "symbol": "Mt",
@@ -920,7 +1029,8 @@ periodic_table = {
         "name": "Meitnerium",
         "weight": "(278.170)",
         "type": "Transactinide",
-        "pos": (7, 9)
+        "pos": (7, 9),
+        "stability": False
     },
     "Ds": {
         "symbol": "Ds",
@@ -928,7 +1038,8 @@ periodic_table = {
         "name": "Darmstadtium",
         "weight": "(281.175)",
         "type": "Transactinide",
-        "pos": (7, 10)
+        "pos": (7, 10),
+        "stability": False
     },
     "Rg": {
         "symbol": "Rg",
@@ -936,7 +1047,8 @@ periodic_table = {
         "name": "Roentgenium",
         "weight": "(282.178)",
         "type": "Transactinide",
-        "pos": (7, 11)
+        "pos": (7, 11),
+        "stability": False
     },
     "Cn": {
         "symbol": "Cn",
@@ -944,7 +1056,8 @@ periodic_table = {
         "name": "Copernicium",
         "weight": "(285.185)",
         "type": "Transactinide",
-        "pos": (7, 12)
+        "pos": (7, 12),
+        "stability": False
     },
     "Nh": {
         "symbol": "Nh",
@@ -952,7 +1065,8 @@ periodic_table = {
         "name": "Nihonium",
         "weight": "(286.190)",
         "type": "Superactinide",
-        "pos": (7, 13)
+        "pos": (7, 13),
+        "stability": False
     },
     "Fl": {
         "symbol": "Fl",
@@ -960,7 +1074,8 @@ periodic_table = {
         "name": "Flerovium",
         "weight": "(289.198)",
         "type": "Superactinide",
-        "pos": (7, 14)
+        "pos": (7, 14),
+        "stability": False
     },
     "Mc": {
         "symbol": "Mc",
@@ -968,7 +1083,8 @@ periodic_table = {
         "name": "Moscovium",
         "weight": "(290.200)",
         "type": "Superactinide",
-        "pos": (7, 15)
+        "pos": (7, 15),
+        "stability": False
     },
     "Lv": {
         "symbol": "Lv",
@@ -976,7 +1092,8 @@ periodic_table = {
         "name": "Livermorium",
         "weight": "(293.210)",
         "type": "Superactinide",
-        "pos": (7, 16)
+        "pos": (7, 16),
+        "stability": False
     },
     "Ts": {
         "symbol": "Ts",
@@ -984,7 +1101,8 @@ periodic_table = {
         "name": "Tennessine",
         "weight": "(294.216)",
         "type": "Superactinide",
-        "pos": (7, 17)
+        "pos": (7, 17),
+        "stability": False
     },
     "Og": {
         "symbol": "Og",
@@ -992,23 +1110,8 @@ periodic_table = {
         "name": "Oganesson",
         "weight": "(294.220)",
         "type": "Noble Gas",
-        "pos": (7, 18)
-    },
-    "6": {
-        "symbol": "6",
-        "nNum": None,
-        "name": None,
-        "weight": None,
-        "type": "Lanthanoid",
-        "pos": (8, 3)
-    },
-    "7": {
-        "symbol": "7",
-        "nNum": None,
-        "name": None,
-        "weight": None,
-        "type": "Actinoid",
-        "pos": (9, 3)
+        "pos": (7, 18),
+        "stability": False
     }
 }
 
@@ -1060,7 +1163,7 @@ class QtPeriodicTable(QMainWindow):
         modeLayout.addWidget(self.modeWidget, Qt.AlignmentFlag.AlignTop)
         modeLayout.addWidget(self.modeText, Qt.AlignmentFlag.AlignHCenter)
 
-        self.grid.addLayout(modeLayout, 9, 1, Qt.AlignmentFlag.AlignTop)
+        self.grid.addLayout(modeLayout, 1, 3, Qt.AlignmentFlag.AlignTop)
 
         for i in range(1, 19):
             self.grid.setColumnStretch(i, 1)
@@ -1121,6 +1224,7 @@ class QtPeriodicTable(QMainWindow):
             info['name'] = periodic_table[spectra['symbol']]['name']
             info['type'] = periodic_table[spectra['symbol']]['type']
             info['weight'] = periodic_table[spectra['symbol']]['weight']
+            info['stability'] = periodic_table[spectra['symbol']]['weight']
             isoCell = ElementCell(info, parent=self)
             isoCell.zNum = spectra['zNum']
             isoCell.setObjectName('iso')
@@ -1137,19 +1241,20 @@ class QtPeriodicTable(QMainWindow):
                     border: 1px solid #444;
                 }}
                 QLabel#Filler{{
-                    font-size: {height // 120}pt;
+                    font-size: {height // 180}pt;
+                    background-color: {color}
                 }}
                 QWidget#cell:hover, QWidget#iso:hover{{
                     border: 1px solid #FFF;
                 }}
                 QLabel#nNum, QLabel#name, QLabel#weight{{
                     color: #DDD;
-                    font-size: {height // 120}pt;
+                    font-size: {height // 180}pt;
                     font-weight: 700;
                 }}
                 QLabel#symbol{{
                     color: #FFF;
-                    font-size: {height // 80}pt;
+                    font-size: {height // 120}pt;
                     font-weight: 800;
                 }}
                 """)

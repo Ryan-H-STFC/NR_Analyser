@@ -86,5 +86,6 @@ params = {
     'show_second_der': False,
     # 'Normalise ENDF data on plotting
     'normalise': False,
-    'limits_from_first_der': False
+    'limits_from_first_der': False,
+    'removeBaseline': False
 }

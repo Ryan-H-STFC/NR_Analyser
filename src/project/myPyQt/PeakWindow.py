@@ -37,7 +37,7 @@ matplotlib.rcParams['figure.subplot.wspace'] = 0.2
 
 class PeakWindow(QMainWindow):
 
-    def __init__(self, parent: QWidget | None = ..., flags: Qt.WindowType = ..., index: QModelIndex = None) -> None:
+    def __init__(self, parent: QWidget | None = ..., flags: Qt.WindowType = ..., index: QModelIndex = None, ) -> None:
         super().__init__(parent, flags)
         # Setting title and geometry
         self.setWindowTitle("Peak Plotting")

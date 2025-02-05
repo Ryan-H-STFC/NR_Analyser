@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 import pandas
 from pandas import DataFrame
 from decimal import Decimal, getcontext
+from time import perf_counter
 import concurrent.futures
 
 from project.spectra.PeakDetection import PeakDetector
@@ -13,9 +14,8 @@ from project.helpers.getSpacedElements import getSpacedElements
 from project.helpers.integration import integrate_simps
 from project.helpers.nearestNumber import nearestnumber
 from project.helpers.resourcePath import resource_path
-from project.helpers.smartRound import smart_round
 from project.spectra.Integrator import IsotopeIntegrator
-from time import perf_counter
+
 from project.settings import params
 
 
@@ -94,6 +94,7 @@ class SpectraData:
         t3 = perf_counter()
         self.name: str = name
         self.plotType: str = 'n-tot' if 'tot' in self.name else 'n-g'
+        self.title = f"{name}-{'ToF' if isToF else 'Energy'}"
         self.numPeaks: int = numPeaks
         self.distributions: dict[float] = distributions
         self.defaultDist: dict[float] = defaultDist
@@ -155,6 +156,9 @@ class SpectraData:
             self.graphData.sort_values(0, ignore_index=True, inplace=True)
 
             self.peakDetector: PeakDetector = PeakDetector(self.name, self.graphData, self.threshold, self.isImported)
+
+        if params['removeBaseline']:
+            self.graphData[1] = self.graphData[1] + self.peakDetector.baselineGraph.iloc[:, 1]
         t4 = perf_counter()
 
         print(f"Elapsed Time - Start Init - {t4 - t3}")
@@ -244,7 +248,7 @@ class SpectraData:
                     self.recalculateAllPeakData(which='min')
 
         t4 = perf_counter()
-        print(f"Elapsed Time - Max Peak Limits - {t4 - t3}")
+        print(f"Elapsed Time - Min Peak Limits - {t4 - t3}")
 
         if self.peakDetector is not None:
             self.numPeaks = self.peakDetector.numPeaks
@@ -508,7 +512,7 @@ class SpectraData:
         tableData = self.maxTableData if which == 'max' else self.minTableData
         peaks = self.maxima if which == 'max' else self.minima
         numPeaks = self.maxima.shape[0] if which == 'max' else self.minima.shape[0]
-        if tableData[1:].empty:
+        if tableData.empty:
             return
 
         rankCol = "Rank by Integral" if byIntegral else "Rank by Peak Width"
@@ -516,12 +520,12 @@ class SpectraData:
         yCol = "Peak Height"
         for i in range(numPeaks):
             if byIntegral:
-                row = tableData[1:].loc[
-                    (tableData[rankCol][1:] == i)
+                row = tableData.loc[
+                    (tableData[rankCol] == i)
                 ]
             else:
-                row = tableData[1:].loc[
-                    (tableData[rankCol][1:] == f'({i})')
+                row = tableData.loc[
+                    (tableData[rankCol] == f'({i})')
                 ]
 
             if row.empty:
@@ -621,7 +625,7 @@ class SpectraData:
             [
                 integralRanks[x],                                                           # Rank by Integral
                 float(np.format_float_positional(x, 6, fractional=False)),                  # Value
-                f"({np.where(peakList[:, 0] == x)[0][0]})",                                    # Rank by Value
+                f"({np.where(peakList[:, 0] == x)[0][0]})",                                 # Rank by Value
                 float(np.format_float_positional(integrals[x][0], 6, fractional=False)),    # Integral
                 float(np.format_float_positional(peakWidth[x], 6, fractional=False)),       # Peak Width
                 f"({peakWidthRank[x]})",                                                    # Rank by Peak Width
@@ -637,12 +641,12 @@ class SpectraData:
 
         if which == 'max':
             self.maxTableData = pandas.DataFrame(tableDataTemp, columns=columns)
-            self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 8]
+            # self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.maxTableData.index += 1
             self.maxTableData.sort_index(inplace=True)
         else:
             self.minTableData = pandas.DataFrame(tableDataTemp, columns=columns)
-            self.minTableData.loc[-1] = [f"{self.name}", *[""] * 8]
+            # self.minTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.minTableData.index += 1
             self.minTableData.sort_index(inplace=True)
         self.changePeakTableData(which=which)
@@ -741,12 +745,12 @@ class SpectraData:
 
         if which == 'max':
             self.maxTableData = pandas.DataFrame(tableDataTemp, columns=columns)
-            self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 8]
+            # self.maxTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.maxTableData.index += 1
             self.maxTableData.sort_index(inplace=True)
         else:
             self.minTableData = pandas.DataFrame(tableDataTemp, columns=columns)
-            self.minTableData.loc[-1] = [f"{self.name}", *[""] * 8]
+            # self.minTableData.loc[-1] = [f"{self.name}", *[""] * 8]
             self.minTableData.index += 1
             self.minTableData.sort_index(inplace=True)
         self.changePeakTableData(which=which)

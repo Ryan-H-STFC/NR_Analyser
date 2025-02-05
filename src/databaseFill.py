@@ -71,9 +71,9 @@ def exportDatabaseValues(name):
                               updatingDatabase=True
                               )
         name = name.replace("element_", "").replace("-Energy", "").replace("-ToF", "")
-        spectra.maxTableData[1:].to_csv(
+        spectra.maxTableData.to_csv(
             f'{exportDir}/Peak Information/{'TOF' if tof else 'Energy'}/{name}_tableData_max.csv', index=False)
-        spectra.minTableData[1:].to_csv(
+        spectra.minTableData.to_csv(
             f'{exportDir}/Peak Information/{'TOF' if tof else 'Energy'}/{name}_tableData_min.csv', index=False)
 
         pd.DataFrame(spectra.maxPeakLimitsX.values()

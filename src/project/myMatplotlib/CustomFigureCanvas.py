@@ -51,8 +51,7 @@ class FigureCanvas(FigureCanvasQTAgg):
                     anno.remove()
                 self.widgetParent.elementDataNames.clear()
                 self.widgetParent.spectraData.pop(res.text())
-                for row in self.widgetParent.titleRows:
-                    self.widgetParent.table.setItemDelegateForRow(row, None)
+
                 self.widgetParent.updateLegend()
                 axis.figure.canvas.draw()
                 self.widgetParent.addTableData()

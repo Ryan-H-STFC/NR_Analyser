@@ -64,14 +64,13 @@ class PeakDetector:
             self.peaks = np.array(graphData.loc[peakIndexes])
             self.prominences = info['prominences']
 
-        # self.npDer = np.gradient(self.interp[1])
-        # self.npSecDer = np.gradient(self.npDer)
+        self.npDer = np.gradient(self.interp[1])
+        self.npSecDer = np.gradient(self.npDer)
 
-        # self.smoothGraph = DataFrame([self.interp[0], self.interp[1]]).T
-        # self.derivative = DataFrame([self.interp[0], self.npDer]).T
-        # self.secDerivative = DataFrame([self.interp[0], self.npSecDer]).T
-        # self.infls = np.where(np.diff(np.sign(self.npSecDer)))[0]
-        # self.peaks = np.array(graphData.loc[results['df'][results['df']['peak'] == True]['x']])
+        self.smoothGraph = DataFrame([self.interp[0], self.interp[1]]).T
+        self.derivative = DataFrame([self.interp[0], self.npDer]).T
+        self.secDerivative = DataFrame([self.interp[0], self.npSecDer]).T
+        self.infls = np.where(np.diff(np.sign(self.npSecDer)))[0]
 
         baselineY = baseline(graphData.iloc[:, 1], 5)
 
@@ -83,6 +82,7 @@ class PeakDetector:
         self.maxPeakLimitsY: dict = None
         self.minPeakLimitsX: dict = None
         self.minPeakLimitsY: dict = None
+
         self.numPeaks = self.maximaList.shape[0]
         t2 = perf_counter()
 
@@ -101,7 +101,7 @@ class PeakDetector:
             Defaults to 'max'.
         """
         t1 = perf_counter()
-        peakList = self.peaks[np.where(self.peaks[:, 1] >= self.threshold)] if which == 'max' else self.dips
+        peakList = self.peaks if which == 'max' else self.dips
         graphData = self.graphData
         if peakList is None:
             return

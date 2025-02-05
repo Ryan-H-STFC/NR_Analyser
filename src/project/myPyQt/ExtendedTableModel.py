@@ -1,11 +1,6 @@
 from __future__ import annotations
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PyQt6.QtWidgets import QTableView
-from pandas import DataFrame, concat
-
-from project.myPyQt.CustomSortingProxy import CustomSortingProxy
-
-# todo - Add dictionary for row indexes for each section of data associated with each plotted element.
+from pandas import DataFrame
 
 
 class ExtendedQTableModel(QAbstractTableModel):
@@ -58,21 +53,3 @@ class ExtendedQTableModel(QAbstractTableModel):
             return self.columns[section]
         if orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
             return self._data.index[section]
-
-    # def sort(self, column: int, order: Qt.SortOrder = ...) -> None:
-    #     proxy = CustomSortingProxy()
-    #     proxy.setSourceModel(self)
-    #     proxy.sort(column, order)
-    #     self.gui.table.setModel(self)
-    #     # if column == -1:
-    #     #     return super().sort(column, order)
-    #     # sortedData = []
-    #     # for data in self.splitData:
-
-    #     #     sortedData.append(concat([
-    #     #         data[0:1],
-    #     #         data[1:].sort_values(
-    #     #             by=self.columns[column], ascending=not order.value, ignore_index=True)],
-    #     #         ignore_index=True))
-
-    #     # concat(sortedData, ignore_index=True)

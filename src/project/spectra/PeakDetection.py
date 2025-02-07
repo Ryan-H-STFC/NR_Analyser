@@ -44,24 +44,24 @@ class PeakDetector:
             results = fp.fit(graphData.iloc[:, 1], interp)['df_interp']
             graphData = DataFrame([results['x'], results['y']]).T
 
-            peakIndexes = results[results['peak'] == True].index.to_numpy()
+            self.peakIndexes = results[results['peak'] == True].index.to_numpy()
             dipIndexes = results[results['valley'] == True].index.to_numpy()
             self.prominences = signal.peak_prominences(graphData.iloc[:, 1] * -1, dipIndexes)
             data = self.graphData.copy().to_numpy()
             dipsX = [nearestnumber(self.graphData.iloc[:, 0], x) for x in graphData.loc[dipIndexes].iloc[:, 0]]
             self.dips = data[np.in1d(data[:, 0], dipsX)]
 
-            peakX = [nearestnumber(self.graphData.iloc[:, 0], x) for x in graphData.loc[peakIndexes].iloc[:, 0]]
+            peakX = [nearestnumber(self.graphData.iloc[:, 0], x) for x in graphData.loc[self.peakIndexes].iloc[:, 0]]
             self.peaks = data[np.in1d(data[:, 0], peakX)]
         else:
-            peakIndexes, info = signal.find_peaks(graphData.iloc[:, 1],
-                                                  height=0,
-                                                  distance=10 if isImported else None,
-                                                  prominence=(params['prominence_min'],
-                                                              params['prominence_max']))
+            self.peakIndexes, info = signal.find_peaks(graphData.iloc[:, 1],
+                                                       height=0,
+                                                       distance=10 if isImported else None,
+                                                       prominence=(params['prominence_min'],
+                                                                   params['prominence_max']))
             self.dips = np.array(graphData.loc[np.unique([info['left_bases'], info['right_bases']])])
             # self.dips = np.array(graphData.loc[results['df'][results['df']['valley'] == True]['x']])
-            self.peaks = np.array(graphData.loc[peakIndexes])
+            self.peaks = np.array(graphData.loc[self.peakIndexes])
             self.prominences = info['prominences']
 
         self.npDer = np.gradient(self.interp[1])

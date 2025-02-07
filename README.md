@@ -45,7 +45,6 @@ Check the issues tab, make note on that tab if you have any bugs or ideas.
 ## **Improvements Coming Soon**
 
 * Improved performance with data calculations, large calculations may take up to a few minutes on slow machines.
-* Sorting of data within tables
   
 ## **Accessibility**
 

@@ -24,7 +24,7 @@ Provides a GUI interface to plot and analyse data taken from the ENDF/B-VIII dat
 
 * Import and plot data
 * Provide automated peak detection feature for quick analysis upon importing of data or selecting data
-* Edit peak limits invidually or choose from a blanket algorithm using nearest zero derivative, or elbow point (recommended).
+* Edit peak limits individually or choose from a blanket algorithm using nearest zero derivative, or elbow point (recommended).
 * Provide further information about a singular peak selected from a spectrum
 * Create compounds of varying compositions
 * Save and export data from plots
